@@ -59,7 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 require_once __DIR__ . '/../includes/data.php';
 
-$editId = (int) ($_GET['edit'] ?? 0);
+$isCreatingStandard = isset($_GET['create']);
+$editId = $isCreatingStandard ? 0 : (int) ($_GET['edit'] ?? 0);
 $editingStandard = null;
 if ($editId > 0) {
     $stmt = $pdo->prepare('SELECT * FROM standards WHERE id = :id LIMIT 1');
@@ -71,51 +72,19 @@ $pageTitle = page_title('Quản lý tiêu chuẩn');
 $heading = 'Quản lý tiêu chuẩn kiểm định';
 include __DIR__ . '/../includes/header.php';
 ?>
+<?php if ($editingStandard || $isCreatingStandard): ?><script>document.body.dataset.autoOpenModal = 'standardFormModal';</script><?php endif; ?>
 <?php if ($success): ?><div class="alert alert-success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
 <div class="row g-4 standards-layout">
-    <div class="col-xl-4">
-        <div class="panel standard-form-panel">
-            <h2 class="h5 mb-3"><?= $editingStandard ? 'Sửa tiêu chuẩn' : 'Thêm tiêu chuẩn' ?></h2>
-            <form method="post">
-                <input type="hidden" name="action" value="save_standard">
-                <input type="hidden" name="id" value="<?= (int) ($editingStandard['id'] ?? 0) ?>">
-                <div class="mb-3">
-                    <label class="form-label">Mã tiêu chuẩn</label>
-                    <input class="form-control" name="code" value="<?= htmlspecialchars($editingStandard['code'] ?? '') ?>" placeholder="VD: TC06" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Tên tiêu chuẩn</label>
-                    <textarea class="form-control" name="name" rows="3" placeholder="Nhập nội dung tiêu chuẩn" required><?= htmlspecialchars($editingStandard['name'] ?? '') ?></textarea>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Mô tả</label>
-                    <textarea class="form-control" name="description" rows="3"><?= htmlspecialchars($editingStandard['description'] ?? '') ?></textarea>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Bộ tiêu chuẩn</label>
-                    <select class="form-select" name="standard_set_id" required>
-                        <?php foreach ($standardSets as $set): ?>
-                            <option value="<?= $set['id'] ?>" <?= (int) ($editingStandard['standard_set_id'] ?? 1) === (int) $set['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($set['name'] . ' - ' . $set['version']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <button class="btn btn-primary w-100" type="submit"><i class="bi bi-save me-1"></i> Lưu tiêu chuẩn</button>
-                <?php if ($editingStandard): ?>
-                    <a class="btn btn-outline-secondary w-100 mt-2" href="<?= base_url('admin/standards.php') ?>">Hủy sửa</a>
-                <?php endif; ?>
-            </form>
-        </div>
-    </div>
-
-    <div class="col-xl-8">
+    <div class="col-12">
         <div class="panel standards-list-panel">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 class="h5 mb-0">Danh sách tiêu chuẩn</h2>
-                <button class="btn btn-outline-secondary" type="button"><i class="bi bi-file-earmark-spreadsheet me-1"></i> Xuất Excel</button>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-primary" href="<?= base_url('admin/standards.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm mới</a>
+                    <button class="btn btn-outline-secondary" type="button"><i class="bi bi-file-earmark-spreadsheet me-1"></i> Xuất Excel</button>
+                </div>
             </div>
             <div class="table-responsive">
                 <table class="table" data-page-size="5">
@@ -141,6 +110,53 @@ include __DIR__ . '/../includes/header.php';
                     <?php endforeach; ?>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade management-form-modal" id="standardFormModal" tabindex="-1" aria-labelledby="standardFormModalLabel" aria-hidden="true" <?= ($editingStandard || $isCreatingStandard) ? 'data-auto-open-modal' : '' ?>>
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="standardFormModalLabel"><?= $editingStandard ? 'Sửa tiêu chuẩn' : 'Thêm tiêu chuẩn' ?></h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post">
+                    <input type="hidden" name="action" value="save_standard">
+                    <input type="hidden" name="id" value="<?= (int) ($editingStandard['id'] ?? 0) ?>">
+                    <div class="mb-3">
+                        <label class="form-label">Mã tiêu chuẩn</label>
+                        <input class="form-control" name="code" value="<?= htmlspecialchars($editingStandard['code'] ?? '') ?>" placeholder="VD: TC06" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tên tiêu chuẩn</label>
+                        <textarea class="form-control" name="name" rows="3" placeholder="Nhập nội dung tiêu chuẩn" required><?= htmlspecialchars($editingStandard['name'] ?? '') ?></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mô tả</label>
+                        <textarea class="form-control" name="description" rows="3"><?= htmlspecialchars($editingStandard['description'] ?? '') ?></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bộ tiêu chuẩn</label>
+                        <select class="form-select" name="standard_set_id" required>
+                            <?php foreach ($standardSets as $set): ?>
+                                <option value="<?= $set['id'] ?>" <?= (int) ($editingStandard['standard_set_id'] ?? 1) === (int) $set['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($set['name'] . ' - ' . $set['version']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <?php if ($editingStandard): ?>
+                            <a class="btn btn-outline-secondary" href="<?= base_url('admin/standards.php') ?>">Hủy sửa</a>
+                        <?php else: ?>
+                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Hủy</button>
+                        <?php endif; ?>
+                        <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Lưu tiêu chuẩn</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

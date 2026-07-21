@@ -1,4 +1,4 @@
-﻿<aside class="sidebar">
+<aside class="sidebar">
     <a class="brand" href="<?= base_url(current_role() === 'viewer' ? 'user/search.php' : 'admin/dashboard.php') ?>">
         <span class="brand-mark"><img src="<?= base_url('assets/images/fbu-logo.png') ?>" alt="FBU"></span>
         <span>
@@ -15,6 +15,7 @@
             <a class="<?= is_active('criteria.php') ?>" href="<?= base_url('admin/criteria.php') ?>"><i class="bi bi-list-check"></i> Quản lý tiêu chí</a>
             <a class="<?= is_active('evidences.php') ?>" href="<?= base_url('admin/evidences.php') ?>"><i class="bi bi-folder2-open"></i> Quản lý minh chứng</a>
             <?php if (user_can_manage_accounts()): ?>
+                <a class="<?= is_active('departments.php') ?>" href="<?= base_url('admin/departments.php') ?>"><i class="bi bi-building"></i> Quản lý đơn vị</a>
                 <a class="<?= is_active('users.php') ?>" href="<?= base_url('admin/users.php') ?>"><i class="bi bi-people"></i> Quản lý tài khoản</a>
             <?php endif; ?>
             <a class="<?= is_active('reports.php') ?>" href="<?= base_url('admin/reports.php') ?>"><i class="bi bi-bar-chart"></i> Thống kê</a>
@@ -40,7 +41,7 @@
         <button class="sidebar-icon-button sidebar-settings-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#settingsPanel" aria-controls="settingsPanel" aria-label="Cài đặt" title="Cài đặt">
             <i class="bi bi-gear"></i>
         </button>
-        <button class="sidebar-icon-button sidebar-policy-toggle" type="button" data-bs-toggle="modal" data-bs-target="#privacyPolicyModal" aria-label="Privacy & Policy" title="Privacy & Policy">
+        <button class="sidebar-icon-button sidebar-policy-toggle" type="button" data-bs-toggle="modal" data-bs-target="#privacyPolicyModal" aria-label="Privacy &amp; Policy" title="Privacy &amp; Policy">
             <i class="bi bi-question-circle"></i>
         </button>
         <div class="language-panel" id="languagePanel" data-language-panel>

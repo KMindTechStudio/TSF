@@ -58,7 +58,7 @@
                 <dt>Chu kỳ kiểm định</dt>
                 <dd><?= htmlspecialchars($trainingProgram['cycle'] ?? 'Chu kỳ kiểm định 2026-2031') ?></dd>
                 <dt>Giới hạn upload</dt>
-                <dd>10MB/tệp minh chứng</dd>
+                <dd>100MB/tệp minh chứng</dd>
             </dl>
         </div>
     </div>
@@ -143,6 +143,6 @@
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="<?= base_url('assets/js/app.js?v=15') ?>"></script>
+<script src="<?= base_url('assets/js/app.js?v=16') ?>"></script>
 </body>
 </html>

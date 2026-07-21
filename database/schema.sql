@@ -41,6 +41,7 @@ CREATE TABLE departments (
 
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    user_code VARCHAR(50) NULL UNIQUE,
     role_id INT NOT NULL,
     department_id INT NULL,
     full_name VARCHAR(150) NOT NULL,
@@ -147,6 +148,7 @@ CREATE TABLE evidence_files (
     file_path VARCHAR(500) NOT NULL,
     file_type VARCHAR(50) NOT NULL,
     file_size BIGINT NOT NULL DEFAULT 0,
+    version_no INT NOT NULL DEFAULT 1,
     uploaded_by INT NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_evidence_files_evidence FOREIGN KEY (evidence_id) REFERENCES evidences(id) ON DELETE CASCADE,
@@ -198,10 +200,10 @@ INSERT INTO departments (code, name, phone, email) VALUES
 ('PKT', 'Phòng Khảo thí', NULL, 'khaothi@fbu.edu.vn'),
 ('BM_PM', 'Bộ môn Phần mềm', NULL, 'bomonpm@fbu.edu.vn');
 
-INSERT INTO users (role_id, department_id, full_name, username, email, password_hash, status) VALUES
-((SELECT id FROM roles WHERE code = 'admin'), (SELECT id FROM departments WHERE code = 'KHOA_CNTT'), 'Nguyễn Minh Anh', 'admin', 'admin@fbu.edu.vn', '$2y$10$G..wbhOHZFYD4lfhGWj/qe3Ng9a/WklLNUaJBa9tqvu5FYugLs/Ee', 'active'),
-((SELECT id FROM roles WHERE code = 'staff'), (SELECT id FROM departments WHERE code = 'PDBCL'), 'Trần Thu Hà', 'kiemdinhtt', 'ha.tt@fbu.edu.vn', '$2y$10$G..wbhOHZFYD4lfhGWj/qe3Ng9a/WklLNUaJBa9tqvu5FYugLs/Ee', 'active'),
-((SELECT id FROM roles WHERE code = 'viewer'), (SELECT id FROM departments WHERE code = 'PDT'), 'Lê Quang Huy', 'viewer01', 'huy.lq@fbu.edu.vn', '$2y$10$G..wbhOHZFYD4lfhGWj/qe3Ng9a/WklLNUaJBa9tqvu5FYugLs/Ee', 'locked');
+INSERT INTO users (user_code, role_id, department_id, full_name, username, email, password_hash, status) VALUES
+('ND001', (SELECT id FROM roles WHERE code = 'admin'), (SELECT id FROM departments WHERE code = 'KHOA_CNTT'), 'Nguyễn Minh Anh', 'admin', 'admin@fbu.edu.vn', '$2y$10$G..wbhOHZFYD4lfhGWj/qe3Ng9a/WklLNUaJBa9tqvu5FYugLs/Ee', 'active'),
+('ND002', (SELECT id FROM roles WHERE code = 'staff'), (SELECT id FROM departments WHERE code = 'PDBCL'), 'Trần Thu Hà', 'kiemdinhtt', 'ha.tt@fbu.edu.vn', '$2y$10$G..wbhOHZFYD4lfhGWj/qe3Ng9a/WklLNUaJBa9tqvu5FYugLs/Ee', 'active'),
+('ND003', (SELECT id FROM roles WHERE code = 'viewer'), (SELECT id FROM departments WHERE code = 'PDT'), 'Lê Quang Huy', 'viewer01', 'huy.lq@fbu.edu.vn', '$2y$10$G..wbhOHZFYD4lfhGWj/qe3Ng9a/WklLNUaJBa9tqvu5FYugLs/Ee', 'locked');
 
 INSERT INTO training_programs (code, name, degree_level, faculty, accreditation_cycle, description) VALUES
 ('7480201', 'Công nghệ thông tin', 'Đại học chính quy', 'Khoa Công nghệ thông tin', 'Chu kỳ kiểm định 2026-2031', 'Chương trình đào tạo ngành Công nghệ thông tin của Trường Đại học Tài chính - Ngân hàng Hà Nội');

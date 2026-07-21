@@ -76,12 +76,12 @@ CREATE TABLE `criteria` (
 --
 
 INSERT INTO `criteria` (`id`, `standard_id`, `department_id`, `code`, `name`, `description`, `evidence_status`, `display_order`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, '1.1', 'Mục tiêu của CTĐT được xác định rõ ràng', 'Mục tiêu CTĐT phù hợp sứ mạng và nhu cầu xã hội', 'complete', 1, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(2, 1, 1, '1.2', 'Chuẩn đầu ra phản ánh yêu cầu của các bên liên quan', 'Chuẩn đầu ra được xây dựng và rà soát định kỳ', 'complete', 2, '2026-07-17 03:40:15', '2026-07-17 10:25:59'),
-(3, 2, 2, '2.1', 'Bản mô tả CTĐT đầy đủ thông tin cần thiết', 'Bản mô tả nêu rõ mục tiêu, CĐR, cấu trúc và học phần', 'complete', 1, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(4, 3, 5, '3.2', 'Nội dung học phần cập nhật theo định hướng nghề nghiệp', 'Đề cương học phần được cập nhật và phê duyệt', 'complete', 2, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(5, 4, 1, '4.1', 'Hoạt động dạy học thúc đẩy năng lực tự học', 'Hoạt động dạy học có định hướng phát triển năng lực', 'missing', 1, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(6, 5, 4, '5.3', 'Quy trình đánh giá kết quả học tập được công bố', 'Quy trình và ma trận đánh giá được công khai', 'need_update', 3, '2026-07-17 03:40:15', '2026-07-17 03:40:15');
+(1, 1, 1, '1.1', 'Má»¥c tiÃªu cá»§a CTÄT Ä‘Æ°á»£c xÃ¡c Ä‘á»‹nh rÃµ rÃ ng', 'Má»¥c tiÃªu CTÄT phÃ¹ há»£p sá»© máº¡ng vÃ  nhu cáº§u xÃ£ há»™i', 'complete', 1, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(2, 1, 1, '1.2', 'Chuáº©n Ä‘áº§u ra pháº£n Ã¡nh yÃªu cáº§u cá»§a cÃ¡c bÃªn liÃªn quan', 'Chuáº©n Ä‘áº§u ra Ä‘Æ°á»£c xÃ¢y dá»±ng vÃ  rÃ  soÃ¡t Ä‘á»‹nh ká»³', 'complete', 2, '2026-07-17 03:40:15', '2026-07-17 10:25:59'),
+(3, 2, 2, '2.1', 'Báº£n mÃ´ táº£ CTÄT Ä‘áº§y Ä‘á»§ thÃ´ng tin cáº§n thiáº¿t', 'Báº£n mÃ´ táº£ nÃªu rÃµ má»¥c tiÃªu, CÄR, cáº¥u trÃºc vÃ  há»c pháº§n', 'complete', 1, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(4, 3, 5, '3.2', 'Ná»™i dung há»c pháº§n cáº­p nháº­t theo Ä‘á»‹nh hÆ°á»›ng nghá» nghiá»‡p', 'Äá» cÆ°Æ¡ng há»c pháº§n Ä‘Æ°á»£c cáº­p nháº­t vÃ  phÃª duyá»‡t', 'complete', 2, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(5, 4, 1, '4.1', 'Hoáº¡t Ä‘á»™ng dáº¡y há»c thÃºc Ä‘áº©y nÄƒng lá»±c tá»± há»c', 'Hoáº¡t Ä‘á»™ng dáº¡y há»c cÃ³ Ä‘á»‹nh hÆ°á»›ng phÃ¡t triá»ƒn nÄƒng lá»±c', 'missing', 1, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(6, 5, 4, '5.3', 'Quy trÃ¬nh Ä‘Ã¡nh giÃ¡ káº¿t quáº£ há»c táº­p Ä‘Æ°á»£c cÃ´ng bá»‘', 'Quy trÃ¬nh vÃ  ma tráº­n Ä‘Ã¡nh giÃ¡ Ä‘Æ°á»£c cÃ´ng khai', 'need_update', 3, '2026-07-17 03:40:15', '2026-07-17 03:40:15');
 
 -- --------------------------------------------------------
 
@@ -103,11 +103,11 @@ CREATE TABLE `departments` (
 --
 
 INSERT INTO `departments` (`id`, `code`, `name`, `phone`, `email`, `created_at`) VALUES
-(1, 'KHOA_CNTT', 'Khoa Công nghệ thông tin', NULL, 'cntt@fbu.edu.vn', '2026-07-17 03:40:15'),
-(2, 'PDT', 'Phòng Đào tạo', NULL, 'daotao@fbu.edu.vn', '2026-07-17 03:40:15'),
-(3, 'PDBCL', 'Phòng Đảm bảo chất lượng', NULL, 'dbcl@fbu.edu.vn', '2026-07-17 03:40:15'),
-(4, 'PKT', 'Phòng Khảo thí', NULL, 'khaothi@fbu.edu.vn', '2026-07-17 03:40:15'),
-(5, 'BM_PM', 'Bộ môn Phần mềm', NULL, 'bomonpm@fbu.edu.vn', '2026-07-17 03:40:15');
+(1, 'KHOA_CNTT', 'Khoa CÃ´ng nghá»‡ thÃ´ng tin', NULL, 'cntt@fbu.edu.vn', '2026-07-17 03:40:15'),
+(2, 'PDT', 'PhÃ²ng ÄÃ o táº¡o', NULL, 'daotao@fbu.edu.vn', '2026-07-17 03:40:15'),
+(3, 'PDBCL', 'PhÃ²ng Äáº£m báº£o cháº¥t lÆ°á»£ng', NULL, 'dbcl@fbu.edu.vn', '2026-07-17 03:40:15'),
+(4, 'PKT', 'PhÃ²ng Kháº£o thÃ­', NULL, 'khaothi@fbu.edu.vn', '2026-07-17 03:40:15'),
+(5, 'BM_PM', 'Bá»™ mÃ´n Pháº§n má»m', NULL, 'bomonpm@fbu.edu.vn', '2026-07-17 03:40:15');
 
 -- --------------------------------------------------------
 
@@ -160,31 +160,31 @@ CREATE TABLE `evidences` (
 --
 
 INSERT INTO `evidences` (`id`, `code`, `title`, `description`, `academic_year`, `issued_date`, `issuing_department_id`, `responsible_user_id`, `approval_status`, `created_at`, `updated_at`) VALUES
-(1, 'MC.01.01.01', 'Quyết định ban hành mục tiêu và chuẩn đầu ra ngành CNTT', 'Quyết định ban hành mục tiêu và chuẩn đầu ra của CTĐT ngành CNTT', '2025-2026', '2025-09-01', 1, 1, 'approved', '2026-07-17 03:40:15', '2026-07-17 13:09:07'),
-(2, 'MC.02.01.03', 'Bản mô tả chương trình đào tạo ngành CNTT', 'Bản mô tả chương trình đào tạo phục vụ kiểm định', '2025-2026', '2025-08-15', 2, 2, 'approved', '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(3, 'MC.03.02.04', 'Đề cương chi tiết các học phần chuyên ngành', 'Tập hợp đề cương học phần chuyên ngành CNTT', '2024-2025', '2024-09-05', 5, 1, 'reviewing', '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(4, 'MC.04.01.02', 'Kế hoạch đổi mới phương pháp dạy học', 'Kế hoạch cải tiến phương pháp giảng dạy trong CTĐT', '2025-2026', '2025-10-20', 1, 1, 'need_update', '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(5, 'MC.05.03.05', 'Quy chế đánh giá học phần và ma trận điểm', 'Quy chế đánh giá, rubrics và ma trận điểm học phần', '2025-2026', '2025-11-10', 4, 2, 'approved', '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(10, 'MC.01.01.02', 'Biên bản họp rà soát mục tiêu chương trình đào tạo CNTT', 'Biên bản họp hội đồng khoa về rà soát mục tiêu CTĐT ngành CNTT', '2025-2026', '2025-09-12', 1, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(11, 'MC.01.02.01', 'Khảo sát nhu cầu các bên liên quan về chuẩn đầu ra CNTT', 'Tổng hợp khảo sát doanh nghiệp, cựu sinh viên và người học về chuẩn đầu ra', '2025-2026', '2025-10-03', 3, 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(12, 'MC.01.02.02', 'Ma trận đối sánh chuẩn đầu ra với mục tiêu CTĐT', 'Ma trận liên kết mục tiêu chương trình với chuẩn đầu ra ngành CNTT', '2025-2026', '2025-10-08', 1, 1, 'need_update', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(13, 'MC.02.01.04', 'Kế hoạch cập nhật bản mô tả chương trình đào tạo', 'Kế hoạch rà soát và cập nhật bản mô tả CTĐT theo chu kỳ kiểm định', '2025-2026', '2025-08-22', 2, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(14, 'MC.02.01.05', 'Phụ lục cấu trúc chương trình đào tạo CNTT', 'Phụ lục khối kiến thức, số tín chỉ và phân bổ học phần theo học kỳ', '2025-2026', '2025-08-28', 2, 2, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(15, 'MC.02.01.06', 'Bảng đối sánh CTĐT với khung trình độ quốc gia', 'Bảng đối sánh chương trình đào tạo ngành CNTT với khung trình độ quốc gia Việt Nam', '2024-2025', '2025-01-14', 3, 1, 'reviewing', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(16, 'MC.03.02.05', 'Danh mục đề cương học phần chuyên ngành CNTT', 'Danh mục đề cương học phần chuyên ngành phục vụ tự đánh giá CTĐT', '2025-2026', '2025-09-05', 5, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(17, 'MC.03.02.06', 'Biên bản nghiệm thu đề cương học phần cập nhật', 'Biên bản nghiệm thu đề cương học phần sau khi cập nhật định hướng nghề nghiệp', '2025-2026', '2025-09-18', 5, 2, 'need_update', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(18, 'MC.03.02.07', 'Ma trận học phần và chuẩn đầu ra học phần', 'Ma trận liên kết học phần với chuẩn đầu ra học phần và chuẩn đầu ra chương trình', '2024-2025', '2024-11-20', 1, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(19, 'MC.04.01.03', 'Kế hoạch đổi mới phương pháp giảng dạy học kỳ I', 'Kế hoạch áp dụng phương pháp dạy học tích cực trong các học phần CNTT', '2025-2026', '2025-09-25', 1, 1, 'reviewing', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(20, 'MC.04.01.04', 'Báo cáo triển khai lớp học dự án ngành CNTT', 'Báo cáo minh chứng hoạt động dạy học theo dự án và đánh giá sản phẩm học tập', '2025-2026', '2025-12-02', 1, 2, 'need_update', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(21, 'MC.04.01.05', 'Danh sách học phần áp dụng blended learning', 'Danh sách các học phần triển khai blended learning và tài nguyên LMS liên quan', '2024-2025', '2025-03-11', 5, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(22, 'MC.05.03.06', 'Quy định xây dựng ma trận đề thi học phần', 'Quy định về xây dựng ma trận đề thi, rubrics và ngân hàng câu hỏi', '2025-2026', '2025-11-18', 4, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(23, 'MC.05.03.07', 'Bảng tổng hợp kết quả đánh giá học phần', 'Bảng tổng hợp điểm quá trình, điểm thi và phân tích kết quả học tập', '2025-2026', '2026-01-10', 4, 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(24, 'MC.05.03.08', 'Biên bản rà soát quy trình chấm thi và phúc khảo', 'Biên bản rà soát quy trình đánh giá, chấm thi và phúc khảo học phần', '2024-2025', '2025-04-18', 4, 1, 'need_update', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(25, 'MC.06.01.01', 'Kế hoạch thu thập minh chứng kiểm định CTĐT CNTT', 'Kế hoạch phân công thu thập, chuẩn hóa và cập nhật minh chứng theo tiêu chuẩn', '2025-2026', '2025-07-15', 3, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(26, 'MC.06.01.02', 'Danh mục phân quyền khai thác kho minh chứng', 'Danh mục tài khoản, quyền truy cập và phạm vi khai thác dữ liệu minh chứng', '2025-2026', '2025-07-20', 3, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(27, 'MC.06.01.03', 'Biên bản kiểm tra định kỳ cơ sở dữ liệu minh chứng', 'Biên bản kiểm tra tính đầy đủ, hợp lệ và khả năng truy xuất của minh chứng', '2025-2026', '2025-12-20', 3, 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(28, 'MC.07.01.01', 'Báo cáo tự đánh giá chương trình đào tạo ngành CNTT', 'Bản dự thảo báo cáo tự đánh giá CTĐT ngành CNTT phục vụ kiểm định chất lượng', '2025-2026', '2026-02-05', 3, 1, 'need_update', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
-(29, 'MC.07.01.02', 'Phụ lục minh chứng phục vụ đoàn đánh giá ngoài', 'Phụ lục tổng hợp đường dẫn, mã hóa và trạng thái minh chứng phục vụ đánh giá ngoài', '2025-2026', '2026-02-12', 3, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09');
+(1, 'MC.01.01.01', 'Quyáº¿t Ä‘á»‹nh ban hÃ nh má»¥c tiÃªu vÃ  chuáº©n Ä‘áº§u ra ngÃ nh CNTT', 'Quyáº¿t Ä‘á»‹nh ban hÃ nh má»¥c tiÃªu vÃ  chuáº©n Ä‘áº§u ra cá»§a CTÄT ngÃ nh CNTT', '2025-2026', '2025-09-01', 1, 1, 'approved', '2026-07-17 03:40:15', '2026-07-17 13:09:07'),
+(2, 'MC.02.01.03', 'Báº£n mÃ´ táº£ chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o ngÃ nh CNTT', 'Báº£n mÃ´ táº£ chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o phá»¥c vá»¥ kiá»ƒm Ä‘á»‹nh', '2025-2026', '2025-08-15', 2, 2, 'approved', '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(3, 'MC.03.02.04', 'Äá» cÆ°Æ¡ng chi tiáº¿t cÃ¡c há»c pháº§n chuyÃªn ngÃ nh', 'Táº­p há»£p Ä‘á» cÆ°Æ¡ng há»c pháº§n chuyÃªn ngÃ nh CNTT', '2024-2025', '2024-09-05', 5, 1, 'reviewing', '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(4, 'MC.04.01.02', 'Káº¿ hoáº¡ch Ä‘á»•i má»›i phÆ°Æ¡ng phÃ¡p dáº¡y há»c', 'Káº¿ hoáº¡ch cáº£i tiáº¿n phÆ°Æ¡ng phÃ¡p giáº£ng dáº¡y trong CTÄT', '2025-2026', '2025-10-20', 1, 1, 'need_update', '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(5, 'MC.05.03.05', 'Quy cháº¿ Ä‘Ã¡nh giÃ¡ há»c pháº§n vÃ  ma tráº­n Ä‘iá»ƒm', 'Quy cháº¿ Ä‘Ã¡nh giÃ¡, rubrics vÃ  ma tráº­n Ä‘iá»ƒm há»c pháº§n', '2025-2026', '2025-11-10', 4, 2, 'approved', '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(10, 'MC.01.01.02', 'BiÃªn báº£n há»p rÃ  soÃ¡t má»¥c tiÃªu chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o CNTT', 'BiÃªn báº£n há»p há»™i Ä‘á»“ng khoa vá» rÃ  soÃ¡t má»¥c tiÃªu CTÄT ngÃ nh CNTT', '2025-2026', '2025-09-12', 1, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(11, 'MC.01.02.01', 'Kháº£o sÃ¡t nhu cáº§u cÃ¡c bÃªn liÃªn quan vá» chuáº©n Ä‘áº§u ra CNTT', 'Tá»•ng há»£p kháº£o sÃ¡t doanh nghiá»‡p, cá»±u sinh viÃªn vÃ  ngÆ°á»i há»c vá» chuáº©n Ä‘áº§u ra', '2025-2026', '2025-10-03', 3, 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(12, 'MC.01.02.02', 'Ma tráº­n Ä‘á»‘i sÃ¡nh chuáº©n Ä‘áº§u ra vá»›i má»¥c tiÃªu CTÄT', 'Ma tráº­n liÃªn káº¿t má»¥c tiÃªu chÆ°Æ¡ng trÃ¬nh vá»›i chuáº©n Ä‘áº§u ra ngÃ nh CNTT', '2025-2026', '2025-10-08', 1, 1, 'need_update', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(13, 'MC.02.01.04', 'Káº¿ hoáº¡ch cáº­p nháº­t báº£n mÃ´ táº£ chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o', 'Káº¿ hoáº¡ch rÃ  soÃ¡t vÃ  cáº­p nháº­t báº£n mÃ´ táº£ CTÄT theo chu ká»³ kiá»ƒm Ä‘á»‹nh', '2025-2026', '2025-08-22', 2, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(14, 'MC.02.01.05', 'Phá»¥ lá»¥c cáº¥u trÃºc chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o CNTT', 'Phá»¥ lá»¥c khá»‘i kiáº¿n thá»©c, sá»‘ tÃ­n chá»‰ vÃ  phÃ¢n bá»• há»c pháº§n theo há»c ká»³', '2025-2026', '2025-08-28', 2, 2, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(15, 'MC.02.01.06', 'Báº£ng Ä‘á»‘i sÃ¡nh CTÄT vá»›i khung trÃ¬nh Ä‘á»™ quá»‘c gia', 'Báº£ng Ä‘á»‘i sÃ¡nh chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o ngÃ nh CNTT vá»›i khung trÃ¬nh Ä‘á»™ quá»‘c gia Viá»‡t Nam', '2024-2025', '2025-01-14', 3, 1, 'reviewing', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(16, 'MC.03.02.05', 'Danh má»¥c Ä‘á» cÆ°Æ¡ng há»c pháº§n chuyÃªn ngÃ nh CNTT', 'Danh má»¥c Ä‘á» cÆ°Æ¡ng há»c pháº§n chuyÃªn ngÃ nh phá»¥c vá»¥ tá»± Ä‘Ã¡nh giÃ¡ CTÄT', '2025-2026', '2025-09-05', 5, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(17, 'MC.03.02.06', 'BiÃªn báº£n nghiá»‡m thu Ä‘á» cÆ°Æ¡ng há»c pháº§n cáº­p nháº­t', 'BiÃªn báº£n nghiá»‡m thu Ä‘á» cÆ°Æ¡ng há»c pháº§n sau khi cáº­p nháº­t Ä‘á»‹nh hÆ°á»›ng nghá» nghiá»‡p', '2025-2026', '2025-09-18', 5, 2, 'need_update', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(18, 'MC.03.02.07', 'Ma tráº­n há»c pháº§n vÃ  chuáº©n Ä‘áº§u ra há»c pháº§n', 'Ma tráº­n liÃªn káº¿t há»c pháº§n vá»›i chuáº©n Ä‘áº§u ra há»c pháº§n vÃ  chuáº©n Ä‘áº§u ra chÆ°Æ¡ng trÃ¬nh', '2024-2025', '2024-11-20', 1, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(19, 'MC.04.01.03', 'Káº¿ hoáº¡ch Ä‘á»•i má»›i phÆ°Æ¡ng phÃ¡p giáº£ng dáº¡y há»c ká»³ I', 'Káº¿ hoáº¡ch Ã¡p dá»¥ng phÆ°Æ¡ng phÃ¡p dáº¡y há»c tÃ­ch cá»±c trong cÃ¡c há»c pháº§n CNTT', '2025-2026', '2025-09-25', 1, 1, 'reviewing', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(20, 'MC.04.01.04', 'BÃ¡o cÃ¡o triá»ƒn khai lá»›p há»c dá»± Ã¡n ngÃ nh CNTT', 'BÃ¡o cÃ¡o minh chá»©ng hoáº¡t Ä‘á»™ng dáº¡y há»c theo dá»± Ã¡n vÃ  Ä‘Ã¡nh giÃ¡ sáº£n pháº©m há»c táº­p', '2025-2026', '2025-12-02', 1, 2, 'need_update', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(21, 'MC.04.01.05', 'Danh sÃ¡ch há»c pháº§n Ã¡p dá»¥ng blended learning', 'Danh sÃ¡ch cÃ¡c há»c pháº§n triá»ƒn khai blended learning vÃ  tÃ i nguyÃªn LMS liÃªn quan', '2024-2025', '2025-03-11', 5, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(22, 'MC.05.03.06', 'Quy Ä‘á»‹nh xÃ¢y dá»±ng ma tráº­n Ä‘á» thi há»c pháº§n', 'Quy Ä‘á»‹nh vá» xÃ¢y dá»±ng ma tráº­n Ä‘á» thi, rubrics vÃ  ngÃ¢n hÃ ng cÃ¢u há»i', '2025-2026', '2025-11-18', 4, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(23, 'MC.05.03.07', 'Báº£ng tá»•ng há»£p káº¿t quáº£ Ä‘Ã¡nh giÃ¡ há»c pháº§n', 'Báº£ng tá»•ng há»£p Ä‘iá»ƒm quÃ¡ trÃ¬nh, Ä‘iá»ƒm thi vÃ  phÃ¢n tÃ­ch káº¿t quáº£ há»c táº­p', '2025-2026', '2026-01-10', 4, 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(24, 'MC.05.03.08', 'BiÃªn báº£n rÃ  soÃ¡t quy trÃ¬nh cháº¥m thi vÃ  phÃºc kháº£o', 'BiÃªn báº£n rÃ  soÃ¡t quy trÃ¬nh Ä‘Ã¡nh giÃ¡, cháº¥m thi vÃ  phÃºc kháº£o há»c pháº§n', '2024-2025', '2025-04-18', 4, 1, 'need_update', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(25, 'MC.06.01.01', 'Káº¿ hoáº¡ch thu tháº­p minh chá»©ng kiá»ƒm Ä‘á»‹nh CTÄT CNTT', 'Káº¿ hoáº¡ch phÃ¢n cÃ´ng thu tháº­p, chuáº©n hÃ³a vÃ  cáº­p nháº­t minh chá»©ng theo tiÃªu chuáº©n', '2025-2026', '2025-07-15', 3, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(26, 'MC.06.01.02', 'Danh má»¥c phÃ¢n quyá»n khai thÃ¡c kho minh chá»©ng', 'Danh má»¥c tÃ i khoáº£n, quyá»n truy cáº­p vÃ  pháº¡m vi khai thÃ¡c dá»¯ liá»‡u minh chá»©ng', '2025-2026', '2025-07-20', 3, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(27, 'MC.06.01.03', 'BiÃªn báº£n kiá»ƒm tra Ä‘á»‹nh ká»³ cÆ¡ sá»Ÿ dá»¯ liá»‡u minh chá»©ng', 'BiÃªn báº£n kiá»ƒm tra tÃ­nh Ä‘áº§y Ä‘á»§, há»£p lá»‡ vÃ  kháº£ nÄƒng truy xuáº¥t cá»§a minh chá»©ng', '2025-2026', '2025-12-20', 3, 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(28, 'MC.07.01.01', 'BÃ¡o cÃ¡o tá»± Ä‘Ã¡nh giÃ¡ chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o ngÃ nh CNTT', 'Báº£n dá»± tháº£o bÃ¡o cÃ¡o tá»± Ä‘Ã¡nh giÃ¡ CTÄT ngÃ nh CNTT phá»¥c vá»¥ kiá»ƒm Ä‘á»‹nh cháº¥t lÆ°á»£ng', '2025-2026', '2026-02-05', 3, 1, 'need_update', '2026-07-17 16:20:07', '2026-07-17 16:24:09'),
+(29, 'MC.07.01.02', 'Phá»¥ lá»¥c minh chá»©ng phá»¥c vá»¥ Ä‘oÃ n Ä‘Ã¡nh giÃ¡ ngoÃ i', 'Phá»¥ lá»¥c tá»•ng há»£p Ä‘Æ°á»ng dáº«n, mÃ£ hÃ³a vÃ  tráº¡ng thÃ¡i minh chá»©ng phá»¥c vá»¥ Ä‘Ã¡nh giÃ¡ ngoÃ i', '2025-2026', '2026-02-12', 3, 1, 'approved', '2026-07-17 16:20:07', '2026-07-17 16:24:09');
 
 -- --------------------------------------------------------
 
@@ -206,10 +206,10 @@ CREATE TABLE `evidence_criteria` (
 INSERT INTO `evidence_criteria` (`evidence_id`, `criteria_id`, `note`, `created_at`) VALUES
 (1, 1, NULL, '2026-07-17 09:43:27'),
 (1, 2, NULL, '2026-07-17 09:43:27'),
-(2, 3, 'Bản mô tả CTĐT', '2026-07-17 03:40:15'),
-(3, 4, 'Đề cương chi tiết', '2026-07-17 03:40:15'),
-(4, 5, 'Cần bổ sung phụ lục triển khai', '2026-07-17 03:40:15'),
-(5, 6, 'Quy chế và ma trận điểm', '2026-07-17 03:40:15'),
+(2, 3, 'Báº£n mÃ´ táº£ CTÄT', '2026-07-17 03:40:15'),
+(3, 4, 'Äá» cÆ°Æ¡ng chi tiáº¿t', '2026-07-17 03:40:15'),
+(4, 5, 'Cáº§n bá»• sung phá»¥ lá»¥c triá»ƒn khai', '2026-07-17 03:40:15'),
+(5, 6, 'Quy cháº¿ vÃ  ma tráº­n Ä‘iá»ƒm', '2026-07-17 03:40:15'),
 (10, 1, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
 (11, 2, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
 (12, 2, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
@@ -245,6 +245,7 @@ CREATE TABLE `evidence_files` (
   `file_path` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
   `file_type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `file_size` bigint(20) NOT NULL DEFAULT 0,
+  `version_no` int(11) NOT NULL DEFAULT 1,
   `uploaded_by` int(11) DEFAULT NULL,
   `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -321,9 +322,9 @@ CREATE TABLE `roles` (
 --
 
 INSERT INTO `roles` (`id`, `code`, `name`, `description`, `created_at`) VALUES
-(1, 'admin', 'Quản trị viên', 'Quản trị toàn bộ hệ thống', '2026-07-17 03:40:15'),
-(2, 'staff', 'Cán bộ kiểm định', 'Cập nhật và rà soát hồ sơ minh chứng', '2026-07-17 03:40:15'),
-(3, 'viewer', 'Người dùng tra cứu', 'Tra cứu và tải minh chứng được phép', '2026-07-17 03:40:15');
+(1, 'admin', 'Quáº£n trá»‹ viÃªn', 'Quáº£n trá»‹ toÃ n bá»™ há»‡ thá»‘ng', '2026-07-17 03:40:15'),
+(2, 'staff', 'CÃ¡n bá»™ kiá»ƒm Ä‘á»‹nh', 'Cáº­p nháº­t vÃ  rÃ  soÃ¡t há»“ sÆ¡ minh chá»©ng', '2026-07-17 03:40:15'),
+(3, 'viewer', 'NgÆ°á»i dÃ¹ng tra cá»©u', 'Tra cá»©u vÃ  táº£i minh chá»©ng Ä‘Æ°á»£c phÃ©p', '2026-07-17 03:40:15');
 
 -- --------------------------------------------------------
 
@@ -347,11 +348,11 @@ CREATE TABLE `standards` (
 --
 
 INSERT INTO `standards` (`id`, `standard_set_id`, `code`, `name`, `description`, `display_order`, `created_at`, `updated_at`) VALUES
-(1, 1, 'TC01', 'Mục tiêu và chuẩn đầu ra của chương trình đào tạo', 'Quản lý minh chứng liên quan mục tiêu và chuẩn đầu ra', 1, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(2, 1, 'TC02', 'Bản mô tả chương trình đào tạo', 'Quản lý bản mô tả chương trình đào tạo', 2, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(3, 1, 'TC03', 'Cấu trúc và nội dung chương trình dạy học', 'Quản lý cấu trúc và nội dung chương trình dạy học', 3, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(4, 1, 'TC04', 'Phương pháp tiếp cận trong dạy và học', 'Quản lý minh chứng về phương pháp dạy học', 4, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
-(5, 1, 'TC05', 'Đánh giá kết quả học tập của người học', 'Quản lý minh chứng về đánh giá kết quả học tập', 5, '2026-07-17 03:40:15', '2026-07-17 03:40:15');
+(1, 1, 'TC01', 'Má»¥c tiÃªu vÃ  chuáº©n Ä‘áº§u ra cá»§a chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o', 'Quáº£n lÃ½ minh chá»©ng liÃªn quan má»¥c tiÃªu vÃ  chuáº©n Ä‘áº§u ra', 1, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(2, 1, 'TC02', 'Báº£n mÃ´ táº£ chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o', 'Quáº£n lÃ½ báº£n mÃ´ táº£ chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o', 2, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(3, 1, 'TC03', 'Cáº¥u trÃºc vÃ  ná»™i dung chÆ°Æ¡ng trÃ¬nh dáº¡y há»c', 'Quáº£n lÃ½ cáº¥u trÃºc vÃ  ná»™i dung chÆ°Æ¡ng trÃ¬nh dáº¡y há»c', 3, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(4, 1, 'TC04', 'PhÆ°Æ¡ng phÃ¡p tiáº¿p cáº­n trong dáº¡y vÃ  há»c', 'Quáº£n lÃ½ minh chá»©ng vá» phÆ°Æ¡ng phÃ¡p dáº¡y há»c', 4, '2026-07-17 03:40:15', '2026-07-17 03:40:15'),
+(5, 1, 'TC05', 'ÄÃ¡nh giÃ¡ káº¿t quáº£ há»c táº­p cá»§a ngÆ°á»i há»c', 'Quáº£n lÃ½ minh chá»©ng vá» Ä‘Ã¡nh giÃ¡ káº¿t quáº£ há»c táº­p', 5, '2026-07-17 03:40:15', '2026-07-17 03:40:15');
 
 -- --------------------------------------------------------
 
@@ -376,7 +377,7 @@ CREATE TABLE `standard_sets` (
 --
 
 INSERT INTO `standard_sets` (`id`, `training_program_id`, `name`, `version_year`, `issuing_body`, `description`, `status`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo', '2025', 'Bộ Giáo dục và Đào tạo', 'Bộ tiêu chuẩn dùng cho cơ sở dữ liệu minh chứng phục vụ kiểm định CTĐT', 'active', '2026-07-17 03:40:15', '2026-07-17 03:40:15');
+(1, 1, 'Bá»™ tiÃªu chuáº©n Ä‘Ã¡nh giÃ¡ cháº¥t lÆ°á»£ng chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o', '2025', 'Bá»™ GiÃ¡o dá»¥c vÃ  ÄÃ o táº¡o', 'Bá»™ tiÃªu chuáº©n dÃ¹ng cho cÆ¡ sá»Ÿ dá»¯ liá»‡u minh chá»©ng phá»¥c vá»¥ kiá»ƒm Ä‘á»‹nh CTÄT', 'active', '2026-07-17 03:40:15', '2026-07-17 03:40:15');
 
 -- --------------------------------------------------------
 
@@ -402,7 +403,7 @@ CREATE TABLE `training_programs` (
 --
 
 INSERT INTO `training_programs` (`id`, `code`, `name`, `degree_level`, `faculty`, `accreditation_cycle`, `description`, `status`, `created_at`, `updated_at`) VALUES
-(1, '7480201', 'Công nghệ thông tin', 'Đại học chính quy', 'Khoa Công nghệ thông tin', 'Chu kỳ kiểm định 2026-2031', 'Chương trình đào tạo ngành Công nghệ thông tin của Trường Đại học Tài chính - Ngân hàng Hà Nội', 'active', '2026-07-17 03:40:15', '2026-07-17 03:40:15');
+(1, '7480201', 'CÃ´ng nghá»‡ thÃ´ng tin', 'Äáº¡i há»c chÃ­nh quy', 'Khoa CÃ´ng nghá»‡ thÃ´ng tin', 'Chu ká»³ kiá»ƒm Ä‘á»‹nh 2026-2031', 'ChÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o ngÃ nh CÃ´ng nghá»‡ thÃ´ng tin cá»§a TrÆ°á»ng Äáº¡i há»c TÃ i chÃ­nh - NgÃ¢n hÃ ng HÃ  Ná»™i', 'active', '2026-07-17 03:40:15', '2026-07-17 03:40:15');
 
 -- --------------------------------------------------------
 
@@ -412,6 +413,7 @@ INSERT INTO `training_programs` (`id`, `code`, `name`, `degree_level`, `faculty`
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
+  `user_code` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `role_id` int(11) NOT NULL,
   `department_id` int(11) DEFAULT NULL,
   `full_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -429,9 +431,9 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `role_id`, `department_id`, `full_name`, `username`, `email`, `avatar_path`, `password_hash`, `status`, `last_login_at`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 'Dev Nguyen', 'admin', 'admin@fbu.edu.vn', 'uploads/avatars/avatar_user_1_20260717062114.jpg', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'active', '2026-07-17 23:44:15', '2026-07-17 03:40:15', '2026-07-17 16:44:15'),
-(2, 3, 3, 'Trần Thu Hà', 'kiemdinhtt', 'ha.tt@fbu.edu.vn', NULL, '$2y$10$98IdFASFlTYGEIBVWcui4u52XXRv1x2h4jO/GAJ612wzPiGkMJtsK', 'active', '2026-07-17 23:43:27', '2026-07-17 03:40:15', '2026-07-17 16:43:27');
+INSERT INTO `users` (`id`, `user_code`, `role_id`, `department_id`, `full_name`, `username`, `email`, `avatar_path`, `password_hash`, `status`, `last_login_at`, `created_at`, `updated_at`) VALUES
+(1, 'ND001', 1, 1, 'Dev Nguyen', 'admin', 'admin@fbu.edu.vn', 'uploads/avatars/avatar_user_1_20260717062114.jpg', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'active', '2026-07-17 23:44:15', '2026-07-17 03:40:15', '2026-07-17 16:44:15'),
+(2, 'ND002', 3, 3, 'Tráº§n Thu HÃ ', 'kiemdinhtt', 'ha.tt@fbu.edu.vn', NULL, '$2y$10$98IdFASFlTYGEIBVWcui4u52XXRv1x2h4jO/GAJ612wzPiGkMJtsK', 'active', '2026-07-17 23:43:27', '2026-07-17 03:40:15', '2026-07-17 16:43:27');
 
 --
 -- Indexes for dumped tables

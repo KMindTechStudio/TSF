@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includes/helpers.php';
 require_roles(['admin']);
 require_once __DIR__ . '/../includes/data.php';
@@ -59,7 +59,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="mb-3">
                     <div class="d-flex justify-content-between mb-1">
                         <span class="fw-semibold"><?= htmlspecialchars($standard['code']) ?> · <?= htmlspecialchars($standard['name']) ?></span>
-                        <span><span class="count-up" data-count-to="<?= $standard['evidences'] ?>">0</span> minh chứng</span>
+                        <span><span class="count-up" data-count-to="<?= $standard['evidences'] ?>">0</span> <span data-i18n="minh chứng">minh chứng</span></span>
                     </div>
                     <div class="progress">
                         <div class="progress-bar bg-success progress-animate" data-progress-to="<?= $percent ?>" style="width: 0%"></div>

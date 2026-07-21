@@ -10,13 +10,82 @@ require_once __DIR__ . '/../config/database.php';
 $pdo = db();
 $success = '';
 $error = '';
-$maxUploadMb = 10;
+$maxUploadMb = 100;
 $maxUploadBytes = $maxUploadMb * 1024 * 1024;
+$allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'jpg', 'jpeg', 'png', 'zip', 'rar'];
 $approvalOptions = [
     'approved' => 'Đã duyệt',
     'reviewing' => 'Chờ rà soát',
     'need_update' => 'Cần bổ sung',
 ];
+
+function ensure_evidence_file_version_column(PDO $pdo): void
+{
+    static $checked = false;
+
+    if ($checked) {
+        return;
+    }
+
+    $column = $pdo->query("SHOW COLUMNS FROM evidence_files LIKE 'version_no'")->fetch();
+    if (!$column) {
+        $pdo->exec('ALTER TABLE evidence_files ADD COLUMN version_no INT NOT NULL DEFAULT 1 AFTER file_size');
+    }
+
+    $checked = true;
+}
+
+function store_evidence_file(PDO $pdo, int $evidenceId, string $code, array $file, int $userId, array $allowedExtensions, ?int $requestedVersion = null): int
+{
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($extension, $allowedExtensions, true)) {
+        throw new RuntimeException('Định dạng file chưa được hỗ trợ. Chỉ nhận PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, RTF, JPG, PNG, ZIP, RAR.');
+    }
+
+    ensure_evidence_file_version_column($pdo);
+
+    if ($requestedVersion !== null && $requestedVersion > 0) {
+        $versionNo = $requestedVersion;
+    } else {
+        $versionStmt = $pdo->prepare('SELECT COALESCE(MAX(version_no), 0) + 1 FROM evidence_files WHERE evidence_id = :evidence_id');
+        $versionStmt->execute(['evidence_id' => $evidenceId]);
+        $versionNo = (int) $versionStmt->fetchColumn();
+    }
+
+    $uploadDir = realpath(__DIR__ . '/../uploads/evidences');
+    if ($uploadDir === false) {
+        $uploadDir = __DIR__ . '/../uploads/evidences';
+        mkdir($uploadDir, 0777, true);
+    }
+
+    $safeCode = preg_replace('/[^A-Za-z0-9_\\-]/', '_', $code);
+    $storedName = $safeCode . '_v' . $versionNo . '_' . date('YmdHis') . '.' . $extension;
+    $targetPath = rtrim($uploadDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $storedName;
+
+    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+        throw new RuntimeException('Không thể lưu file upload vào thư mục hệ thống.');
+    }
+
+    $relativePath = 'uploads/evidences/' . $storedName;
+    $fileStmt = $pdo->prepare("
+        INSERT INTO evidence_files (evidence_id, original_name, stored_name, file_path, file_type, file_size, version_no, uploaded_by)
+        VALUES (:evidence_id, :original_name, :stored_name, :file_path, :file_type, :file_size, :version_no, :uploaded_by)
+    ");
+    $fileStmt->execute([
+        'evidence_id' => $evidenceId,
+        'original_name' => $file['name'],
+        'stored_name' => $storedName,
+        'file_path' => $relativePath,
+        'file_type' => strtoupper($extension),
+        'file_size' => (int) $file['size'],
+        'version_no' => $versionNo,
+        'uploaded_by' => $userId,
+    ]);
+
+    return $versionNo;
+}
+
+ensure_evidence_file_version_column($pdo);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_evidence_status') {
     $evidenceId = (int) ($_POST['id'] ?? 0);
@@ -99,19 +168,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     $issuedDate = trim($_POST['issued_date'] ?? '');
     $departmentId = (int) ($_POST['department_id'] ?? 0);
     $criteriaIds = array_map('intval', $_POST['criteria_ids'] ?? []);
+    $versionNo = (int) ($_POST['version_no'] ?? 0);
     $userId = $_SESSION['user_id'] ?? 1;
     $file = $_FILES['evidence_file'] ?? null;
     $extension = $file && !empty($file['name']) ? strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) : '';
-    $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'zip'];
 
     if ($evidenceId <= 0 || $code === '' || $title === '' || $academicYear === '' || $departmentId <= 0 || empty($criteriaIds)) {
         $error = 'Vui lòng nhập đầy đủ mã, tên, năm học, đơn vị và tiêu chí.';
+    } elseif ($versionNo <= 0) {
+        $error = 'Vui lòng nhập phiên bản minh chứng hợp lệ.';
     } elseif ($file && $file['error'] !== UPLOAD_ERR_NO_FILE && $file['error'] !== UPLOAD_ERR_OK) {
         $error = 'Upload file không thành công. Vui lòng thử lại.';
     } elseif ($file && $file['error'] === UPLOAD_ERR_OK && (int) $file['size'] > $maxUploadBytes) {
         $error = 'Không được upload file quá ' . $maxUploadMb . 'MB.';
     } elseif ($file && $file['error'] === UPLOAD_ERR_OK && !in_array($extension, $allowedExtensions, true)) {
-        $error = 'Định dạng file chưa được hỗ trợ. Chỉ nhận PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, ZIP.';
+        $error = 'Định dạng file chưa được hỗ trợ. Chỉ nhận PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, RTF, JPG, PNG, ZIP, RAR.';
     } else {
         try {
             $pdo->beginTransaction();
@@ -147,36 +218,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                 ]);
             }
 
+            $newVersion = null;
             if ($file && $file['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = realpath(__DIR__ . '/../uploads/evidences');
-                if ($uploadDir === false) {
-                    $uploadDir = __DIR__ . '/../uploads/evidences';
-                    mkdir($uploadDir, 0777, true);
-                }
-                $safeCode = preg_replace('/[^A-Za-z0-9_\\-]/', '_', $code);
-                $storedName = $safeCode . '_' . date('YmdHis') . '.' . $extension;
-                $targetPath = rtrim($uploadDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $storedName;
-                if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-                    throw new RuntimeException('Không thể lưu file upload vào thư mục hệ thống.');
-                }
-                $relativePath = 'uploads/evidences/' . $storedName;
-                $fileStmt = $pdo->prepare("
-                    INSERT INTO evidence_files (evidence_id, original_name, stored_name, file_path, file_type, file_size, uploaded_by)
-                    VALUES (:evidence_id, :original_name, :stored_name, :file_path, :file_type, :file_size, :uploaded_by)
-                ");
-                $fileStmt->execute([
+                $newVersion = store_evidence_file($pdo, $evidenceId, $code, $file, $userId, $allowedExtensions, $versionNo);
+            } else {
+                $latestFileStmt = $pdo->prepare('
+                    UPDATE evidence_files
+                    SET version_no = :version_no
+                    WHERE id = (
+                        SELECT latest_id FROM (
+                            SELECT id AS latest_id
+                            FROM evidence_files
+                            WHERE evidence_id = :evidence_id
+                            ORDER BY version_no DESC, uploaded_at DESC, id DESC
+                            LIMIT 1
+                        ) latest_file
+                    )
+                ');
+                $latestFileStmt->execute([
+                    'version_no' => $versionNo,
                     'evidence_id' => $evidenceId,
-                    'original_name' => $file['name'],
-                    'stored_name' => $storedName,
-                    'file_path' => $relativePath,
-                    'file_type' => strtoupper($extension),
-                    'file_size' => (int) $file['size'],
-                    'uploaded_by' => $userId,
                 ]);
             }
 
             $pdo->commit();
-            $success = 'Cập nhật minh chứng thành công.';
+            $success = $newVersion
+                ? 'Cập nhật minh chứng thành công. Tệp mới đã được lưu là phiên bản v' . $newVersion . '.'
+                : 'Cập nhật minh chứng thành công.';
         } catch (Throwable $exception) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -194,14 +262,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
     $issuedDate = trim($_POST['issued_date'] ?? '');
     $departmentId = (int) ($_POST['department_id'] ?? 0);
     $criteriaIds = array_map('intval', $_POST['criteria_ids'] ?? []);
+    $versionNo = (int) ($_POST['version_no'] ?? 1);
     $userId = $_SESSION['user_id'] ?? 1;
 
-    $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'zip'];
     $file = $_FILES['evidence_file'] ?? null;
     $extension = $file && !empty($file['name']) ? strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) : '';
 
     if ($code === '' || $title === '' || $academicYear === '' || $departmentId <= 0 || empty($criteriaIds)) {
         $error = 'Vui lòng nhập đầy đủ mã, tên, năm học, đơn vị và tiêu chí.';
+    } elseif ($versionNo <= 0) {
+        $error = 'Vui lòng nhập phiên bản minh chứng hợp lệ.';
     } elseif (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
         $error = 'Vui lòng chọn file minh chứng để upload.';
     } elseif ($file['error'] !== UPLOAD_ERR_OK) {
@@ -209,7 +279,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
     } elseif ((int) $file['size'] > $maxUploadBytes) {
         $error = 'Không được upload file quá ' . $maxUploadMb . 'MB.';
     } elseif (!in_array($extension, $allowedExtensions, true)) {
-        $error = 'Định dạng file chưa được hỗ trợ. Chỉ nhận PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, ZIP.';
+        $error = 'Định dạng file chưa được hỗ trợ. Chỉ nhận PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, RTF, JPG, PNG, ZIP, RAR.';
     } else {
         try {
             $pdo->beginTransaction();
@@ -253,49 +323,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
 
             $evidenceId = (int) $pdo->lastInsertId();
 
-            $uploadDir = realpath(__DIR__ . '/../uploads/evidences');
-            if ($uploadDir === false) {
-                $uploadDir = __DIR__ . '/../uploads/evidences';
-                mkdir($uploadDir, 0777, true);
-            }
-
-            $safeCode = preg_replace('/[^A-Za-z0-9_\\-]/', '_', $code);
-            $storedName = $safeCode . '_' . date('YmdHis') . '.' . $extension;
-            $targetPath = rtrim($uploadDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $storedName;
-
-            if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-                throw new RuntimeException('Không thể lưu file upload vào thư mục hệ thống.');
-            }
-
-            $relativePath = 'uploads/evidences/' . $storedName;
-            $fileStmt = $pdo->prepare("
-                INSERT INTO evidence_files (
-                    evidence_id,
-                    original_name,
-                    stored_name,
-                    file_path,
-                    file_type,
-                    file_size,
-                    uploaded_by
-                ) VALUES (
-                    :evidence_id,
-                    :original_name,
-                    :stored_name,
-                    :file_path,
-                    :file_type,
-                    :file_size,
-                    :uploaded_by
-                )
-            ");
-            $fileStmt->execute([
-                'evidence_id' => $evidenceId,
-                'original_name' => $file['name'],
-                'stored_name' => $storedName,
-                'file_path' => $relativePath,
-                'file_type' => strtoupper($extension),
-                'file_size' => (int) $file['size'],
-                'uploaded_by' => $userId,
-            ]);
+            store_evidence_file($pdo, $evidenceId, $code, $file, $userId, $allowedExtensions, $versionNo);
 
             $linkStmt = $pdo->prepare('INSERT INTO evidence_criteria (evidence_id, criteria_id) VALUES (:evidence_id, :criteria_id)');
             foreach (array_unique($criteriaIds) as $criteriaId) {
@@ -330,9 +358,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
 require_once __DIR__ . '/../includes/data.php';
 
 $departments = $pdo->query('SELECT id, name FROM departments ORDER BY name')->fetchAll();
-$editId = (int) ($_GET['edit'] ?? 0);
+$isCreatingEvidence = isset($_GET['create']);
+$editId = $isCreatingEvidence ? 0 : (int) ($_GET['edit'] ?? 0);
 $editingEvidence = null;
 $editingCriteriaIds = [];
+$editingLatestFile = null;
+$editingVersionNo = 1;
 if ($editId > 0) {
     $stmt = $pdo->prepare('SELECT * FROM evidences WHERE id = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
@@ -341,10 +372,22 @@ if ($editId > 0) {
     $stmt = $pdo->prepare('SELECT criteria_id FROM evidence_criteria WHERE evidence_id = :id');
     $stmt->execute(['id' => $editId]);
     $editingCriteriaIds = array_map('intval', array_column($stmt->fetchAll(), 'criteria_id'));
+
+    $stmt = $pdo->prepare('
+        SELECT id, original_name, file_type, file_size, version_no, uploaded_at
+        FROM evidence_files
+        WHERE evidence_id = :id
+        ORDER BY version_no DESC, uploaded_at DESC, id DESC
+        LIMIT 1
+    ');
+    $stmt->execute(['id' => $editId]);
+    $editingLatestFile = $stmt->fetch();
+    $editingVersionNo = (int) ($editingLatestFile['version_no'] ?? 1);
 }
 
 $searchKeyword = trim($_GET['q'] ?? '');
 $selectedYear = trim($_GET['year'] ?? '');
+$selectedStandard = trim($_GET['standard'] ?? '');
 $selectedDepartmentId = (int) ($_GET['department_id'] ?? 0);
 $selectedStatus = trim($_GET['status'] ?? '');
 $selectedDepartmentName = '';
@@ -359,11 +402,12 @@ $evidenceYears = array_values(array_unique(array_filter(array_column($evidences,
 sort($evidenceYears);
 $evidenceStatuses = array_values(array_unique(array_filter(array_column($evidences, 'status'))));
 
-$filteredEvidences = array_values(array_filter($evidences, function ($item) use ($searchKeyword, $selectedYear, $selectedDepartmentName, $selectedStatus) {
+$filteredEvidences = array_values(array_filter($evidences, function ($item) use ($searchKeyword, $selectedYear, $selectedStandard, $selectedDepartmentName, $selectedStatus) {
     $haystack = implode(' ', [
         $item['code'] ?? '',
         $item['name'] ?? '',
         $item['criteria'] ?? '',
+        $item['standards'] ?? '',
         $item['year'] ?? '',
         $item['department'] ?? '',
         $item['type'] ?? '',
@@ -375,6 +419,10 @@ $filteredEvidences = array_values(array_filter($evidences, function ($item) use 
     }
 
     if ($selectedYear !== '' && ($item['year'] ?? '') !== $selectedYear) {
+        return false;
+    }
+
+    if ($selectedStandard !== '' && !search_contains($item['standards'] ?? '', $selectedStandard)) {
         return false;
     }
 
@@ -392,6 +440,7 @@ $pageTitle = page_title('Quản lý minh chứng');
 $heading = 'Quản lý hồ sơ minh chứng';
 include __DIR__ . '/../includes/header.php';
 ?>
+<?php if ($editingEvidence || $isCreatingEvidence): ?><script>document.body.dataset.autoOpenModal = 'evidenceFormModal';</script><?php endif; ?>
 <div class="panel mb-4">
     <form class="row g-3 align-items-end" method="get">
         <div class="col-md-3">
@@ -407,8 +456,17 @@ include __DIR__ . '/../includes/header.php';
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="col-md-3">
-            <label class="form-label">Đơn vị cung cấp</label>
+        <div class="col-md-2">
+            <label class="form-label">Tiêu chuẩn</label>
+            <select class="form-select" name="standard">
+                <option value="">Tất cả</option>
+                <?php foreach ($standards as $standard): ?>
+                    <option value="<?= htmlspecialchars($standard['code']) ?>" <?= $selectedStandard === $standard['code'] ? 'selected' : '' ?>><?= htmlspecialchars($standard['code']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Đơn vị phụ trách</label>
             <select class="form-select" name="department_id">
                 <option value="">Tất cả đơn vị</option>
                 <?php foreach ($departments as $department): ?>
@@ -425,7 +483,7 @@ include __DIR__ . '/../includes/header.php';
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-1">
             <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search me-1"></i> Tìm</button>
         </div>
     </form>
@@ -440,22 +498,66 @@ include __DIR__ . '/../includes/header.php';
 <?php endif; ?>
 
 <div class="row g-4 evidences-layout">
-    <div class="col-xl-8">
+    <div class="col-12">
         <div class="panel evidences-list-panel">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 class="h5 mb-0">Danh mục minh chứng</h2>
-                <a class="btn btn-primary" href="#evidence-form"><i class="bi bi-cloud-arrow-up me-1"></i> Upload minh chứng</a>
+                <a class="btn btn-primary" href="<?= base_url('admin/evidences.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm mới</a>
             </div>
             <div class="text-secondary mb-3"><?= count($filteredEvidences) ?> minh chứng phù hợp</div>
             <div class="table-responsive">
-                <table class="table" data-page-size="10" data-row-height="62">
+                <table class="table" data-page-size="10" data-row-height="62" data-column-filters>
                     <thead>
                     <tr>
-                        <th>Mã</th>
-                        <th>Tên minh chứng</th>
-                        <th>Tiêu chí</th>
-                        <th>Năm học</th>
-                        <th>File</th>
+                        <th>
+                            <span class="column-filter-head">
+                                <span>Mã</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc mã"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="0" placeholder="Lọc mã"></span>
+                            </span>
+                        </th>
+                        <th>
+                            <span class="column-filter-head">
+                                <span>Tên minh chứng</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc tên"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="1" placeholder="Lọc tên"></span>
+                            </span>
+                        </th>
+                        <th>
+                            <span class="column-filter-head">
+                                <span>Tiêu chuẩn</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc tiêu chuẩn"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="2" placeholder="Lọc TC"></span>
+                            </span>
+                        </th>
+                        <th>
+                            <span class="column-filter-head">
+                                <span>Tiêu chí</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc tiêu chí"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="3" placeholder="Lọc tiêu chí"></span>
+                            </span>
+                        </th>
+                        <th>
+                            <span class="column-filter-head">
+                                <span>Năm học</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc năm học"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="4" placeholder="Lọc năm"></span>
+                            </span>
+                        </th>
+                        <th>
+                            <span class="column-filter-head">
+                                <span>File</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc file"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="5" placeholder="Lọc file"></span>
+                            </span>
+                        </th>
+                        <th>
+                            <span class="column-filter-head">
+                                <span>Phiên bản</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc phiên bản"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="6" placeholder="Lọc v"></span>
+                            </span>
+                        </th>
                         <th>Trạng thái</th>
                         <th class="text-end">Thao tác</th>
                     </tr>
@@ -468,9 +570,11 @@ include __DIR__ . '/../includes/header.php';
                                 <div class="evidence-title"><?= htmlspecialchars($item['name']) ?></div>
                                 <div class="evidence-owner small text-secondary"><?= htmlspecialchars($item['department']) ?></div>
                             </td>
+                            <td><?= htmlspecialchars($item['standards'] ?? 'Chưa gắn') ?></td>
                             <td><?= htmlspecialchars($item['criteria']) ?></td>
                             <td><?= htmlspecialchars($item['year']) ?></td>
                             <td><span class="badge text-bg-light text-dark"><?= htmlspecialchars($item['type']) ?></span></td>
+                            <td><span class="badge text-bg-light text-dark">v<?= (int) ($item['version'] ?? 1) ?></span></td>
                             <td>
                                 <form method="post" class="status-update-form">
                                     <input type="hidden" name="action" value="update_evidence_status">
@@ -491,7 +595,7 @@ include __DIR__ . '/../includes/header.php';
                                     <?php else: ?>
                                         <button class="btn btn-sm btn-outline-secondary" type="button" disabled><i class="bi bi-eye"></i></button>
                                     <?php endif; ?>
-                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $item['id'] ?>#evidence-form"><i class="bi bi-pencil"></i></a>
+                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $item['id'] ?>"><i class="bi bi-pencil"></i></a>
                                     <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa minh chứng này?">
                                         <input type="hidden" name="action" value="delete_evidence">
                                         <input type="hidden" name="id" value="<?= $item['id'] ?>">
@@ -501,9 +605,12 @@ include __DIR__ . '/../includes/header.php';
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    <tr class="column-filter-empty-row" hidden>
+                        <td colspan="9" class="text-center text-secondary">Không tìm thấy minh chứng phù hợp với bộ lọc.</td>
+                    </tr>
                     <?php if (!$filteredEvidences): ?>
                         <tr>
-                            <td colspan="7" class="text-center text-secondary">Không tìm thấy minh chứng phù hợp.</td>
+                            <td colspan="9" class="text-center text-secondary">Không tìm thấy minh chứng phù hợp.</td>
                         </tr>
                     <?php endif; ?>
                     </tbody>
@@ -511,10 +618,16 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
     </div>
+</div>
 
-    <div class="col-xl-4">
-        <div class="panel evidence-form-panel" id="evidence-form">
-            <h2 class="h5 mb-3"><?= $editingEvidence ? 'Sửa minh chứng' : 'Thông tin minh chứng' ?></h2>
+<div class="modal fade management-form-modal" id="evidenceFormModal" tabindex="-1" aria-labelledby="evidenceFormModalLabel" aria-hidden="true" <?= ($editingEvidence || $isCreatingEvidence) ? 'data-auto-open-modal' : '' ?>>
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="evidenceFormModalLabel"><?= $editingEvidence ? 'Sửa minh chứng' : 'Thêm mới minh chứng' ?></h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
             <form method="post" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="<?= $editingEvidence ? 'update_evidence' : 'create_evidence' ?>">
                 <input type="hidden" name="id" value="<?= (int) ($editingEvidence['id'] ?? 0) ?>">
@@ -532,17 +645,21 @@ include __DIR__ . '/../includes/header.php';
                     <textarea class="form-control" name="description" rows="2"><?= htmlspecialchars($editingEvidence['description'] ?? '') ?></textarea>
                 </div>
                 <div class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">Năm học</label>
                         <input class="form-control" name="academic_year" value="<?= htmlspecialchars($editingEvidence['academic_year'] ?? '') ?>" placeholder="2025-2026" required>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">Ngày ban hành</label>
                         <input class="form-control" name="issued_date" value="<?= htmlspecialchars($editingEvidence['issued_date'] ?? '') ?>" type="date">
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Phiên bản</label>
+                        <input class="form-control" name="version_no" value="<?= (int) ($editingEvidence ? $editingVersionNo : 1) ?>" type="number" min="1" step="1" required>
+                    </div>
                 </div>
                 <div class="mb-3 mt-3">
-                    <label class="form-label">Đơn vị cung cấp</label>
+                    <label class="form-label">Đơn vị phụ trách</label>
                     <select class="form-select" name="department_id" required>
                         <option value="">Chọn đơn vị</option>
                         <?php foreach ($departments as $department): ?>
@@ -552,7 +669,8 @@ include __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Gắn tiêu chí</label>
-                    <select class="form-select" name="criteria_ids[]" multiple size="5" required>
+                    <input class="form-control form-control-sm mb-2" type="search" data-criteria-search placeholder="Nhập mã hoặc tên tiêu chí">
+                    <select class="form-select" name="criteria_ids[]" multiple size="5" required data-criteria-select>
                         <?php foreach ($criteria as $item): ?>
                             <option value="<?= $item['id'] ?>" <?= in_array((int) $item['id'], $editingCriteriaIds, true) ? 'selected' : '' ?>><?= htmlspecialchars($item['code'] . ' - ' . $item['name']) ?></option>
                         <?php endforeach; ?>
@@ -561,17 +679,25 @@ include __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="mb-3">
                     <label class="form-label">File đính kèm</label>
-                    <input class="form-control" id="evidenceFile" name="evidence_file" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip" data-max-mb="<?= $maxUploadMb ?>" <?= $editingEvidence ? '' : 'required' ?>>
-                    <div class="form-text">Dung lượng tối đa: <?= $maxUploadMb ?>MB.</div>
+                    <input class="form-control" id="evidenceFile" name="evidence_file" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.jpg,.jpeg,.png,.zip,.rar" data-max-mb="<?= $maxUploadMb ?>" <?= $editingEvidence ? '' : 'required' ?>>
+                    <?php if ($editingLatestFile): ?>
+                        <div class="small text-secondary mt-2">
+                            Phiên bản hiện tại: v<?= (int) $editingLatestFile['version_no'] ?> · <?= htmlspecialchars($editingLatestFile['original_name']) ?> · <?= htmlspecialchars($editingLatestFile['file_type']) ?>
+                        </div>
+                    <?php endif; ?>
+                    <div class="form-text"><?= $editingEvidence ? 'Chọn tệp mới nếu cần cập nhật phiên bản minh chứng. ' : '' ?>Dung lượng tối đa: <?= $maxUploadMb ?>MB.</div>
                     <div class="alert alert-danger mt-2 d-none" id="fileSizeAlert">
                         Không được upload file quá <?= $maxUploadMb ?>MB.
                     </div>
                 </div>
-                <button class="btn btn-primary w-100" type="submit">
-                    <i class="bi bi-save me-1"></i> Lưu minh chứng
-                </button>
-                <?php if ($editingEvidence): ?><a class="btn btn-outline-secondary w-100 mt-2" href="<?= base_url('admin/evidences.php') ?>">Hủy sửa</a><?php endif; ?>
+                <div class="d-flex gap-2 justify-content-end">
+                    <?php if ($editingEvidence): ?><a class="btn btn-outline-secondary" href="<?= base_url('admin/evidences.php') ?>">Hủy sửa</a><?php else: ?><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Hủy</button><?php endif; ?>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-save me-1"></i> Lưu minh chứng
+                    </button>
+                </div>
             </form>
+            </div>
         </div>
     </div>
 </div>

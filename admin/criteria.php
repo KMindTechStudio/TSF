@@ -84,7 +84,8 @@ require_once __DIR__ . '/../includes/data.php';
 
 $departments = $pdo->query('SELECT id, name FROM departments ORDER BY name')->fetchAll();
 $standardRows = $pdo->query('SELECT id, code, name FROM standards ORDER BY display_order, id')->fetchAll();
-$editId = (int) ($_GET['edit'] ?? 0);
+$isCreatingCriterion = isset($_GET['create']);
+$editId = $isCreatingCriterion ? 0 : (int) ($_GET['edit'] ?? 0);
 $editingCriterion = null;
 if ($editId > 0) {
     $stmt = $pdo->prepare('SELECT * FROM criteria WHERE id = :id LIMIT 1');
@@ -96,6 +97,7 @@ $pageTitle = page_title('Quản lý tiêu chí');
 $heading = 'Quản lý tiêu chí đánh giá';
 include __DIR__ . '/../includes/header.php';
 ?>
+<?php if ($editingCriterion || $isCreatingCriterion): ?><script>document.body.dataset.autoOpenModal = 'criterionFormModal';</script><?php endif; ?>
 <?php if ($success): ?><div class="alert alert-success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
@@ -109,8 +111,12 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="row g-4 criteria-layout">
-    <div class="col-xl-8">
+    <div class="col-12">
         <div class="panel criteria-list-panel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Danh sách tiêu chí</h2>
+                <a class="btn btn-primary" href="<?= base_url('admin/criteria.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm mới</a>
+            </div>
             <div class="table-responsive">
                 <table class="table" data-page-size="10">
                     <thead><tr><th>Mã</th><th>Tiêu chí</th><th>Tiêu chuẩn</th><th>Đơn vị phụ trách</th><th>Minh chứng</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
@@ -146,9 +152,16 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
     </div>
-    <div class="col-xl-4">
-        <div class="panel criterion-form-panel">
-            <h2 class="h5 mb-3"><?= $editingCriterion ? 'Sửa tiêu chí' : 'Thêm tiêu chí' ?></h2>
+</div>
+
+<div class="modal fade management-form-modal" id="criterionFormModal" tabindex="-1" aria-labelledby="criterionFormModalLabel" aria-hidden="true" <?= ($editingCriterion || $isCreatingCriterion) ? 'data-auto-open-modal' : '' ?>>
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="criterionFormModalLabel"><?= $editingCriterion ? 'Sửa tiêu chí' : 'Thêm tiêu chí' ?></h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
             <form method="post">
                 <input type="hidden" name="action" value="save_criterion">
                 <input type="hidden" name="id" value="<?= (int) ($editingCriterion['id'] ?? 0) ?>">
@@ -158,9 +171,12 @@ include __DIR__ . '/../includes/header.php';
                 <div class="mb-3"><label class="form-label">Trạng thái</label><select class="form-select" name="evidence_status"><?php foreach (['complete' => 'Đủ minh chứng', 'need_update' => 'Cần bổ sung', 'missing' => 'Thiếu minh chứng'] as $value => $label): ?><option value="<?= $value ?>" <?= ($editingCriterion['evidence_status'] ?? 'missing') === $value ? 'selected' : '' ?>><?= $label ?></option><?php endforeach; ?></select></div>
                 <div class="mb-3"><label class="form-label">Nội dung tiêu chí</label><textarea class="form-control" name="name" rows="3" required><?= htmlspecialchars($editingCriterion['name'] ?? '') ?></textarea></div>
                 <div class="mb-3"><label class="form-label">Mô tả</label><textarea class="form-control" name="description" rows="3"><?= htmlspecialchars($editingCriterion['description'] ?? '') ?></textarea></div>
-                <button class="btn btn-primary w-100" type="submit"><i class="bi bi-save me-1"></i> Lưu tiêu chí</button>
-                <?php if ($editingCriterion): ?><a class="btn btn-outline-secondary w-100 mt-2" href="<?= base_url('admin/criteria.php') ?>">Hủy sửa</a><?php endif; ?>
+                <div class="d-flex gap-2 justify-content-end">
+                    <?php if ($editingCriterion): ?><a class="btn btn-outline-secondary" href="<?= base_url('admin/criteria.php') ?>">Hủy sửa</a><?php else: ?><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Hủy</button><?php endif; ?>
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Lưu tiêu chí</button>
+                </div>
             </form>
+            </div>
         </div>
     </div>
 </div>

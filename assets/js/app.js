@@ -1,4 +1,4 @@
-﻿const themeToggles = document.querySelectorAll('[data-theme-toggle]');
+const themeToggles = document.querySelectorAll('[data-theme-toggle]');
 const sidebarToggles = document.querySelectorAll('[data-sidebar-toggle]');
 const appShell = document.querySelector('.app-shell');
 const mobileSidebarQuery = window.matchMedia('(max-width: 640px)');
@@ -113,7 +113,7 @@ function getStatusTone(value) {
         return 'warning';
     }
 
-    if (['missing', 'locked', 'inactive_set', 'danger'].includes(value)) {
+    if (['missing', 'locked', 'inactive', 'inactive_set', 'danger'].includes(value)) {
         return 'danger';
     }
 
@@ -169,19 +169,27 @@ function enhanceStatusSelect(select) {
 
     const render = () => {
         const selectedOption = select.options[select.selectedIndex] || select.options[0];
+        if (selectedOption && !selectedOption.dataset.originalText) {
+            selectedOption.dataset.originalText = selectedOption.textContent;
+        }
+        const selectedText = selectedOption?.dataset?.originalText || selectedOption?.textContent || '';
         const activeLanguage = document.documentElement.dataset.language || localStorage.getItem('kiemdinh-language') || 'vi';
         syncToggleTone();
-        toggle.innerHTML = `<span>${translatePhrase(selectedOption?.textContent || '', activeLanguage)}</span><i class="bi bi-chevron-down"></i>`;
+        toggle.innerHTML = `<span>${translatePhrase(selectedText, activeLanguage)}</span><i class="bi bi-chevron-down"></i>`;
         menu.innerHTML = '';
 
         Array.from(select.options).forEach((option) => {
+            if (!option.dataset.originalText) {
+                option.dataset.originalText = option.textContent;
+            }
+            const rawText = option.dataset.originalText;
             const tone = getStatusTone(option.value);
             const item = document.createElement('button');
             item.type = 'button';
             item.className = `status-dropdown-option status-dropdown-option-${tone} status-dropdown-option-${option.value}`;
             item.setAttribute('role', 'option');
             item.setAttribute('aria-selected', option.selected ? 'true' : 'false');
-            item.innerHTML = `<span>${translatePhrase(option.textContent, activeLanguage)}</span><i class="bi bi-check-lg"></i>`;
+            item.innerHTML = `<span>${translatePhrase(rawText, activeLanguage)}</span><i class="bi bi-check-lg"></i>`;
             item.classList.toggle('active', option.selected);
 
             item.addEventListener('click', () => {
@@ -309,8 +317,10 @@ function initTablePagination() {
         const render = () => {
             tbody.querySelectorAll('.pagination-filler-row').forEach((row) => row.remove());
 
+            const activeRows = rows.filter((row) => row.dataset.filteredOut !== 'true' && !row.classList.contains('column-filter-empty-row'));
+            const emptyFilterRow = rows.find((row) => row.classList.contains('column-filter-empty-row'));
             const pageSize = getPageSize();
-            const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+            const totalPages = Math.max(1, Math.ceil(activeRows.length / pageSize));
             currentPage = Math.min(currentPage, totalPages);
             const startIndex = (currentPage - 1) * pageSize;
             const endIndex = startIndex + pageSize;
@@ -321,14 +331,22 @@ function initTablePagination() {
 
             tableWrapper.style.minHeight = `${headerHeight + (pageSize * stableRowHeight)}px`;
 
-            rows.forEach((row, index) => {
+            rows.forEach((row) => {
+                row.hidden = true;
+            });
+
+            activeRows.forEach((row, index) => {
                 row.hidden = index < startIndex || index >= endIndex;
                 if (!row.hidden) {
                     visibleRows += 1;
                 }
             });
 
-            if (totalPages > 1 && visibleRows < pageSize) {
+            if (emptyFilterRow) {
+                emptyFilterRow.hidden = activeRows.length > 0;
+            }
+
+            if (activeRows.length > 0 && totalPages > 1 && visibleRows < pageSize) {
                 const columnCount = Math.max(1, table.tHead?.rows[0]?.cells.length || rows[0]?.cells.length || 1);
                 const fillersNeeded = pageSize - visibleRows;
 
@@ -385,7 +403,9 @@ function initTablePagination() {
 
             const info = document.createElement('span');
             info.className = 'table-pagination-info';
-            info.textContent = `${translatePhrase('Trang', activeLanguage)} ${currentPage}/${totalPages}`;
+            info.textContent = activeLanguage === 'en'
+                ? `Page ${currentPage}/${totalPages}`
+                : `Trang ${currentPage}/${totalPages}`;
             pagination.appendChild(info);
         };
 
@@ -445,134 +465,11 @@ const languageButtons = document.querySelectorAll('[data-language-option]');
 const languageToggle = document.querySelector('[data-language-toggle]');
 const languagePanel = document.querySelector('[data-language-panel]');
 const translations = {
-    en: {
-        'CSDL minh chá»©ng': 'Evidence Database',
-        'CSDL minh chá»©ng kiá»ƒm Ä‘á»‹nh': 'Accreditation Evidence DB',
-        'Minh chá»©ng kiá»ƒm Ä‘á»‹nh': 'Accreditation Evidence',
-        'MINH CHá»¨NG KIá»‚M Äá»ŠNH': 'ACCREDITATION EVIDENCE',
-        'CTÄT ngÃ nh CNTT - FBU': 'IT Program - FBU',
-        'Há»‡ thá»‘ng CSDL minh chá»©ng kiá»ƒm Ä‘á»‹nh': 'Accreditation Evidence Database System',
-        'Há»‡ thá»‘ng CSDL minh chá»©ng kiá»ƒm Ä‘á»‹nh cháº¥t lÆ°á»£ng CTÄT ngÃ nh CNTT': 'IT Program Quality Accreditation Evidence Database System',
-        'Copyright 2026 TrÆ°á»ng Äáº¡i há»c TÃ i chÃ­nh NgÃ¢n hÃ ng HÃ  Ná»™i - Viá»‡n CÃ´ng nghá»‡ thÃ´ng tin': 'Copyright 2026 Hanoi Financial and Banking University - Institute of Information Technology',
-        'Kiá»ƒm Ä‘á»‹nh CTÄT CNTT': 'IT Program Accreditation',
-        'TrÆ°á»ng Äáº¡i há»c TÃ i chÃ­nh - NgÃ¢n hÃ ng HÃ  Ná»™i': 'Hanoi Financial and Banking University',
-        'Tá»•ng quan cÆ¡ sá»Ÿ dá»¯ liá»‡u minh chá»©ng': 'Evidence Database Overview',
-        'Quáº£n trá»‹ há»‡ thá»‘ng': 'System Administration',
-        'Tá»•ng quan': 'Overview',
-        'Quáº£n lÃ½ tiÃªu chuáº©n': 'Manage Standards',
-        'Quáº£n lÃ½ tiÃªu chÃ­': 'Manage Criteria',
-        'Quáº£n lÃ½ minh chá»©ng': 'Manage Evidence',
-        'Quáº£n lÃ½ tÃ i khoáº£n': 'Manage Accounts',
-        'Thá»‘ng kÃª': 'Reports',
-        'Khai thÃ¡c dá»¯ liá»‡u': 'Data Access',
-        'Tra cá»©u minh chá»©ng': 'Search Evidence',
-        'Tra cá»©u vÃ  khai thÃ¡c minh chá»©ng': 'Search and Access Evidence',
-        'ThÃ´ng tin cÃ¡ nhÃ¢n': 'Profile',
-        'Äá»•i máº­t kháº©u': 'Change Password',
-        'ÄÄƒng xuáº¥t': 'Sign Out',
-        'CÃ i Ä‘áº·t há»‡ thá»‘ng': 'System Settings',
-        'Tuá»³ chá»‰nh nhanh giao diá»‡n vÃ  thÃ´ng tin váº­n hÃ nh.': 'Quickly customize the interface and operating information.',
-        'Giao diá»‡n': 'Interface',
-        'Cháº¿ Ä‘á»™ mÃ u': 'Color Mode',
-        'Äá»•i sÃ¡ng/tá»‘i': 'Toggle Light/Dark',
-        'Sidebar': 'Sidebar',
-        'áº¨n/hiá»‡n': 'Hide/Show',
-        'Hiá»ƒn thá»‹ báº£ng': 'Table Display',
-        'Cá»¡ chá»¯ dá»¯ liá»‡u': 'Data Font Size',
-        'Nhá»': 'Small',
-        'Vá»«a': 'Medium',
-        'Lá»›n': 'Large',
-        'Báº£ng gá»n hÆ¡n': 'Compact Table',
-        'ThÃ´ng tin há»‡ thá»‘ng': 'System Information',
-        'TrÆ°á»ng': 'School',
-        'ChÆ°Æ¡ng trÃ¬nh': 'Program',
-        'MÃ£ ngÃ nh': 'Program Code',
-        'Chu ká»³ kiá»ƒm Ä‘á»‹nh': 'Accreditation Cycle',
-        'Giá»›i háº¡n upload': 'Upload Limit',
-        '10MB/tá»‡p minh chá»©ng': '10MB/evidence file',
-        'NgÃ´n ngá»¯': 'Language',
-        'Chá»n ngÃ´n ngá»¯ hiá»ƒn thá»‹ há»‡ thá»‘ng.': 'Choose the system display language.',
-        'Tiáº¿ng Viá»‡t': 'Vietnamese',
-        'NgÃ´n ngá»¯ máº·c Ä‘á»‹nh': 'Default language',
-        'Privacy & Policy': 'Privacy & Policy',
-        'Quy Ä‘á»‹nh báº£o máº­t vÃ  khai thÃ¡c dá»¯ liá»‡u minh chá»©ng.': 'Privacy and evidence data usage policy.',
-        'Báº£o máº­t dá»¯ liá»‡u': 'Data Privacy',
-        'Minh chá»©ng chá»‰ phá»¥c vá»¥ kiá»ƒm Ä‘á»‹nh cháº¥t lÆ°á»£ng chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o, khÃ´ng chia sáº» ra ngoÃ i pháº¡m vi Ä‘Æ°á»£c phÃ¢n quyá»n.': 'Evidence is used only for program accreditation and is not shared outside the authorized scope.',
-        'Quyá»n truy cáº­p': 'Access Rights',
-        'Quáº£n trá»‹ viÃªn quáº£n lÃ½ toÃ n há»‡ thá»‘ng; ngÆ°á»i dÃ¹ng chá»‰ Ä‘Æ°á»£c Ä‘Äƒng nháº­p, tÃ¬m kiáº¿m vÃ  táº£i vá» minh chá»©ng Ä‘Æ°á»£c phÃ©p.': 'Administrators manage the whole system; users may only sign in, search, and download permitted evidence.',
-        'Ghi nháº­n lÆ°á»£t táº£i': 'Download Logging',
-        'Má»—i lÆ°á»£t táº£i minh chá»©ng Ä‘Æ°á»£c há»‡ thá»‘ng ghi nháº­n gá»“m ngÆ°á»i táº£i, thá»i gian, tá»‡p táº£i vÃ  Ä‘á»‹a chá»‰ truy cáº­p Ä‘á»ƒ phá»¥c vá»¥ truy váº¿t.': 'Each evidence download is logged with downloader, time, file, and access address for traceability.',
-        'Quy Ä‘á»‹nh upload': 'Upload Rules',
-        'Tá»‡p upload pháº£i Ä‘Ãºng Ä‘á»‹nh dáº¡ng, Ä‘Ãºng tiÃªu chÃ­, Ä‘Ãºng nguá»“n cung cáº¥p vÃ  khÃ´ng vÆ°á»£t quÃ¡ giá»›i háº¡n dung lÆ°á»£ng cá»§a há»‡ thá»‘ng.': 'Uploaded files must match the format, criterion, source, and system size limit.',
-        'Má»i tháº¯c máº¯c vá» dá»¯ liá»‡u minh chá»©ng liÃªn há»‡ Khoa CÃ´ng nghá»‡ thÃ´ng tin hoáº·c bá»™ pháº­n Ä‘áº£m báº£o cháº¥t lÆ°á»£ng.': 'For questions about evidence data, contact the IT Faculty or quality assurance unit.',
-        'ÄÃ£ hiá»ƒu': 'Got It',
-        'XÃ¡c nháº­n thao tÃ¡c': 'Confirm Action',
-        'Báº¡n cháº¯c cháº¯n muá»‘n thá»±c hiá»‡n thao tÃ¡c nÃ y?': 'Are you sure you want to perform this action?',
-        'Há»§y': 'Cancel',
-        'Äá»“ng Ã½': 'Confirm',
-        'Báº¡n cÃ³ cháº¯c muá»‘n Ä‘Äƒng xuáº¥t?': 'Are you sure you want to sign out?',
-        'PhiÃªn lÃ m viá»‡c hiá»‡n táº¡i sáº½ Ä‘Æ°á»£c káº¿t thÃºc.': 'Your current session will be ended.',
-        'á»ž láº¡i': 'Stay',
-        'Tá»« khÃ³a': 'Keyword',
-        'TiÃªu chuáº©n': 'Standard',
-        'TiÃªu chÃ­': 'Criteria',
-        'Minh chá»©ng': 'Evidence',
-        'Tá»· lá»‡ Ä‘Ã¡p á»©ng': 'Compliance Rate',
-        'Bá»™ tiÃªu chuáº©n Ä‘ang Ã¡p dá»¥ng': 'Active standard set',
-        'ÄÃ£ phÃ¢n cÃ´ng Ä‘Æ¡n vá»‹ phá»¥ trÃ¡ch': 'Assigned to responsible units',
-        'Tá»‡p Ä‘Ã£ Ä‘Æ°á»£c Ä‘Æ°a vÃ o há»‡ thá»‘ng': 'Files added to the system',
-        'Theo tiÃªu chÃ­ Ä‘á»§ minh chá»©ng': 'Based on criteria with sufficient evidence',
-        'TÃ¬nh tráº¡ng theo tiÃªu chuáº©n': 'Status by Standard',
-        'Theo dÃµi má»©c Ä‘á»™ Ä‘áº§y Ä‘á»§ cá»§a há»“ sÆ¡ minh chá»©ng.': 'Track the completeness level of evidence records.',
-        'Xem thá»‘ng kÃª': 'View Reports',
-        'TÃªn tiÃªu chuáº©n': 'Standard Name',
-        'Nháº­t kÃ½ gáº§n Ä‘Ã¢y': 'Recent Activity',
-        'Äá»§ minh chá»©ng': 'Sufficient Evidence',
-        'Cáº§n bá»• sung': 'Needs Supplement',
-        'Thiáº¿u minh chá»©ng': 'Missing Evidence',
-        'ÄÃ£ duyá»‡t': 'Approved',
-        'Chá» rÃ  soÃ¡t': 'Under Review',
-        'Hoáº¡t Ä‘á»™ng': 'Active',
-        'Táº¡m khÃ³a': 'Locked',
-        'Äang Ã¡p dá»¥ng': 'Active',
-        'Má»¥c tiÃªu vÃ  chuáº©n Ä‘áº§u ra cá»§a chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o': 'Program Objectives and Learning Outcomes',
-        'Báº£n mÃ´ táº£ chÆ°Æ¡ng trÃ¬nh Ä‘Ã o táº¡o': 'Program Specification',
-        'Cáº¥u trÃºc vÃ  ná»™i dung chÆ°Æ¡ng trÃ¬nh dáº¡y há»c': 'Curriculum Structure and Content',
-        'PhÆ°Æ¡ng phÃ¡p tiáº¿p cáº­n trong dáº¡y vÃ  há»c': 'Teaching and Learning Approach',
-        'ÄÃ¡nh giÃ¡ káº¿t quáº£ há»c táº­p cá»§a ngÆ°á»i há»c': 'Learner Assessment',
-        'NÄƒm há»c': 'Academic Year',
-        'Loáº¡i file': 'File Type',
-        'Táº¥t cáº£': 'All',
-        'TÃ¬m kiáº¿m': 'Search',
-        'Káº¿t quáº£ tra cá»©u': 'Search Results',
-        'MÃ£': 'Code',
-        'TÃªn minh chá»©ng': 'Evidence Name',
-        'TiÃªu chÃ­ liÃªn quan': 'Related Criteria',
-        'ÄÆ¡n vá»‹': 'Department',
-        'Tráº¡ng thÃ¡i': 'Status',
-        'Thao tÃ¡c': 'Actions',
-        'KhÃ´ng tÃ¬m tháº¥y minh chá»©ng phÃ¹ há»£p. Vui lÃ²ng thá»­ tá»« khÃ³a hoáº·c bá»™ lá»c khÃ¡c.': 'No matching evidence found. Please try another keyword or filter.',
-        'minh chá»©ng phÃ¹ há»£p': 'matching evidence',
-        'Äá»‹nh dáº¡ng': 'Format',
-        'cáº­p nháº­t': 'updated',
-        'KhÃ´ng thá»ƒ táº£i minh chá»©ng. Vui lÃ²ng kiá»ƒm tra láº¡i tá»‡p Ä‘Ã­nh kÃ¨m trong há»‡ thá»‘ng.': 'Unable to download evidence. Please check the attached file in the system.',
-        'Danh má»¥c minh chá»©ng': 'Evidence List',
-        'Upload minh chá»©ng': 'Upload Evidence',
-        'ThÃ´ng tin minh chá»©ng': 'Evidence Information',
-        'LÆ°u minh chá»©ng': 'Save Evidence',
-        'TÃ¬m': 'Search',
-        'Quáº£n trá»‹ viÃªn': 'Administrator',
-        'NgÆ°á»i dÃ¹ng tra cá»©u': 'Search User'
-    }
+    en: {}
 };
 
 const placeholderTranslations = {
-    en: {
-        'TÃ¬m mÃ£ minh chá»©ng, tiÃªu chÃ­...': 'Search evidence code, criteria...',
-        'MÃ£ minh chá»©ng, tÃªn minh chá»©ng': 'Evidence code, evidence name',
-        'VD: MC.01.01.01': 'Ex: MC.01.01.01',
-        'Nháº­p mÃ£ hoáº·c tÃªn tiÃªu chÃ­': 'Enter criterion code or name'
-    }
+    en: {}
 };
 
 Object.assign(translations.en, {
@@ -617,12 +514,22 @@ Object.assign(translations.en, {
     'Quản lý tiêu chí': 'Manage Criteria',
     'Quản lý minh chứng': 'Manage Evidence',
     'Quản lý tài khoản': 'Manage Accounts',
+    'Quản lý đơn vị': 'Manage Departments',
+    'Danh sách đơn vị': 'Department List',
+    'Mã đơn vị': 'Department Code',
+    'Tên đơn vị': 'Department Name',
+    'Thêm đơn vị mới': 'Add New Department',
+    'Thêm đơn vị': 'Add Department',
+    'Sửa đơn vị': 'Edit Department',
+    'Lưu thay đổi': 'Save Changes',
+    'Khoa, phòng ban, bộ môn tham gia quy trình kiểm định.': 'Faculties, departments, and units participating in accreditation.',
     'Thống kê': 'Reports',
     'Khai thác dữ liệu': 'Data Access',
     'Tra cứu minh chứng': 'Search Evidence',
     'Tổng quan cơ sở dữ liệu minh chứng': 'Evidence Database Overview',
     'Quản lý tài khoản và phân quyền': 'Account and Permission Management',
     'Danh sách người dùng': 'User List',
+    'Mã người dùng': 'User Code',
     'Thêm tài khoản': 'Add Account',
     'Cấp tài khoản': 'Create Account',
     'Sửa tài khoản': 'Edit Account',
@@ -634,15 +541,25 @@ Object.assign(translations.en, {
     'Đơn vị': 'Department',
     'Trạng thái': 'Status',
     'Thao tác': 'Actions',
+    'Mã': 'Code',
+    'Tải': 'Download',
+    'Cập nhật': 'Updated',
+    'Đơn vị phụ trách': 'Responsible Dept.',
+    'Tra cứu nhanh': 'Quick Search',
+    'Minh chứng mới cập nhật': 'Recently Updated Evidence',
     'Lưu tài khoản': 'Save Account',
     'Hủy sửa': 'Cancel Edit',
     'Quản trị viên': 'Administrator',
+    'Cán bộ kiểm định': 'Accreditation Staff',
     'Người dùng tra cứu': 'Search User',
+    'Đang hoạt động': 'Active',
     'Hoạt động': 'Active',
     'Tạm khóa': 'Locked',
+    'Khóa': 'Locked',
     'Quản lý hồ sơ minh chứng': 'Evidence Record Management',
     'Danh mục minh chứng': 'Evidence List',
     'Upload minh chứng': 'Upload Evidence',
+    'Thêm mới': 'Add New',
     'Thông tin minh chứng': 'Evidence Information',
     'Mã minh chứng': 'Evidence Code',
     'Tên minh chứng': 'Evidence Name',
@@ -650,14 +567,31 @@ Object.assign(translations.en, {
     'Năm học': 'Academic Year',
     'Ngày ban hành': 'Issue Date',
     'Đơn vị cung cấp': 'Provider',
+    'Đơn vị phụ trách': 'Responsible Unit',
     'Gắn tiêu chí': 'Linked Criteria',
     'File đính kèm': 'Attachment',
+    'Phiên bản': 'Version',
+    'Phiên bản hiện tại:': 'Current version:',
+    'Lọc mã': 'Filter code',
+    'Lọc tên': 'Filter name',
+    'Lọc TC': 'Filter standard',
+    'Lọc tiêu chí': 'Filter criteria',
+    'Lọc tiêu chuẩn': 'Filter standard',
+    'Lọc năm': 'Filter year',
+    'Lọc năm học': 'Filter academic year',
+    'Lọc file': 'Filter file',
+    'Lọc v': 'Filter version',
+    'Lọc phiên bản': 'Filter version',
+    'Không tìm thấy minh chứng phù hợp với bộ lọc.': 'No evidence matches the filters.',
+    'Chọn tệp mới nếu cần cập nhật phiên bản minh chứng.': 'Choose a new file if you need to update the evidence version.',
+    'Dung lượng tối đa:': 'Maximum size:',
     'Lưu minh chứng': 'Save Evidence',
     'Đã duyệt': 'Approved',
     'Chờ rà soát': 'Under Review',
     'Cần bổ sung': 'Needs Supplement',
     'Đủ minh chứng': 'Sufficient Evidence',
     'Thiếu minh chứng': 'Missing Evidence',
+    'Tiêu chí đủ minh chứng': 'Criteria with Sufficient Evidence',
     'Tiêu chuẩn': 'Standard',
     'Tiêu chí': 'Criteria',
     'Minh chứng': 'Evidence',
@@ -671,30 +605,123 @@ Object.assign(translations.en, {
     'Xem thống kê': 'View Reports',
     'Tên tiêu chuẩn': 'Standard Name',
     'Nhật ký gần đây': 'Recent Activity',
+    'Quản lý tiêu chuẩn kiểm định': 'Manage Accreditation Standards',
+    'Quản lý tiêu chí đánh giá': 'Manage Evaluation Criteria',
+    'Quản lý minh chứng': 'Manage Evidence',
+    'Quản lý tài khoản và phân quyền': 'Manage Accounts and Permissions',
+    'Quản lý đơn vị': 'Manage Departments',
     'Thống kê phục vụ kiểm định': 'Accreditation Reports',
-    'Tiêu chí đủ minh chứng': 'Criteria with Sufficient Evidence',
-    'Thiếu minh chứng': 'Missing Evidence',
+    'Tra cứu và khai thác minh chứng': 'Search and Access Evidence',
+    'Xuất Excel': 'Export Excel',
+    'Tất cả tiêu chuẩn': 'All Standards',
+    'Tất cả trạng thái': 'All Statuses',
+    'Mục tiêu và chuẩn đầu ra của chương trình đào tạo': 'Program Objectives and Learning Outcomes',
+    'Bản mô tả chương trình đào tạo': 'Program Specification',
+    'Cấu trúc và nội dung chương trình dạy học': 'Curriculum Structure and Content',
+    'Phương pháp tiếp cận trong dạy và học': 'Teaching and Learning Approach',
+    'Đánh giá kết quả học tập của người học': 'Learner Assessment',
+    'Mục tiêu của CTĐT được xác định rõ ràng': 'Program objectives are clearly defined',
+    'Chuẩn đầu ra phản ánh yêu cầu của các bên liên quan': 'Learning outcomes reflect stakeholder requirements',
+    'Bản mô tả CTĐT đầy đủ thông tin cần thiết': 'Program specification provides full necessary information',
+    'Nội dung học phần cập nhật theo định hướng nghề nghiệp': 'Course content is updated towards career orientation',
+    'Hoạt động dạy học thúc đẩy năng lực tự học': 'Teaching activities promote self-learning capacity',
+    'Quy trình đánh giá kết quả học tập được công bố': 'Assessment process of learning outcomes is published',
+    'Bộ môn Phần mềm': 'Software Engineering Department',
+    'Khoa Công nghệ thông tin': 'Faculty of Information Technology',
+    'Phòng Đảm bảo chất lượng': 'Quality Assurance Department',
+    'Phòng Đào tạo': 'Academic Affairs Department',
+    'Phòng Khảo thí': 'Testing & Assessment Department',
+    'Chưa phân công': 'Unassigned',
+    'Chưa xác định': 'Unassigned',
+    'Chưa gắn': 'Not Linked',
+    'Quyết định ban hành mục tiêu và chuẩn đầu ra ngành CNTT': 'Decision on Program Objectives and Learning Outcomes for IT',
+    'Bản mô tả chương trình đào tạo ngành CNTT': 'IT Program Specification Document',
+    'Đề cương chi tiết các học phần chuyên ngành': 'Detailed Syllabi of Specialized Courses',
+    'Kế hoạch đổi mới phương pháp dạy học': 'Plan for Teaching Method Innovation',
+    'Quy chế đánh giá học phần và ma trận điểm': 'Course Assessment Regulations and Grading Matrix',
     'Số lượng minh chứng theo tiêu chuẩn': 'Evidence Count by Standard',
     'Tiêu chí cần ưu tiên': 'Priority Criteria',
     'Xuất PDF': 'Export PDF',
     'Tra cứu và khai thác minh chứng': 'Search and Access Evidence',
     'Từ khóa': 'Keyword',
     'Loại file': 'File Type',
-    'Tất cả': 'All',
-    'Trang': 'Page',
-    'Tìm kiếm': 'Search',
-    'Tìm': 'Search',
-    'Kết quả tra cứu': 'Search Results',
-    'Mã': 'Code',
-    'Tiêu chí liên quan': 'Related Criteria',
-    'Không tìm thấy minh chứng phù hợp. Vui lòng thử từ khóa hoặc bộ lọc khác.': 'No matching evidence found. Please try another keyword or filter.',
+    'Cập nhật thông tin': 'Update Profile',
+    'Cập nhật thông tin cá nhân thành công.': 'Profile updated successfully.',
+    'Thông tin hệ thống': 'System Information',
+    'Trạng thái tài khoản': 'Account Status',
+    'Chương trình đào tạo': 'Training Program',
+    'Ảnh đại diện': 'Avatar',
+    'Chọn ảnh từ thiết bị. Dung lượng tối đa 2MB.': 'Choose an image from device. Max size 2MB.',
+    'Cập nhật mật khẩu': 'Update Password',
+    'Cập nhật mật khẩu thành công.': 'Password updated successfully.',
+    'Mật khẩu hiện tại không chính xác.': 'Current password is incorrect.',
+    'Mật khẩu mới phải có ít nhất 6 ký tự.': 'New password must be at least 6 characters.',
+    'Mật khẩu xác nhận chưa trùng khớp.': 'Confirmation password does not match.',
+    'Lưu ý bảo mật': 'Security Note',
+    'Mật khẩu nên có tối thiểu 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt. Không dùng lại mật khẩu của email hoặc các hệ thống cá nhân.': 'Password should be at least 8 characters long, including uppercase, lowercase, numbers, and special characters. Do not reuse email or personal system passwords.',
     'minh chứng phù hợp': 'matching evidence',
     'Định dạng': 'Format',
     'cập nhật': 'updated',
-    'Thông tin cá nhân': 'Profile',
-    'Đổi mật khẩu': 'Change Password',
-    'Đăng xuất': 'Sign Out',
-    'Cài đặt hệ thống': 'System Settings',
+    'Có hồ sơ cơ bản đáp ứng': 'Sufficient basic evidence records',
+    'Cần cập nhật hoặc rà soát thêm': 'Needs update or further review',
+    'Ưu tiên xử lý trước đánh giá': 'Priority before evaluation',
+    'minh chứng': 'evidence',
+    'Tất cả đơn vị': 'All Departments',
+    'Mã/Tên minh chứng': 'Code/Evidence Name',
+    'Mã/Evidence Name': 'Code/Evidence Name',
+    'Ngưng áp dụng': 'Inactive',
+    'Đang áp dụng': 'Active',
+    'Đang hoạt động': 'Active',
+    'Khóa': 'Locked',
+    'Danh sách tiêu chuẩn': 'Standard List',
+    'Danh sách tiêu chí': 'Criteria List',
+    'Phụ lục minh chứng phục vụ đoàn đánh giá ngoài': 'Appendix of Evidence for External Assessment Team',
+    'Báo cáo tự đánh giá chương trình đào tạo ngành CNTT': 'Self-Assessment Report for IT Training Program',
+    'Biên bản kiểm tra định kỳ cơ sở dữ liệu minh chứng': 'Periodic Audit Minutes of Evidence Database',
+    'Danh mục phân quyền khai thác kho minh chứng': 'Evidence Repository Permission & Access Catalog',
+    'Kế hoạch thu thập minh chứng kiểm định CTĐT CNTT': 'Evidence Collection Plan for IT Accreditation',
+    'Biên bản rà soát quy trình chấm thi và phúc khảo': 'Review Minutes of Grading & Re-examination Process',
+    'Bảng tổng hợp kết quả đánh giá học phần': 'Summary Sheet of Course Assessment Results',
+    'Quy định xây dựng ma trận đề thi học phần': 'Regulations on Course Exam Matrix Development',
+    'Danh sách học phần áp dụng blended learning': 'List of Courses Applying Blended Learning',
+    'Báo cáo triển khai lớp học dự án ngành CNTT': 'Report on Project-based Learning Implementation in IT',
+    'Tất cả đơn vị': 'All Departments',
+    'Mã, tên minh chứng, tiêu chí': 'Code, evidence name, criteria',
+    'Phụ lục minh chứng phục vụ đoàn đánh giá ngoài Quality Assurance Department': 'Appendix of Evidence for External Assessment Team',
+    'Báo cáo tự đánh giá chương trình đào tạo ngành CNTT Quality Assurance Department': 'Self-Assessment Report for IT Training Program',
+    'Biên bản kiểm tra định kỳ cơ sở dữ liệu minh chứng Quality Assurance Department': 'Periodic Audit Minutes of Evidence Database',
+    'Danh mục phân quyền khai thác kho minh chứng Quality Assurance Department': 'Evidence Repository Permission & Access Catalog',
+    'Kế hoạch thu thập minh chứng kiểm định CTĐT CNTT Quality Assurance Department': 'Evidence Collection Plan for IT Accreditation',
+    'Biên bản rà soát quy trình chấm thi và phúc khảo Testing & Assessment Department': 'Review Minutes of Grading & Re-examination Process',
+    'Bảng tổng hợp kết quả đánh giá học phần Testing & Assessment Department': 'Summary Sheet of Course Assessment Results',
+    'Quy định xây dựng ma trận đề thi học phần Testing & Assessment Department': 'Regulations on Course Exam Matrix Development',
+    'Danh sách học phần áp dụng blended learning Software Engineering Department': 'List of Courses Applying Blended Learning',
+    'Báo cáo triển khai lớp học dự án ngành CNTT Faculty of Information Technology': 'Report on Project-based Learning Implementation in IT',
+    'Sửa tiêu chuẩn': 'Edit Standard',
+    'Thêm tiêu chuẩn': 'Add Standard',
+    'Sửa tiêu chí': 'Edit Criterion',
+    'Thêm tiêu chí': 'Add Criterion',
+    'Sửa đơn vị': 'Edit Department',
+    'Thêm đơn vị': 'Add Department',
+    'Thêm đơn vị mới': 'Add New Department',
+    'Bộ tiêu chuẩn': 'Standard Set',
+    'Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo - 2025': 'Program Accreditation Standard Set - 2025',
+    'Mã tiêu chuẩn': 'Standard Code',
+    'Nội dung tiêu chuẩn': 'Standard Content',
+    'Mã tiêu chí': 'Criterion Code',
+    'Thuộc tiêu chuẩn': 'Belongs to Standard',
+    'Đơn vị phụ trách': 'Responsible Department',
+    'Nội dung tiêu chí': 'Criterion Content',
+    'Bạn chắc chắn muốn xóa tiêu chuẩn này?': 'Are you sure you want to delete this standard?',
+    'Bạn chắc chắn muốn xóa tiêu chí này?': 'Are you sure you want to delete this criterion?',
+    'Bạn chắc chắn muốn xóa đơn vị này?': 'Are you sure you want to delete this department?',
+    'Bạn chắc chắn muốn mở/khóa tài khoản này?': 'Are you sure you want to lock/unlock this account?',
+    'Bạn chắc chắn muốn xóa tài khoản này?': 'Are you sure you want to delete this account?',
+    'Lưu tiêu chuẩn': 'Save Standard',
+    'Lưu tiêu chí': 'Save Criterion',
+    'Lưu đơn vị': 'Save Department',
+    'Lưu thay đổi': 'Save Changes',
+    'Hủy sửa': 'Cancel Edit',
     'Tùy chỉnh nhanh giao diện và thông tin vận hành.': 'Quickly customize the interface and operating information.',
     'Giao diện': 'Interface',
     'Chế độ màu': 'Color Mode',
@@ -740,13 +767,24 @@ Object.assign(placeholderTranslations.en, {
     'VD: MC.01.01.01': 'Ex: MC.01.01.01',
     'VD: TC06': 'Ex: TC06',
     'VD: 6.1': 'Ex: 6.1',
-    'Nhập nội dung tiêu chuẩn': 'Enter standard content',
+    'Lọc': 'Filter',
+    'Tìm kiếm': 'Search',
+    'Tìm': 'Search',
+    'Tất cả': 'All',
+    'Trang': 'Page',
+    'Trang 1/1': 'Page 1/1',
+    'Trang 1/3': 'Page 1/3',
     'Nhập mã hoặc tên tiêu chí': 'Enter criterion code or name',
-    'Nhập mật khẩu hiện tại': 'Enter current password',
-    'Nhập mật khẩu mới': 'Enter new password',
-    'Xác nhận mật khẩu mới': 'Confirm new password',
-    'Mã, tên minh chứng, tiêu chí': 'Code, evidence name, criteria',
-    'Chọn đơn vị': 'Select department',
+    'Lọc mã': 'Filter code',
+    'Lọc tên': 'Filter name',
+    'Lọc TC': 'Filter standard',
+    'Lọc tiêu chí': 'Filter criteria',
+    'Lọc tiêu chuẩn': 'Filter standard',
+    'Lọc năm': 'Filter year',
+    'Lọc năm học': 'Filter academic year',
+    'Lọc file': 'Filter file',
+    'Lọc v': 'Filter version',
+    'Lọc phiên bản': 'Filter version',
     'Không có tệp nào được chọn': 'No file selected'
 });
 
@@ -754,16 +792,34 @@ function compactText(value) {
     return value.replace(/\s+/g, ' ').trim();
 }
 
+function normalizeSearchText(value) {
+    return value
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function translatePhrase(value, language) {
-    if (language === 'vi') {
+    if (language === 'vi' || !value) {
         return value;
+    }
+
+    const clean = compactText(value);
+    if (translations.en[clean]) {
+        return value.replace(clean, translations.en[clean]);
     }
 
     const entries = Object.entries(translations.en).sort((a, b) => b[0].length - a[0].length);
     let translatedValue = value;
 
     entries.forEach(([source, target]) => {
-        translatedValue = translatedValue.split(source).join(target);
+        if (translatedValue.includes(source)) {
+            translatedValue = translatedValue.split(source).join(target);
+        }
     });
 
     return translatedValue;
@@ -778,13 +834,17 @@ function translateTextNode(node, language) {
         node.originalText = node.nodeValue;
     }
 
-    const original = compactText(node.originalText);
-    const translated = translations[language]?.[original];
-    node.nodeValue = language === 'vi' || !translated
-        ? node.originalText
-        : node.originalText.replace(original, translated);
+    if (language === 'vi') {
+        node.nodeValue = node.originalText;
+        return;
+    }
 
-    if (language !== 'vi' && !translated) {
+    const originalClean = compactText(node.originalText);
+    const exactMatch = translations[language]?.[originalClean];
+
+    if (exactMatch) {
+        node.nodeValue = node.originalText.replace(originalClean, exactMatch);
+    } else {
         node.nodeValue = translatePhrase(node.originalText, language);
     }
 }
@@ -822,7 +882,7 @@ function applyLanguage(language) {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
             const tagName = node.parentElement?.tagName;
-            return ['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT'].includes(tagName)
+            return ['SCRIPT', 'STYLE'].includes(tagName)
                 ? NodeFilter.FILTER_REJECT
                 : NodeFilter.FILTER_ACCEPT;
         }
@@ -853,6 +913,49 @@ function applyLanguage(language) {
         translateElementAttribute(element, 'aria-label', safeLanguage);
     });
 
+    // Translate all <option> elements (TreeWalker misses these in some browsers)
+    document.querySelectorAll('select option').forEach((option) => {
+        if (!option.dataset.originalText) {
+            option.dataset.originalText = option.textContent;
+        }
+        const raw = option.dataset.originalText;
+        const cleaned = compactText(raw);
+        option.textContent = safeLanguage === 'vi'
+            ? raw
+            : (translations.en[cleaned] || placeholderTranslations.en[cleaned] || raw);
+    });
+
+    // Translate <button> elements — handles buttons that contain <i> icons
+    // by only touching direct text nodes within the button
+    document.querySelectorAll('button').forEach((btn) => {
+        if (!btn.dataset.originalButtonText) {
+            // collect concatenated text from direct text nodes only
+            const textParts = Array.from(btn.childNodes)
+                .filter(n => n.nodeType === Node.TEXT_NODE)
+                .map(n => n.nodeValue);
+            const combined = compactText(textParts.join(''));
+            if (combined) {
+                btn.dataset.originalButtonText = combined;
+                btn.dataset.originalButtonNodes = textParts.length;
+            }
+        }
+        const original = btn.dataset.originalButtonText;
+        if (!original || compactText(original) === '') return;
+
+        const translated = safeLanguage === 'vi'
+            ? original
+            : (translations.en[compactText(original)] || placeholderTranslations.en[compactText(original)] || original);
+
+        // replace text content of direct text nodes only (preserve icon children)
+        let textNodeIndex = 0;
+        btn.childNodes.forEach((n) => {
+            if (n.nodeType === Node.TEXT_NODE && compactText(n.nodeValue) !== '') {
+                n.nodeValue = textNodeIndex === 0 ? (n.nodeValue.trimStart() ? ' ' + translated : '') : '';
+                textNodeIndex++;
+            }
+        });
+    });
+
     languageButtons.forEach((button) => {
         button.classList.toggle('active', button.dataset.languageOption === safeLanguage);
     });
@@ -863,6 +966,8 @@ function applyLanguage(language) {
 
 applyLanguage(localStorage.getItem('kiemdinh-language') || 'vi');
 initStatusDropdowns();
+initColumnFilters();
+initCriteriaSearch();
 initTablePagination();
 refreshStatusDropdowns();
 refreshTablePaginations();
@@ -932,6 +1037,29 @@ if (actionConfirmAccept) {
     });
 }
 
+function openAutoManagementModal() {
+    const targetedModalId = document.body?.dataset.autoOpenModal;
+    if (targetedModalId && window.bootstrap) {
+        const targetedModal = document.getElementById(targetedModalId);
+        if (targetedModal) {
+            bootstrap.Modal.getOrCreateInstance(targetedModal).show();
+            return;
+        }
+    }
+
+    document.querySelectorAll('[data-auto-open-modal]').forEach((element) => {
+        if (window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(element).show();
+        }
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', openAutoManagementModal);
+} else {
+    openAutoManagementModal();
+}
+
 document.querySelectorAll('[data-confirm]').forEach((button) => {
     button.addEventListener('click', (event) => {
         event.preventDefault();
@@ -953,6 +1081,100 @@ document.querySelectorAll('[data-confirm-form]').forEach((form) => {
             form.dataset.confirmed = 'true';
             form.requestSubmit();
         });
+    });
+});
+
+function initColumnFilters() {
+    document.querySelectorAll('table[data-column-filters]').forEach((table) => {
+        const filters = Array.from(table.querySelectorAll('[data-column-filter]'));
+        const toggles = Array.from(table.querySelectorAll('[data-column-filter-toggle]'));
+        const tbody = table.tBodies[0];
+
+        if (!filters.length || !tbody) {
+            return;
+        }
+
+        const rows = Array.from(tbody.rows).filter((row) => !row.classList.contains('column-filter-empty-row'));
+
+        const applyFilters = () => {
+            const activeFilters = filters
+                .map((filter) => ({
+                    index: Number(filter.dataset.columnFilter),
+                    value: normalizeSearchText(filter.value || '')
+                }))
+                .filter((filter) => filter.value !== '');
+
+            rows.forEach((row) => {
+                const isMatch = activeFilters.every((filter) => {
+                    const cellText = normalizeSearchText(row.cells[filter.index]?.textContent || '');
+                    return cellText.includes(filter.value);
+                });
+
+                row.dataset.filteredOut = isMatch ? 'false' : 'true';
+            });
+
+            filters.forEach((filter) => {
+                const toggle = filter.closest('.column-filter-head')?.querySelector('[data-column-filter-toggle]');
+                toggle?.classList.toggle('is-active', filter.value.trim() !== '');
+            });
+
+            const pagination = table.closest('.table-responsive')?.nextElementSibling;
+            if (pagination?.renderPagination) {
+                pagination.renderPagination();
+            }
+        };
+
+        filters.forEach((filter) => {
+            filter.addEventListener('input', applyFilters);
+            filter.addEventListener('click', (event) => event.stopPropagation());
+            filter.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    filter.closest('.column-filter-head')?.classList.remove('show');
+                }
+            });
+        });
+
+        toggles.forEach((toggle) => {
+            toggle.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const head = toggle.closest('.column-filter-head');
+                const shouldShow = !head?.classList.contains('show');
+
+                table.querySelectorAll('.column-filter-head.show').forEach((openHead) => {
+                    openHead.classList.remove('show');
+                });
+
+                if (head && shouldShow) {
+                    head.classList.add('show');
+                    head.querySelector('[data-column-filter]')?.focus();
+                }
+            });
+        });
+    });
+}
+
+function initCriteriaSearch() {
+    const searchInput = document.querySelector('[data-criteria-search]');
+    const criteriaSelect = document.querySelector('[data-criteria-select]');
+
+    if (!searchInput || !criteriaSelect) {
+        return;
+    }
+
+    searchInput.addEventListener('input', () => {
+        const keyword = normalizeSearchText(searchInput.value || '');
+
+        Array.from(criteriaSelect.options).forEach((option) => {
+            const isSelected = option.selected;
+            const isMatch = keyword === '' || normalizeSearchText(option.textContent || '').includes(keyword);
+            option.hidden = !isMatch && !isSelected;
+        });
+    });
+}
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.column-filter-head.show').forEach((head) => {
+        head.classList.remove('show');
     });
 });
 

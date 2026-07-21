@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     --ink: #12305f;
     --muted: #667896;
     --line: #d9e7f8;
@@ -668,6 +668,27 @@ html[data-theme="dark"] .logout-modal-icon {
     align-items: flex-start;
 }
 
+.management-form-modal .modal-content {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink);
+    box-shadow: 0 24px 60px rgba(18, 48, 95, 0.22);
+}
+
+.management-form-modal .modal-header,
+.management-form-modal .modal-footer {
+    border-color: var(--line);
+}
+
+.management-form-modal .modal-body {
+    padding: 22px;
+}
+
+.management-form-modal form {
+    margin-bottom: 0;
+}
+
 .profile-avatar {
     width: 58px;
     height: 58px;
@@ -772,6 +793,69 @@ html[data-theme="dark"] .logout-modal-icon {
 .evidences-list-panel .table th,
 .evidences-list-panel .table td {
     vertical-align: middle;
+}
+
+.column-filter-head {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+}
+
+.column-filter-toggle {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--brand);
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    font-size: 13px;
+}
+
+.column-filter-toggle:hover,
+.column-filter-head.show .column-filter-toggle,
+.column-filter-toggle.is-active {
+    background: rgba(47, 100, 173, 0.1);
+    border-color: rgba(47, 100, 173, 0.22);
+}
+
+.column-filter-toggle.is-active {
+    color: var(--accent-red);
+}
+
+.column-filter-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 176px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: 0 14px 34px rgba(18, 48, 95, 0.16);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+    z-index: 20;
+}
+
+.column-filter-head.show .column-filter-menu {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.column-filter-menu .form-control {
+    height: 34px;
+    min-height: 34px;
+    padding: 5px 8px;
+    font-size: 12px;
 }
 
 .evidence-title-cell {
@@ -1655,13 +1739,15 @@ select[name="evidence_status"] option[value="missing"]:checked {
 .status-select-warning,
 .status-select-reviewing,
 .status-select-need_update {
-    background-color: #ffc107;
-    color: #101828;
+    background-color: #e85d00;
+    color: #ffffff;
+    --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
 }
 
 .status-select-danger,
 .status-select-missing,
 .status-select-locked,
+.status-select-inactive,
 .status-select-inactive_set {
     background-color: #e33448;
     color: #ffffff;
@@ -1709,8 +1795,8 @@ html[data-theme="dark"] .status-select-active_set {
 html[data-theme="dark"] .status-select-warning,
 html[data-theme="dark"] .status-select-reviewing,
 html[data-theme="dark"] .status-select-need_update {
-    background-color: #f8ad26;
-    color: #101828;
+    background-color: #f06a00;
+    color: #ffffff;
 }
 
 html[data-theme="dark"] .status-select-danger,
