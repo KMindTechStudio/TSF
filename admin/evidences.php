@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -166,6 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     $description = trim($_POST['description'] ?? '');
     $academicYear = trim($_POST['academic_year'] ?? '');
     $issuedDate = trim($_POST['issued_date'] ?? '');
+    $evidenceType = trim($_POST['evidence_type'] ?? 'Minh chứng chính');
     $departmentId = (int) ($_POST['department_id'] ?? 0);
     $criteriaIds = array_map('intval', $_POST['criteria_ids'] ?? []);
     $versionNo = (int) ($_POST['version_no'] ?? 0);
@@ -194,6 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                     description = :description,
                     academic_year = :academic_year,
                     issued_date = :issued_date,
+                    evidence_type = :evidence_type,
                     issuing_department_id = :department_id,
                     responsible_user_id = :user_id
                 WHERE id = :id
@@ -204,6 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                 'description' => $description,
                 'academic_year' => $academicYear,
                 'issued_date' => $issuedDate !== '' ? $issuedDate : null,
+                'evidence_type' => $evidenceType !== '' ? $evidenceType : 'Minh chứng chính',
                 'department_id' => $departmentId,
                 'user_id' => $userId,
                 'id' => $evidenceId,
@@ -260,6 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
     $description = trim($_POST['description'] ?? '');
     $academicYear = trim($_POST['academic_year'] ?? '');
     $issuedDate = trim($_POST['issued_date'] ?? '');
+    $evidenceType = trim($_POST['evidence_type'] ?? 'Minh chứng chính');
     $departmentId = (int) ($_POST['department_id'] ?? 0);
     $criteriaIds = array_map('intval', $_POST['criteria_ids'] ?? []);
     $versionNo = (int) ($_POST['version_no'] ?? 1);
@@ -297,6 +301,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
                     description,
                     academic_year,
                     issued_date,
+                    evidence_type,
                     issuing_department_id,
                     responsible_user_id,
                     approval_status
@@ -306,6 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
                     :description,
                     :academic_year,
                     :issued_date,
+                    :evidence_type,
                     :department_id,
                     :user_id,
                     'reviewing'
@@ -317,6 +323,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
                 'description' => $description,
                 'academic_year' => $academicYear,
                 'issued_date' => $issuedDate !== '' ? $issuedDate : null,
+                'evidence_type' => $evidenceType !== '' ? $evidenceType : 'Minh chứng chính',
                 'department_id' => $departmentId,
                 'user_id' => $userId,
             ]);
@@ -511,7 +518,7 @@ include __DIR__ . '/../includes/header.php';
                     <tr>
                         <th>
                             <span class="column-filter-head">
-                                <span>Mã</span>
+                                <span>Mã minh chứng</span>
                                 <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc mã"><i class="bi bi-funnel"></i></button>
                                 <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="0" placeholder="Lọc mã"></span>
                             </span>
@@ -525,37 +532,51 @@ include __DIR__ . '/../includes/header.php';
                         </th>
                         <th>
                             <span class="column-filter-head">
-                                <span>Tiêu chuẩn</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc tiêu chuẩn"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="2" placeholder="Lọc TC"></span>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="column-filter-head">
-                                <span>Tiêu chí</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc tiêu chí"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="3" placeholder="Lọc tiêu chí"></span>
+                                <span>Mô tả</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc mô tả"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="2" placeholder="Lọc mô tả"></span>
                             </span>
                         </th>
                         <th>
                             <span class="column-filter-head">
                                 <span>Năm học</span>
                                 <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc năm học"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="4" placeholder="Lọc năm"></span>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="3" placeholder="Lọc năm"></span>
                             </span>
                         </th>
                         <th>
                             <span class="column-filter-head">
-                                <span>File</span>
+                                <span>Ngày ban hành</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc ngày ban hành"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="4" placeholder="Lọc ngày"></span>
+                            </span>
+                        </th>
+                        <th>
+                            <span class="column-filter-head">
+                                <span>Thuộc tiêu chí</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc tiêu chí"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="5" placeholder="Lọc tiêu chí"></span>
+                            </span>
+                        </th>
+                        <th>
+                            <span class="column-filter-head">
+                                <span>Đơn vị cung cấp</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc đơn vị cung cấp"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="6" placeholder="Lọc đơn vị"></span>
+                            </span>
+                        </th>
+                        <th>
+                            <span class="column-filter-head">
+                                <span>Loại minh chứng</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc loại minh chứng"><i class="bi bi-funnel"></i></button>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="7" placeholder="Lọc loại"></span>
+                            </span>
+                        </th>
+                        <th>
+                            <span class="column-filter-head">
+                                <span>File đính kèm</span>
                                 <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc file"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="5" placeholder="Lọc file"></span>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="column-filter-head">
-                                <span>Phiên bản</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc phiên bản"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="6" placeholder="Lọc v"></span>
+                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="8" placeholder="Lọc file"></span>
                             </span>
                         </th>
                         <th>Trạng thái</th>
@@ -566,15 +587,18 @@ include __DIR__ . '/../includes/header.php';
                     <?php foreach ($filteredEvidences as $item): ?>
                         <tr>
                             <td class="fw-bold"><?= htmlspecialchars($item['code']) ?></td>
-                            <td class="evidence-title-cell">
-                                <div class="evidence-title"><?= htmlspecialchars($item['name']) ?></div>
-                                <div class="evidence-owner small text-secondary"><?= htmlspecialchars($item['department']) ?></div>
+                            <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($item['name']) ?>">
+                                <?= htmlspecialchars($item['name']) ?>
                             </td>
-                            <td><?= htmlspecialchars($item['standards'] ?? 'Chưa gắn') ?></td>
-                            <td><?= htmlspecialchars($item['criteria']) ?></td>
+                            <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($item['description']) ?>">
+                                <?= htmlspecialchars($item['description']) ?>
+                            </td>
                             <td><?= htmlspecialchars($item['year']) ?></td>
+                            <td><?= htmlspecialchars($item['issued_date'] ? date('d/m/Y', strtotime($item['issued_date'])) : '') ?></td>
+                            <td><?= htmlspecialchars($item['criteria']) ?></td>
+                            <td><?= htmlspecialchars($item['department']) ?></td>
+                            <td><?= htmlspecialchars($item['evidence_type']) ?></td>
                             <td><span class="badge text-bg-light text-dark"><?= htmlspecialchars($item['type']) ?></span></td>
-                            <td><span class="badge text-bg-light text-dark">v<?= (int) ($item['version'] ?? 1) ?></span></td>
                             <td>
                                 <form method="post" class="status-update-form">
                                     <input type="hidden" name="action" value="update_evidence_status">
@@ -632,6 +656,7 @@ include __DIR__ . '/../includes/header.php';
                 <input type="hidden" name="action" value="<?= $editingEvidence ? 'update_evidence' : 'create_evidence' ?>">
                 <input type="hidden" name="id" value="<?= (int) ($editingEvidence['id'] ?? 0) ?>">
 
+
                 <div class="mb-3">
                     <label class="form-label">Mã minh chứng</label>
                     <input class="form-control" name="code" value="<?= htmlspecialchars($editingEvidence['code'] ?? '') ?>" placeholder="MC.06.01.01" required>
@@ -645,21 +670,30 @@ include __DIR__ . '/../includes/header.php';
                     <textarea class="form-control" name="description" rows="2"><?= htmlspecialchars($editingEvidence['description'] ?? '') ?></textarea>
                 </div>
                 <div class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Năm học</label>
                         <input class="form-control" name="academic_year" value="<?= htmlspecialchars($editingEvidence['academic_year'] ?? '') ?>" placeholder="2025-2026" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Ngày ban hành</label>
                         <input class="form-control" name="issued_date" value="<?= htmlspecialchars($editingEvidence['issued_date'] ?? '') ?>" type="date">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <label class="form-label">Loại minh chứng</label>
+                        <select class="form-select" name="evidence_type">
+                            <?php $currentEvType = $editingEvidence['evidence_type'] ?? 'Minh chứng chính'; ?>
+                            <option value="Minh chứng chính" <?= $currentEvType === 'Minh chứng chính' ? 'selected' : '' ?>>Minh chứng chính</option>
+                            <option value="Minh chứng bổ sung" <?= $currentEvType === 'Minh chứng bổ sung' ? 'selected' : '' ?>>Minh chứng bổ sung</option>
+                            <option value="Minh chứng tham khảo" <?= $currentEvType === 'Minh chứng tham khảo' ? 'selected' : '' ?>>Minh chứng tham khảo</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label">Phiên bản</label>
                         <input class="form-control" name="version_no" value="<?= (int) ($editingEvidence ? $editingVersionNo : 1) ?>" type="number" min="1" step="1" required>
                     </div>
                 </div>
                 <div class="mb-3 mt-3">
-                    <label class="form-label">Đơn vị phụ trách</label>
+                    <label class="form-label">Đơn vị cung cấp / phụ trách</label>
                     <select class="form-select" name="department_id" required>
                         <option value="">Chọn đơn vị</option>
                         <?php foreach ($departments as $department): ?>

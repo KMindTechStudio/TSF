@@ -180,7 +180,10 @@ $stmt = $pdo->query("
         e.id,
         e.code,
         e.title,
+        e.description,
         e.academic_year,
+        e.issued_date,
+        COALESCE(e.evidence_type, 'Minh chứng chính') AS evidence_type,
         e.approval_status,
         DATE_FORMAT(e.updated_at, '%d/%m/%Y') AS updated_date,
         COALESCE(d.name, 'Chưa xác định') AS department_name,
@@ -201,24 +204,27 @@ $stmt = $pdo->query("
     LEFT JOIN evidence_criteria ec ON ec.evidence_id = e.id
     LEFT JOIN criteria c ON c.id = ec.criteria_id
     LEFT JOIN standards s ON s.id = c.standard_id
-    GROUP BY e.id, e.code, e.title, e.academic_year, e.approval_status, e.updated_at, d.name, latest_file.id, latest_file.file_type, latest_file.version_no
+    GROUP BY e.id, e.code, e.title, e.description, e.academic_year, e.issued_date, e.evidence_type, e.approval_status, e.updated_at, d.name, latest_file.id, latest_file.file_type, latest_file.version_no
     ORDER BY e.updated_at DESC, e.id DESC
 ");
 foreach ($stmt->fetchAll() as $row) {
     $evidences[] = [
-        'id'         => (int) $row['id'],
-        'code'       => $row['code'],
-        'name'       => $row['title'],
-        'criteria'   => $row['criteria_codes'],
-        'year'       => $row['academic_year'],
-        'department' => $row['department_name'],
-        'file_id'    => (int) ($row['file_id'] ?? 0),
-        'type'       => $row['file_type'],
-        'version'    => (int) ($row['version_no'] ?? 1),
-        'standards'  => $row['standard_codes'],
-        'updated'    => $row['updated_date'],
-        'status_raw' => $row['approval_status'],
-        'status'     => vn_approval_status($row['approval_status']),
+        'id'            => (int) $row['id'],
+        'code'          => $row['code'],
+        'name'          => $row['title'],
+        'description'   => $row['description'] ?? '',
+        'issued_date'   => $row['issued_date'] ?? '',
+        'evidence_type' => $row['evidence_type'] ?? 'Minh chứng chính',
+        'criteria'      => $row['criteria_codes'],
+        'year'          => $row['academic_year'],
+        'department'    => $row['department_name'],
+        'file_id'       => (int) ($row['file_id'] ?? 0),
+        'type'          => $row['file_type'],
+        'version'       => (int) ($row['version_no'] ?? 1),
+        'standards'     => $row['standard_codes'],
+        'updated'       => $row['updated_date'],
+        'status_raw'    => $row['approval_status'],
+        'status'        => vn_approval_status($row['approval_status']),
     ];
 }
 

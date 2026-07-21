@@ -131,6 +131,7 @@ CREATE TABLE evidences (
     description TEXT NULL,
     academic_year VARCHAR(20) NULL,
     issued_date DATE NULL,
+    evidence_type VARCHAR(100) NULL DEFAULT 'Minh chứng chính',
     issuing_department_id INT NULL,
     responsible_user_id INT NULL,
     approval_status ENUM('approved', 'reviewing', 'need_update') NOT NULL DEFAULT 'reviewing',

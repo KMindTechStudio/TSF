@@ -2,24 +2,21 @@
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/data.php';
 
-$keyword = trim($_GET['q'] ?? '');
+$searchCode = trim($_GET['code'] ?? '');
+$searchName = trim($_GET['name'] ?? '');
 $selectedStandard = trim($_GET['standard'] ?? '');
+$selectedCriterion = trim($_GET['criterion'] ?? '');
+$selectedDepartment = trim($_GET['department'] ?? '');
 $selectedYear = trim($_GET['year'] ?? '');
 $selectedType = trim($_GET['type'] ?? '');
 $downloadError = $_GET['download_error'] ?? '';
 
-$filteredEvidences = array_filter($evidences, function ($item) use ($keyword, $selectedStandard, $selectedYear, $selectedType) {
-    $haystack = implode(' ', [
-        $item['code'] ?? '',
-        $item['name'] ?? '',
-        $item['criteria'] ?? '',
-        $item['year'] ?? '',
-        $item['department'] ?? '',
-        $item['type'] ?? '',
-        $item['status'] ?? '',
-    ]);
+$filteredEvidences = array_filter($evidences, function ($item) use ($searchCode, $searchName, $selectedStandard, $selectedCriterion, $selectedDepartment, $selectedYear, $selectedType, $criteria) {
+    if ($searchCode !== '' && !search_contains($item['code'] ?? '', $searchCode)) {
+        return false;
+    }
 
-    if ($keyword !== '' && !search_contains($haystack, $keyword)) {
+    if ($searchName !== '' && !search_contains($item['name'] ?? '', $searchName)) {
         return false;
     }
 
@@ -44,6 +41,14 @@ $filteredEvidences = array_filter($evidences, function ($item) use ($keyword, $s
         }
     }
 
+    if ($selectedCriterion !== '' && !search_contains($item['criteria'] ?? '', $selectedCriterion)) {
+        return false;
+    }
+
+    if ($selectedDepartment !== '' && ($item['department'] ?? '') !== $selectedDepartment) {
+        return false;
+    }
+
     if ($selectedYear !== '' && ($item['year'] ?? '') !== $selectedYear) {
         return false;
     }
@@ -58,6 +63,7 @@ $filteredEvidences = array_filter($evidences, function ($item) use ($keyword, $s
 $filteredEvidences = array_values($filteredEvidences);
 $years = array_values(array_unique(array_filter(array_column($evidences, 'year'))));
 $types = array_values(array_unique(array_filter(array_column($evidences, 'type'))));
+$departmentsList = array_values(array_unique(array_filter(array_column($evidences, 'department'))));
 
 $pageTitle = page_title('Tra cứu minh chứng');
 $heading = 'Tra cứu và khai thác minh chứng';
@@ -65,25 +71,51 @@ include __DIR__ . '/../includes/header.php';
 ?>
 <div class="panel mb-4">
     <form class="row g-3 align-items-end" method="get">
-        <div class="col-lg-4">
-            <label class="form-label">Từ khóa</label>
-            <input class="form-control" name="q" value="<?= htmlspecialchars($keyword) ?>" placeholder="Mã minh chứng, tên minh chứng">
+        <div class="col-md-6 col-lg-3">
+            <label class="form-label">Mã minh chứng</label>
+            <input class="form-control" name="code" value="<?= htmlspecialchars($searchCode) ?>" placeholder="Mã minh chứng">
         </div>
-        <div class="col-lg-2">
+        <div class="col-md-6 col-lg-3">
+            <label class="form-label">Tên minh chứng</label>
+            <input class="form-control" name="name" value="<?= htmlspecialchars($searchName) ?>" placeholder="Tên minh chứng">
+        </div>
+        <div class="col-md-6 col-lg-3">
             <label class="form-label">Tiêu chuẩn</label>
             <select class="form-select" name="standard">
-                <option value="">Tất cả</option>
+                <option value="">Tất cả tiêu chuẩn</option>
                 <?php foreach ($standards as $standard): ?>
                     <option value="<?= htmlspecialchars($standard['code']) ?>" <?= $selectedStandard === $standard['code'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($standard['code']) ?>
+                        <?= htmlspecialchars($standard['code']) ?> - <?= htmlspecialchars($standard['name']) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="col-lg-2">
+        <div class="col-md-6 col-lg-3">
+            <label class="form-label">Tiêu chí</label>
+            <select class="form-select" name="criterion">
+                <option value="">Tất cả tiêu chí</option>
+                <?php foreach ($criteria as $criterion): ?>
+                    <option value="<?= htmlspecialchars($criterion['code']) ?>" <?= $selectedCriterion === $criterion['code'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($criterion['code']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <label class="form-label">Đơn vị</label>
+            <select class="form-select" name="department">
+                <option value="">Tất cả đơn vị</option>
+                <?php foreach ($departmentsList as $dept): ?>
+                    <option value="<?= htmlspecialchars($dept) ?>" <?= $selectedDepartment === $dept ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($dept) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-6 col-lg-3">
             <label class="form-label">Năm học</label>
             <select class="form-select" name="year">
-                <option value="">Tất cả</option>
+                <option value="">Tất cả năm học</option>
                 <?php foreach ($years as $year): ?>
                     <option value="<?= htmlspecialchars($year) ?>" <?= $selectedYear === $year ? 'selected' : '' ?>>
                         <?= htmlspecialchars($year) ?>
@@ -91,10 +123,10 @@ include __DIR__ . '/../includes/header.php';
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="col-lg-2">
+        <div class="col-md-6 col-lg-3">
             <label class="form-label">Loại file</label>
             <select class="form-select" name="type">
-                <option value="">Tất cả</option>
+                <option value="">Tất cả loại file</option>
                 <?php foreach ($types as $type): ?>
                     <option value="<?= htmlspecialchars($type) ?>" <?= strtoupper($selectedType) === strtoupper($type) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($type) ?>
@@ -102,7 +134,7 @@ include __DIR__ . '/../includes/header.php';
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="col-lg-2">
+        <div class="col-md-6 col-lg-3">
             <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search me-1"></i> Tìm kiếm</button>
         </div>
     </form>
@@ -118,8 +150,15 @@ include __DIR__ . '/../includes/header.php';
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h2 class="h5 mb-0">Kết quả tra cứu</h2>
-            <?php if ($keyword !== ''): ?>
-                <small class="text-secondary">Từ khóa: “<?= htmlspecialchars($keyword) ?>”</small>
+            <?php if ($searchCode !== '' || $searchName !== ''): ?>
+                <small class="text-secondary">
+                    <?php 
+                    $filters = [];
+                    if ($searchCode !== '') $filters[] = "Mã: “" . htmlspecialchars($searchCode) . "”";
+                    if ($searchName !== '') $filters[] = "Tên: “" . htmlspecialchars($searchName) . "”";
+                    echo implode(' | ', $filters);
+                    ?>
+                </small>
             <?php endif; ?>
         </div>
         <span class="text-secondary"><?= count($filteredEvidences) ?> minh chứng phù hợp</span>
@@ -134,11 +173,15 @@ include __DIR__ . '/../includes/header.php';
             <table class="table" data-page-size="10">
                 <thead>
                 <tr>
-                    <th>Mã</th>
+                    <th>Mã minh chứng</th>
                     <th>Tên minh chứng</th>
-                    <th>Tiêu chí liên quan</th>
+                    <th>Mô tả</th>
                     <th>Năm học</th>
-                    <th>Đơn vị</th>
+                    <th>Ngày ban hành</th>
+                    <th>Thuộc tiêu chí</th>
+                    <th>Đơn vị cung cấp</th>
+                    <th>Loại minh chứng</th>
+                    <th>File đính kèm</th>
                     <th>Trạng thái</th>
                     <th class="text-end">Thao tác</th>
                 </tr>
@@ -147,10 +190,18 @@ include __DIR__ . '/../includes/header.php';
                 <?php foreach ($filteredEvidences as $item): ?>
                     <tr>
                         <td class="fw-bold"><?= htmlspecialchars($item['code']) ?></td>
-                        <td><?= htmlspecialchars($item['name']) ?><div class="small text-secondary">Định dạng <?= htmlspecialchars($item['type']) ?> · cập nhật <?= htmlspecialchars($item['updated']) ?></div></td>
-                        <td><?= htmlspecialchars($item['criteria']) ?></td>
+                        <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($item['name']) ?>">
+                            <?= htmlspecialchars($item['name']) ?>
+                        </td>
+                        <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($item['description']) ?>">
+                            <?= htmlspecialchars($item['description']) ?>
+                        </td>
                         <td><?= htmlspecialchars($item['year']) ?></td>
+                        <td><?= htmlspecialchars($item['issued_date'] ? date('d/m/Y', strtotime($item['issued_date'])) : '') ?></td>
+                        <td><?= htmlspecialchars($item['criteria']) ?></td>
                         <td><?= htmlspecialchars($item['department']) ?></td>
+                        <td><?= htmlspecialchars($item['evidence_type']) ?></td>
+                        <td><span class="badge text-bg-light text-dark"><?= htmlspecialchars($item['type']) ?></span></td>
                         <td><?= readonly_status_select($item['status']) ?></td>
                         <td class="text-end">
                             <div class="action-buttons">
