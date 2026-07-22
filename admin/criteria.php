@@ -97,6 +97,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 require_once __DIR__ . '/../includes/data.php';
 
+$selectedStandard = trim($_GET['standard'] ?? '');
+$selectedStatus   = trim($_GET['status'] ?? '');
+$searchKeyword    = trim($_GET['search'] ?? $_GET['q'] ?? $_GET['keyword'] ?? '');
+
+if ($selectedStandard !== '' || $selectedStatus !== '' || $searchKeyword !== '') {
+    $criteria = array_filter($criteria, function ($item) use ($selectedStandard, $selectedStatus, $searchKeyword) {
+        if ($selectedStandard !== '' && $item['standard'] !== $selectedStandard) {
+            return false;
+        }
+
+        if ($selectedStatus !== '') {
+            $st = mb_strtolower($selectedStatus);
+            $itemSt = mb_strtolower($item['status']);
+            $itemStRaw = mb_strtolower($item['status_raw'] ?? '');
+            if ($st !== $itemSt && !str_contains($itemSt, $st) && $st !== $itemStRaw) {
+                return false;
+            }
+        }
+
+        if ($searchKeyword !== '') {
+            $matchCode = search_contains($item['code'], $searchKeyword);
+            $matchName = search_contains($item['name'], $searchKeyword);
+            $matchDesc = search_contains($item['description'] ?? '', $searchKeyword);
+            $matchStd  = search_contains($item['standard'], $searchKeyword);
+            if (!$matchCode && !$matchName && !$matchDesc && !$matchStd) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+}
+
 $departments  = $pdo->query("SELECT id, ten_don_vi AS name FROM don_vi WHERE trang_thai = 'active' ORDER BY ten_don_vi")->fetchAll();
 $standardRows = $pdo->query('SELECT id, ma_tieu_chuan AS code, ten_tieu_chuan AS name FROM tieu_chuan ORDER BY thu_tu_hien_thi, id')->fetchAll();
 
@@ -118,11 +151,34 @@ include __DIR__ . '/../includes/header.php';
 <?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
 <div class="panel mb-4">
-    <form class="row g-3 align-items-end">
-        <div class="col-md-3"><label class="form-label">Tiêu chuẩn</label><select class="form-select"><option>Tất cả tiêu chuẩn</option><?php foreach ($standards as $standard): ?><option><?= htmlspecialchars($standard['code']) ?></option><?php endforeach; ?></select></div>
-        <div class="col-md-3"><label class="form-label">Trạng thái</label><select class="form-select"><option>Tất cả trạng thái</option><option>Đủ minh chứng</option><option>Cần bổ sung</option><option>Thiếu minh chứng</option></select></div>
-        <div class="col-md-4"><label class="form-label">Từ khóa</label><input class="form-control" placeholder="Nhập mã hoặc tên tiêu chí"></div>
-        <div class="col-md-2"><button class="btn btn-primary w-100" type="button"><i class="bi bi-funnel me-1"></i> Lọc</button></div>
+    <form class="row g-3 align-items-end" method="get" action="" id="criteriaFilterForm">
+        <div class="col-md-3">
+            <label class="form-label">Tiêu chuẩn</label>
+            <select class="form-select" name="standard" id="filterStandard">
+                <option value="">Tất cả tiêu chuẩn</option>
+                <?php foreach ($standards as $standard): ?>
+                    <option value="<?= htmlspecialchars($standard['code']) ?>" <?= ($selectedStandard === $standard['code']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($standard['code']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Trạng thái</label>
+            <select class="form-select" name="status" id="filterStatus">
+                <option value="">Tất cả trạng thái</option>
+                <option value="Đủ minh chứng" <?= ($selectedStatus === 'Đủ minh chứng' || $selectedStatus === 'complete' || $selectedStatus === 'du_minh_chung') ? 'selected' : '' ?>>Đủ minh chứng</option>
+                <option value="Cần bổ sung" <?= ($selectedStatus === 'Cần bổ sung' || $selectedStatus === 'need_update' || $selectedStatus === 'can_bo_sung') ? 'selected' : '' ?>>Cần bổ sung</option>
+                <option value="Thiếu minh chứng" <?= ($selectedStatus === 'Thiếu minh chứng' || $selectedStatus === 'missing' || $selectedStatus === 'thieu_minh_chung') ? 'selected' : '' ?>>Thiếu minh chứng</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Từ khóa</label>
+            <input class="form-control" name="search" id="criterionSearchInput" placeholder="Nhập mã tiêu chí, tên, thuộc tiêu chuẩn hoặc mô tả..." value="<?= htmlspecialchars($searchKeyword) ?>">
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-funnel me-1"></i> Lọc</button>
+        </div>
     </form>
 </div>
 
@@ -145,7 +201,7 @@ include __DIR__ . '/../includes/header.php';
                             <th class="text-end">Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="criteriaTableBody">
                     <?php foreach ($criteria as $item): ?>
                         <tr>
                             <td class="fw-bold text-nowrap"><?= htmlspecialchars($item['code']) ?></td>
@@ -175,12 +231,84 @@ include __DIR__ . '/../includes/header.php';
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    <tr id="noDataRow" class="<?= !empty($criteria) ? 'd-none' : '' ?>">
+                        <td colspan="6" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
+                    </tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('criterionSearchInput');
+    const filterStandard = document.getElementById('filterStandard');
+    const filterStatus = document.getElementById('filterStatus');
+    const tableBody = document.getElementById('criteriaTableBody');
+    const noDataRow = document.getElementById('noDataRow');
+    if (!tableBody) return;
+
+    function normalizeText(str) {
+        return (str || '')
+            .toString()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function filterTable() {
+        const query = normalizeText(searchInput ? searchInput.value : '');
+        const selectedStd = normalizeText(filterStandard ? filterStandard.value : '');
+        const selectedSt = normalizeText(filterStatus ? filterStatus.value : '');
+        const rows = tableBody.querySelectorAll('tr:not(#noDataRow)');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const codeCell = row.cells[0]?.textContent || '';
+            const nameCell = row.cells[1]?.textContent || '';
+            const stdCell  = row.cells[2]?.textContent || '';
+            const descCell = row.cells[3]?.textContent || '';
+            const statusCell = row.cells[4]?.textContent || '';
+
+            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + stdCell + ' ' + descCell);
+            const stdText = normalizeText(stdCell);
+            const statusText = normalizeText(statusCell);
+
+            const matchesQuery = query === '' || textToMatch.includes(query);
+            const matchesStd   = selectedStd === '' || stdText.includes(selectedStd);
+            const matchesStatus= selectedSt === '' || statusText.includes(selectedSt);
+
+            if (matchesQuery && matchesStd && matchesStatus) {
+                row.dataset.filteredOut = 'false';
+                visibleCount++;
+            } else {
+                row.dataset.filteredOut = 'true';
+            }
+        });
+
+        if (noDataRow) {
+            if (visibleCount === 0) {
+                noDataRow.classList.remove('d-none');
+            } else {
+                noDataRow.classList.add('d-none');
+            }
+        }
+
+        if (typeof refreshTablePaginations === 'function') {
+            refreshTablePaginations();
+        }
+    }
+
+    if (searchInput) searchInput.addEventListener('input', filterTable);
+    if (filterStandard) filterStandard.addEventListener('change', filterTable);
+    if (filterStatus) filterStatus.addEventListener('change', filterTable);
+});
+</script>
 
 <div class="modal fade management-form-modal" id="criterionFormModal" tabindex="-1" aria-labelledby="criterionFormModalLabel" aria-hidden="true" <?= ($editingCriterion || $isCreatingCriterion) ? 'data-auto-open-modal' : '' ?>>
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">

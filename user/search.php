@@ -203,14 +203,17 @@ include __DIR__ . '/../includes/header.php';
                         <td><?= htmlspecialchars($item['evidence_type']) ?></td>
                         <td><span class="badge text-bg-light text-dark"><?= htmlspecialchars($item['type']) ?></span></td>
                         <td><?= readonly_status_select($item['status']) ?></td>
-                        <td class="text-end">
+                        <td class="text-end action-cell">
                             <div class="action-buttons">
+                                <?php if (current_role() === 'admin'): ?>
+                                    <a class="btn btn-sm btn-outline-primary" href="<?= base_url('admin/evidences.php?edit=' . (int) $item['id']) ?>" title="Sửa minh chứng"><i class="bi bi-pencil"></i></a>
+                                <?php endif; ?>
                                 <?php if (!empty($item['file_id'])): ?>
                                     <a class="btn btn-sm btn-outline-secondary" href="<?= base_url('user/view.php?id=' . (int) $item['file_id']) ?>" target="_blank" rel="noopener" title="Xem minh chứng"><i class="bi bi-eye"></i></a>
-                                    <a class="btn btn-sm btn-outline-success" href="<?= base_url('user/download.php?id=' . (int) $item['file_id']) ?>"><i class="bi bi-download"></i></a>
+                                    <a class="btn btn-sm btn-outline-success" href="<?= base_url('user/download.php?id=' . (int) $item['file_id']) ?>" title="Tải minh chứng"><i class="bi bi-download"></i></a>
                                 <?php else: ?>
-                                    <button class="btn btn-sm btn-outline-secondary" type="button" disabled><i class="bi bi-eye"></i></button>
-                                    <button class="btn btn-sm btn-outline-secondary" type="button" disabled><i class="bi bi-download"></i></button>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" disabled title="Xem minh chứng"><i class="bi bi-eye"></i></button>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" disabled title="Tải minh chứng"><i class="bi bi-download"></i></button>
                                 <?php endif; ?>
                             </div>
                         </td>

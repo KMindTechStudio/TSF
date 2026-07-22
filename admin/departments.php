@@ -106,6 +106,13 @@ if ($editId > 0) {
 
 $deptRows = $pdo->query('SELECT id, ma_don_vi AS code, ten_don_vi AS name, trang_thai AS status FROM don_vi ORDER BY ten_don_vi')->fetchAll();
 
+$searchKeyword = trim($_GET['search'] ?? $_GET['q'] ?? '');
+if ($searchKeyword !== '') {
+    $deptRows = array_filter($deptRows, function ($dept) use ($searchKeyword) {
+        return search_contains($dept['code'], $searchKeyword) || search_contains($dept['name'], $searchKeyword);
+    });
+}
+
 $pageTitle = page_title('Quản lý đơn vị');
 $heading   = 'Quản lý đơn vị';
 include __DIR__ . '/../includes/header.php';
@@ -115,7 +122,7 @@ include __DIR__ . '/../includes/header.php';
 <?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
 <div class="panel">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <div>
             <h2 class="h5 mb-1">Danh sách đơn vị</h2>
             <p class="text-secondary mb-0 small">Khoa, phòng ban, bộ môn tham gia quy trình kiểm định.</p>
@@ -124,6 +131,17 @@ include __DIR__ . '/../includes/header.php';
             <i class="bi bi-plus-circle me-1"></i> Thêm mới
         </a>
     </div>
+
+    <form method="get" action="" class="mb-3" id="departmentSearchForm">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" name="search" id="departmentSearchInput" class="form-control" placeholder="Nhập mã hoặc tên đơn vị để tìm kiếm..." value="<?= htmlspecialchars($searchKeyword) ?>">
+            <?php if ($searchKeyword !== ''): ?>
+                <a href="<?= base_url('admin/departments.php') ?>" class="btn btn-outline-secondary" title="Xóa tìm kiếm"><i class="bi bi-x-lg"></i></a>
+            <?php endif; ?>
+            <button class="btn btn-primary" type="submit">Tìm kiếm</button>
+        </div>
+    </form>
 
     <div class="table-responsive">
         <table class="table" data-page-size="10">
@@ -135,7 +153,7 @@ include __DIR__ . '/../includes/header.php';
                     <th class="text-end">Thao tác</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="departmentsTableBody">
             <?php foreach ($deptRows as $dept): ?>
                 <tr>
                     <td class="fw-bold"><?= htmlspecialchars($dept['code']) ?></td>
@@ -171,13 +189,66 @@ include __DIR__ . '/../includes/header.php';
                     </td>
                 </tr>
             <?php endforeach; ?>
-            <?php if (empty($deptRows)): ?>
-                <tr><td colspan="4" class="text-center text-secondary py-4">Chưa có đơn vị nào.</td></tr>
-            <?php endif; ?>
+            <tr id="noDataRow" class="<?= !empty($deptRows) ? 'd-none' : '' ?>">
+                <td colspan="4" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
+            </tr>
             </tbody>
         </table>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('departmentSearchInput');
+    const tableBody = document.getElementById('departmentsTableBody');
+    const noDataRow = document.getElementById('noDataRow');
+    if (!searchInput || !tableBody) return;
+
+    function normalizeText(str) {
+        return (str || '')
+            .toString()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function filterTable() {
+        const query = normalizeText(searchInput.value);
+        const rows = tableBody.querySelectorAll('tr:not(#noDataRow)');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const codeCell = row.cells[0]?.textContent || '';
+            const nameCell = row.cells[1]?.textContent || '';
+            const textToMatch = normalizeText(codeCell + ' ' + nameCell);
+
+            if (query === '' || textToMatch.includes(query)) {
+                row.dataset.filteredOut = 'false';
+                visibleCount++;
+            } else {
+                row.dataset.filteredOut = 'true';
+            }
+        });
+
+        if (noDataRow) {
+            if (visibleCount === 0) {
+                noDataRow.classList.remove('d-none');
+            } else {
+                noDataRow.classList.add('d-none');
+            }
+        }
+
+        if (typeof refreshTablePaginations === 'function') {
+            refreshTablePaginations();
+        }
+    }
+
+    searchInput.addEventListener('input', filterTable);
+});
+</script>
 
 <!-- Department Form Modal -->
 <div class="modal fade management-form-modal" id="departmentFormModal" tabindex="-1"

@@ -207,6 +207,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 require_once __DIR__ . '/../includes/data.php';
 
+$searchKeyword = trim($_GET['search'] ?? $_GET['q'] ?? '');
+if ($searchKeyword !== '') {
+    $users = array_filter($users, function ($user) use ($searchKeyword) {
+        $matchCode = search_contains($user['code'], $searchKeyword);
+        $matchName = search_contains($user['name'], $searchKeyword);
+        $matchDept = search_contains($user['department'], $searchKeyword);
+        $matchRole = search_contains($user['role'], $searchKeyword);
+        $matchUser = search_contains($user['username'], $searchKeyword);
+        return $matchCode || $matchName || $matchDept || $matchRole || $matchUser;
+    });
+}
+
 $roleRows    = $pdo->query('SELECT id, ma_vai_tro AS code, ten_vai_tro AS name FROM vai_tro ORDER BY id')->fetchAll();
 $departments = $pdo->query("SELECT id, ten_don_vi AS name FROM don_vi WHERE trang_thai = 'active' ORDER BY ten_don_vi")->fetchAll();
 
@@ -230,14 +242,25 @@ include __DIR__ . '/../includes/header.php';
 <div class="row g-4 accounts-layout">
     <div class="col-12">
         <div class="panel accounts-list-panel">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
                 <h2 class="h5 mb-0">Danh sách người dùng</h2>
                 <a class="btn btn-primary" href="<?= base_url('admin/users.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm mới</a>
             </div>
+            <form method="get" action="" class="mb-3" id="userSearchForm">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="search" id="userSearchInput" class="form-control" placeholder="Nhập mã người dùng, họ tên, đơn vị hoặc vai trò để tìm kiếm..." value="<?= htmlspecialchars($searchKeyword) ?>">
+                    <?php if ($searchKeyword !== ''): ?>
+                        <a href="<?= base_url('admin/users.php') ?>" class="btn btn-outline-secondary" title="Xóa tìm kiếm"><i class="bi bi-x-lg"></i></a>
+                    <?php endif; ?>
+                    <button class="btn btn-primary" type="submit">Tìm kiếm</button>
+                </div>
+            </form>
             <div class="table-responsive">
                 <table class="table" data-page-size="10">
                     <thead>
                     <tr>
+                        <th style="width: 60px;">Avatar</th>
                         <th>Mã người dùng</th>
                         <th>Họ tên</th>
                         <th>Đơn vị</th>
@@ -247,9 +270,10 @@ include __DIR__ . '/../includes/header.php';
                         <th class="text-end">Thao tác</th>
                     </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="usersTableBody">
                     <?php foreach ($users as $user): ?>
                         <tr>
+                            <td><?= avatar_html($user['avatar'] ?? null, $user['name']) ?></td>
                             <td class="fw-bold"><?= htmlspecialchars($user['code']) ?></td>
                             <td class="fw-semibold"><?= htmlspecialchars($user['name']) ?></td>
                             <td><?= htmlspecialchars($user['department']) ?></td>
@@ -279,12 +303,71 @@ include __DIR__ . '/../includes/header.php';
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    <tr id="noDataRow" class="<?= !empty($users) ? 'd-none' : '' ?>">
+                        <td colspan="8" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
+                    </tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('userSearchInput');
+    const tableBody = document.getElementById('usersTableBody');
+    const noDataRow = document.getElementById('noDataRow');
+    if (!searchInput || !tableBody) return;
+
+    function normalizeText(str) {
+        return (str || '')
+            .toString()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function filterTable() {
+        const query = normalizeText(searchInput.value);
+        const rows = tableBody.querySelectorAll('tr:not(#noDataRow)');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const codeCell = row.cells[1]?.textContent || '';
+            const nameCell = row.cells[2]?.textContent || '';
+            const deptCell = row.cells[3]?.textContent || '';
+            const roleCell = row.cells[4]?.textContent || '';
+            const userCell = row.cells[5]?.textContent || '';
+            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + deptCell + ' ' + roleCell + ' ' + userCell);
+
+            if (query === '' || textToMatch.includes(query)) {
+                row.dataset.filteredOut = 'false';
+                visibleCount++;
+            } else {
+                row.dataset.filteredOut = 'true';
+            }
+        });
+
+        if (noDataRow) {
+            if (visibleCount === 0) {
+                noDataRow.classList.remove('d-none');
+            } else {
+                noDataRow.classList.add('d-none');
+            }
+        }
+
+        if (typeof refreshTablePaginations === 'function') {
+            refreshTablePaginations();
+        }
+    }
+
+    searchInput.addEventListener('input', filterTable);
+});
+</script>
 
 <div class="modal fade management-form-modal" id="accountFormModal" tabindex="-1" aria-labelledby="accountFormModalLabel" aria-hidden="true" <?= ($editingUser || $isCreatingUser) ? 'data-auto-open-modal' : '' ?>>
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">

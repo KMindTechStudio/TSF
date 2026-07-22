@@ -74,6 +74,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 require_once __DIR__ . '/../includes/data.php';
 
+$searchKeyword = trim($_GET['search'] ?? $_GET['q'] ?? '');
+if ($searchKeyword !== '') {
+    $standards = array_filter($standards, function ($std) use ($searchKeyword) {
+        return search_contains($std['code'], $searchKeyword) || search_contains($std['name'], $searchKeyword);
+    });
+}
+
 $isCreatingStandard = isset($_GET['create']);
 $editId             = $isCreatingStandard ? 0 : (int) ($_GET['edit'] ?? 0);
 $editingStandard    = null;
@@ -94,17 +101,27 @@ include __DIR__ . '/../includes/header.php';
 <div class="row g-4 standards-layout">
     <div class="col-12">
         <div class="panel standards-list-panel">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
                 <h2 class="h5 mb-0">Danh sách tiêu chuẩn</h2>
                 <div class="d-flex gap-2">
                     <a class="btn btn-primary" href="<?= base_url('admin/standards.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm mới</a>
                     <button class="btn btn-outline-secondary" type="button"><i class="bi bi-file-earmark-spreadsheet me-1"></i> Xuất Excel</button>
                 </div>
             </div>
+            <form method="get" action="" class="mb-3" id="standardSearchForm">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="search" id="standardSearchInput" class="form-control" placeholder="Nhập mã hoặc tên tiêu chuẩn để tìm kiếm..." value="<?= htmlspecialchars($searchKeyword) ?>">
+                    <?php if ($searchKeyword !== ''): ?>
+                        <a href="<?= base_url('admin/standards.php') ?>" class="btn btn-outline-secondary" title="Xóa tìm kiếm"><i class="bi bi-x-lg"></i></a>
+                    <?php endif; ?>
+                    <button class="btn btn-primary" type="submit">Tìm kiếm</button>
+                </div>
+            </form>
             <div class="table-responsive">
                 <table class="table" data-page-size="10">
                     <thead><tr><th>Mã</th><th>Tên tiêu chuẩn</th><th>Tiêu chí</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
-                    <tbody>
+                    <tbody id="standardsTableBody">
                     <?php foreach ($standards as $standard): ?>
                         <tr>
                             <td class="fw-bold"><?= htmlspecialchars($standard['code']) ?></td>
@@ -123,12 +140,68 @@ include __DIR__ . '/../includes/header.php';
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    <tr id="noDataRow" class="<?= !empty($standards) ? 'd-none' : '' ?>">
+                        <td colspan="5" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
+                    </tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('standardSearchInput');
+    const tableBody = document.getElementById('standardsTableBody');
+    const noDataRow = document.getElementById('noDataRow');
+    if (!searchInput || !tableBody) return;
+
+    function normalizeText(str) {
+        return (str || '')
+            .toString()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function filterTable() {
+        const query = normalizeText(searchInput.value);
+        const rows = tableBody.querySelectorAll('tr:not(#noDataRow)');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const codeCell = row.cells[0]?.textContent || '';
+            const nameCell = row.cells[1]?.textContent || '';
+            const textToMatch = normalizeText(codeCell + ' ' + nameCell);
+
+            if (query === '' || textToMatch.includes(query)) {
+                row.dataset.filteredOut = 'false';
+                visibleCount++;
+            } else {
+                row.dataset.filteredOut = 'true';
+            }
+        });
+
+        if (noDataRow) {
+            if (visibleCount === 0) {
+                noDataRow.classList.remove('d-none');
+            } else {
+                noDataRow.classList.add('d-none');
+            }
+        }
+
+        if (typeof refreshTablePaginations === 'function') {
+            refreshTablePaginations();
+        }
+    }
+
+    searchInput.addEventListener('input', filterTable);
+});
+</script>
 
 <div class="modal fade management-form-modal" id="standardFormModal" tabindex="-1" aria-labelledby="standardFormModalLabel" aria-hidden="true" <?= ($editingStandard || $isCreatingStandard) ? 'data-auto-open-modal' : '' ?>>
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">

@@ -238,6 +238,7 @@ $stmt = $pdo->query("
         u.ten_dang_nhap,
         u.email,
         u.trang_thai,
+        u.duong_dan_anh_dai_dien AS avatar,
         v.ten_vai_tro AS role_name,
         COALESCE(d.ten_don_vi, 'Chưa phân đơn vị') AS department_name
     FROM nguoi_dung u
@@ -254,6 +255,7 @@ foreach ($stmt->fetchAll() as $row) {
         'email'      => $row['email'],
         'role'       => $row['role_name'],
         'department' => $row['department_name'],
+        'avatar'     => $row['avatar'],
         'status_raw' => $row['trang_thai'],
         'status'     => vn_user_status($row['trang_thai']),
     ];

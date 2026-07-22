@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/helpers.php';
 require_login();
-require_roles(['admin']);
 require_once __DIR__ . '/../config/database.php';
 
 $success = '';
@@ -13,18 +12,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirmPassword = $_POST['confirm_password'] ?? '';
     $userId = (int) $_SESSION['user_id'];
 
-    $stmt = db()->prepare('SELECT password_hash FROM nguoi_dung WHERE id = :id LIMIT 1');
+    $stmt = db()->prepare('SELECT mat_khau_hash FROM nguoi_dung WHERE id = :id LIMIT 1');
     $stmt->execute(['id' => $userId]);
     $user = $stmt->fetch();
 
-    if (!$user || !password_verify($currentPassword, $user['password_hash'])) {
+    if (!$user || !password_verify($currentPassword, $user['mat_khau_hash'])) {
         $error = 'Mật khẩu hiện tại không chính xác.';
     } elseif (strlen($newPassword) < 6) {
         $error = 'Mật khẩu mới phải có ít nhất 6 ký tự.';
     } elseif ($newPassword !== $confirmPassword) {
         $error = 'Mật khẩu xác nhận chưa trùng khớp.';
     } else {
-        $update = db()->prepare('UPDATE nguoi_dung SET password_hash = :password_hash, updated_at = NOW() WHERE id = :id');
+        $update = db()->prepare('UPDATE nguoi_dung SET mat_khau_hash = :password_hash WHERE id = :id');
         $update->execute([
             'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
             'id' => $userId,

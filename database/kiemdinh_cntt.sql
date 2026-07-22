@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 22, 2026 at 05:02 AM
+-- Generation Time: Jul 22, 2026 at 06:09 AM
 -- Server version: 10.4.22-MariaDB
 -- PHP Version: 7.4.28
 
@@ -325,8 +325,8 @@ CREATE TABLE `nguoi_dung` (
 --
 
 INSERT INTO `nguoi_dung` (`id`, `ma_nguoi_dung`, `id_vai_tro`, `id_don_vi`, `ho_ten`, `ten_dang_nhap`, `email`, `duong_dan_anh_dai_dien`, `mat_khau_hash`, `trang_thai`, `dang_nhap_cuoi`, `ngay_tao`, `ngay_cap_nhat`) VALUES
-(1, 'ND001', 1, 5, 'Dev Nguyen', 'admin', 'admin@fbu.edu.vn', 'uploads/avatars/avatar_user_1_20260717062114.jpg', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'active', '2026-07-22 09:58:59', '2026-07-17 03:40:15', '2026-07-22 03:00:53'),
-(2, 'ND002', 2, 3, 'Tran Thu Ha', 'kiemdinhtt', 'ha.tt@fbu.edu.vn', NULL, '$2y$10$98IdFASFlTYGEIBVWcui4u52XXRv1x2h4jO/GAJ612wzPiGkMJtsK', 'active', '2026-07-22 02:03:10', '2026-07-17 03:40:15', '2026-07-22 02:20:09');
+(1, 'ND001', 1, 5, 'Dev Nguyen', 'admin', 'admin@fbu.edu.vn', 'uploads/avatars/avatar_user_1_20260717062114.jpg', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'active', '2026-07-22 11:07:05', '2026-07-17 03:40:15', '2026-07-22 04:07:05'),
+(2, 'ND002', 2, 3, 'Tran Thu Ha', 'kiemdinhtt', 'ha.tt@fbu.edu.vn', 'uploads/avatars/avatar_user_2_20260722060656.jpg', '$2y$10$98IdFASFlTYGEIBVWcui4u52XXRv1x2h4jO/GAJ612wzPiGkMJtsK', 'active', '2026-07-22 11:06:22', '2026-07-17 03:40:15', '2026-07-22 04:06:56');
 
 -- --------------------------------------------------------
 
@@ -352,7 +352,8 @@ INSERT INTO `remember_tokens` (`id`, `id_nguoi_dung`, `ma_token`, `het_han`, `ng
 (4, 1, 'b124adb663deb1eb2daba8cf7188dbc7c3bfed49ce2b8c57a392e55c71e09457', '2026-07-25 08:48:03', '2026-07-18 06:48:03'),
 (5, 1, 'f27a57993177966a72d22ad28147856ef02ac9152574b64f64186a7a8d22cc0e', '2026-07-28 18:08:29', '2026-07-21 16:08:29'),
 (12, 1, 'dd5c44eda87d17950711d2383c8634128c9d2e153ccb9ec8080f2b2676c26b3a', '2026-07-29 01:56:48', '2026-07-21 23:56:48'),
-(13, 1, '6fa4132769a86159d165e4311c262bcfa47d1f3fe8a9eed2dbacf2d3aec4b371', '2026-07-29 04:58:59', '2026-07-22 02:58:59');
+(13, 1, '6fa4132769a86159d165e4311c262bcfa47d1f3fe8a9eed2dbacf2d3aec4b371', '2026-07-29 04:58:59', '2026-07-22 02:58:59'),
+(17, 1, 'eeaf7353b1c2dd8ea7229485b5938e3896236f599be391c30acfca9126074bf0', '2026-07-29 06:07:05', '2026-07-22 04:07:05');
 
 -- --------------------------------------------------------
 
@@ -598,7 +599,7 @@ ALTER TABLE `nguoi_dung`
 -- AUTO_INCREMENT for table `remember_tokens`
 --
 ALTER TABLE `remember_tokens`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `tieu_chi`

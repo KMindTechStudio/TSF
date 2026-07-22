@@ -57,17 +57,11 @@ $pageTitle = $pageTitle ?? $appName;
                                 <small><?= htmlspecialchars($currentUser['department']) ?></small>
                             </span>
                         </div>
-                        <?php if (current_role() === 'admin'): ?>
-                            <a class="dropdown-item" href="<?= base_url('user/profile.php') ?>">
-                                <i class="bi bi-person-badge"></i>
-                                Thông tin cá nhân
-                            </a>
-                            <a class="dropdown-item" href="<?= base_url('user/change_password.php') ?>">
-                                <i class="bi bi-key"></i>
-                                Đổi mật khẩu
-                            </a>
-                            <div class="dropdown-divider"></div>
-                        <?php endif; ?>
+                        <a class="dropdown-item" href="<?= base_url('user/profile.php') ?>">
+                            <i class="bi bi-person-badge"></i>
+                            Thông tin cá nhân
+                        </a>
+                        <div class="dropdown-divider"></div>
                         <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#logoutConfirmModal">
                             <i class="bi bi-box-arrow-right"></i>
                             Đăng xuất

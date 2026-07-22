@@ -11,94 +11,66 @@ $pdo = db();
 $userId = (int) $_SESSION['user_id'];
 $success = '';
 $error = '';
-$avatarMaxMb = 2;
+$avatarMaxMb = 100;
 $avatarMaxBytes = $avatarMaxMb * 1024 * 1024;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $fullName = trim($_POST['full_name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $departmentId = (int) ($_POST['department_id'] ?? 0);
-    $avatarPath = null;
-    $avatarFile = $_FILES['avatar_file'] ?? null;
+    $action = $_POST['action'] ?? '';
 
-    if ($fullName === '' || $email === '' || $departmentId <= 0) {
-        $error = 'Vui lòng nhập đầy đủ họ tên, email và đơn vị.';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = 'Email chưa đúng định dạng.';
-    } else {
-        $check = $pdo->prepare('SELECT id FROM nguoi_dung WHERE email = :email AND id <> :id LIMIT 1');
-        $check->execute([
-            'email' => $email,
-            'id' => $userId,
-        ]);
-
-        if ($check->fetch()) {
-            $error = 'Email này đã được tài khoản khác sử dụng.';
-        }
-    }
-
-    if (!$error && $avatarFile && $avatarFile['error'] !== UPLOAD_ERR_NO_FILE) {
-        $allowedAvatarExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-        $extension = strtolower(pathinfo($avatarFile['name'], PATHINFO_EXTENSION));
-
-        if ($avatarFile['error'] !== UPLOAD_ERR_OK) {
-            $error = 'Upload ảnh đại diện không thành công. Vui lòng thử lại.';
-        } elseif ((int) $avatarFile['size'] > $avatarMaxBytes) {
-            $error = 'Không được upload ảnh đại diện quá ' . $avatarMaxMb . 'MB.';
-        } elseif (!in_array($extension, $allowedAvatarExtensions, true)) {
-            $error = 'Ảnh đại diện chỉ nhận JPG, PNG, WebP hoặc GIF.';
+    if ($action === 'update_avatar') {
+        $avatarFile = $_FILES['avatar_file'] ?? null;
+        if (!$avatarFile || $avatarFile['error'] === UPLOAD_ERR_NO_FILE) {
+            $error = 'Vui lòng chọn tệp ảnh mới để cập nhật ảnh đại diện.';
         } else {
-            $avatarDir = realpath(__DIR__ . '/../uploads/avatars');
-            if ($avatarDir === false) {
-                $avatarDir = __DIR__ . '/../uploads/avatars';
-                mkdir($avatarDir, 0777, true);
-            }
+            $allowedAvatarExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+            $extension = strtolower(pathinfo($avatarFile['name'], PATHINFO_EXTENSION));
 
-            $storedName = 'avatar_user_' . $userId . '_' . date('YmdHis') . '.' . $extension;
-            $targetPath = rtrim($avatarDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $storedName;
-
-            if (!move_uploaded_file($avatarFile['tmp_name'], $targetPath)) {
-                $error = 'Không thể lưu ảnh đại diện vào hệ thống.';
+            if ($avatarFile['error'] !== UPLOAD_ERR_OK) {
+                $error = 'Upload ảnh đại diện không thành công. Vui lòng thử lại.';
+            } elseif ((int) $avatarFile['size'] > $avatarMaxBytes) {
+                $error = 'Không được upload ảnh đại diện quá ' . $avatarMaxMb . 'MB.';
+            } elseif (!in_array($extension, $allowedAvatarExtensions, true)) {
+                $error = 'Ảnh đại diện chỉ nhận JPG, PNG, WebP hoặc GIF.';
             } else {
-                $avatarPath = 'uploads/avatars/' . $storedName;
+                $avatarDir = realpath(__DIR__ . '/../uploads/avatars');
+                if ($avatarDir === false) {
+                    $avatarDir = __DIR__ . '/../uploads/avatars';
+                    mkdir($avatarDir, 0777, true);
+                }
+
+                $storedName = 'avatar_user_' . $userId . '_' . date('YmdHis') . '.' . $extension;
+                $targetPath = rtrim($avatarDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $storedName;
+
+                if (!move_uploaded_file($avatarFile['tmp_name'], $targetPath)) {
+                    $error = 'Không thể lưu ảnh đại diện vào hệ thống.';
+                } else {
+                    $avatarPath = 'uploads/avatars/' . $storedName;
+                    $stmt = $pdo->prepare("UPDATE nguoi_dung SET duong_dan_anh_dai_dien = :avatar_path WHERE id = :id");
+                    $stmt->execute(['avatar_path' => $avatarPath, 'id' => $userId]);
+                    $success = 'Cập nhật ảnh đại diện thành công.';
+                }
             }
         }
     }
 
-    if (!$error) {
-        if ($avatarPath) {
-            $stmt = $pdo->prepare("
-                UPDATE nguoi_dung
-                SET ho_ten = :full_name,
-                    email = :email,
-                    id_don_vi = :department_id,
-                    duong_dan_anh_dai_dien = :avatar_path
-                WHERE id = :id
-            ");
-            $stmt->execute([
-                'full_name' => $fullName,
-                'email' => $email,
-                'department_id' => $departmentId,
-                'avatar_path' => $avatarPath,
-                'id' => $userId,
-            ]);
-        } else {
-            $stmt = $pdo->prepare("
-                UPDATE nguoi_dung
-                SET ho_ten = :full_name,
-                    email = :email,
-                    id_don_vi = :department_id
-                WHERE id = :id
-            ");
-            $stmt->execute([
-                'full_name' => $fullName,
-                'email' => $email,
-                'department_id' => $departmentId,
-                'id' => $userId,
-            ]);
-        }
+    if ($action === 'change_password') {
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
 
-        $success = 'Cập nhật thông tin cá nhân thành công.';
+        if ($newPassword === '') {
+            $error = 'Vui lòng nhập mật khẩu mới.';
+        } elseif (strlen($newPassword) < 6) {
+            $error = 'Mật khẩu mới phải có ít nhất 6 ký tự.';
+        } elseif ($newPassword !== $confirmPassword) {
+            $error = 'Mật khẩu xác nhận chưa trùng khớp.';
+        } else {
+            $stmt = $pdo->prepare("UPDATE nguoi_dung SET mat_khau_hash = :password_hash WHERE id = :id");
+            $stmt->execute([
+                'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
+                'id' => $userId,
+            ]);
+            $success = 'Cập nhật mật khẩu thành công.';
+        }
     }
 }
 
@@ -122,15 +94,13 @@ $stmt = $pdo->prepare("
 $stmt->execute(['id' => $userId]);
 $profile = $stmt->fetch();
 
-$departments = $pdo->query("SELECT id, ten_don_vi AS name FROM don_vi WHERE trang_thai = 'active' ORDER BY ten_don_vi")->fetchAll();
-
 $pageTitle = page_title('Thông tin cá nhân');
 $heading = 'Thông tin cá nhân';
 include __DIR__ . '/../includes/header.php';
 ?>
-<div class="row g-4">
+<div class="row g-4 profile-layout">
     <div class="col-xl-5">
-        <div class="panel">
+        <div class="panel h-100">
             <div class="d-flex align-items-center gap-3 mb-4">
                 <?= avatar_html($profile['avatar_path'] ?? null, $profile['full_name'], 'avatar profile-avatar') ?>
                 <div>
@@ -148,6 +118,7 @@ include __DIR__ . '/../includes/header.php';
             <?php endif; ?>
 
             <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="update_avatar">
                 <div class="mb-3">
                     <label class="form-label">Ảnh đại diện</label>
                     <input class="form-control" name="avatar_file" type="file" accept=".jpg,.jpeg,.png,.webp,.gif">
@@ -155,40 +126,43 @@ include __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Họ tên</label>
-                    <input class="form-control" name="full_name" value="<?= htmlspecialchars($profile['full_name']) ?>" required>
+                    <input class="form-control bg-light" value="<?= htmlspecialchars($profile['full_name']) ?>" readonly title="Chỉ Quản trị viên mới có quyền đổi họ tên">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tên đăng nhập</label>
+                    <input class="form-control bg-light" value="<?= htmlspecialchars($profile['username']) ?>" readonly title="Không thể thay đổi tên đăng nhập">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Email</label>
-                    <input class="form-control" type="email" name="email" value="<?= htmlspecialchars($profile['email']) ?>" required>
+                    <input class="form-control bg-light" value="<?= htmlspecialchars($profile['email']) ?>" readonly title="Chỉ Quản trị viên mới có quyền đổi email">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Đơn vị</label>
-                    <select class="form-select" name="department_id" required>
-                        <?php foreach ($departments as $department): ?>
-                            <option value="<?= $department['id'] ?>" <?= (int) $profile['department_id'] === (int) $department['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($department['name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <input class="form-control bg-light" value="<?= htmlspecialchars($profile['department_name'] ?? 'Chưa phân đơn vị') ?>" readonly title="Chỉ Quản trị viên mới có quyền chuyển đơn vị">
                 </div>
                 <div class="mb-4">
                     <label class="form-label">Vai trò</label>
-                    <input class="form-control" value="<?= htmlspecialchars($profile['role_name']) ?>" readonly>
+                    <input class="form-control bg-light" value="<?= htmlspecialchars($profile['role_name']) ?>" readonly>
                 </div>
+
                 <button class="btn btn-primary w-100" type="submit">
-                    <i class="bi bi-save me-1"></i> Cập nhật thông tin
+                    <i class="bi bi-save me-1"></i> Lưu ảnh đại diện
                 </button>
             </form>
         </div>
     </div>
     <div class="col-xl-7">
-        <div class="panel">
+        <div class="panel h-100">
             <h2 class="h5 mb-3">Thông tin hệ thống</h2>
-            <div class="table-responsive">
+            <div class="profile-info-table">
                 <table class="table">
                     <tbody>
                     <tr>
-                        <th style="width: 220px;">Tên đăng nhập</th>
+                        <th style="width: 220px;">Mã người dùng</th>
+                        <td><?= htmlspecialchars($profile['ma_nguoi_dung'] ?? ('ND' . str_pad($profile['id'], 3, '0', STR_PAD_LEFT))) ?></td>
+                    </tr>
+                    <tr>
+                        <th>Tên đăng nhập</th>
                         <td><?= htmlspecialchars($profile['username']) ?></td>
                     </tr>
                     <tr>
@@ -200,16 +174,29 @@ include __DIR__ . '/../includes/header.php';
                         <td><?= htmlspecialchars($trainingProgram['name']) ?></td>
                     </tr>
                     <tr>
-                        <th>Mã ngành</th>
-                        <td><?= htmlspecialchars($trainingProgram['code']) ?></td>
-                    </tr>
-                    <tr>
-                        <th>Chu kỳ kiểm định</th>
-                        <td><?= htmlspecialchars($trainingProgram['cycle']) ?></td>
+                        <th>Trường</th>
+                        <td><?= htmlspecialchars($trainingProgram['school']) ?></td>
                     </tr>
                     </tbody>
                 </table>
             </div>
+
+            <hr class="my-4">
+            <h2 class="h5 mb-3"><i class="bi bi-shield-lock me-1"></i> Đổi mật khẩu</h2>
+            <form method="post">
+                <input type="hidden" name="action" value="change_password">
+                <div class="mb-3">
+                    <label class="form-label">Mật khẩu mới</label>
+                    <input class="form-control" type="password" name="new_password" placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Nhập lại mật khẩu mới</label>
+                    <input class="form-control" type="password" name="confirm_password" placeholder="Xác nhận lại mật khẩu mới" required>
+                </div>
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-key me-1"></i> Cập nhật mật khẩu
+                </button>
+            </form>
         </div>
     </div>
 </div>
