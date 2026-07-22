@@ -12,7 +12,16 @@ $success = '';
 $error = '';
 $maxUploadMb = 100;
 $maxUploadBytes = $maxUploadMb * 1024 * 1024;
-$allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'jpg', 'jpeg', 'png', 'zip', 'rar'];
+$allowedExtensions = ['zip', 'pdf', 'docx', 'xlsx', 'jpg', 'jpeg', 'png'];
+$maxSizeLimitsMb = [
+    'zip'  => 100,
+    'pdf'  => 50,
+    'docx' => 20,
+    'xlsx' => 20,
+    'jpg'  => 10,
+    'jpeg' => 10,
+    'png'  => 10,
+];
 $approvalOptions = [
     'approved' => 'Đã duyệt',
     'reviewing' => 'Chờ rà soát',
@@ -27,19 +36,36 @@ function ensure_evidence_file_version_column(PDO $pdo): void
         return;
     }
 
-    $column = $pdo->query("SHOW COLUMNS FROM evidence_files LIKE 'version_no'")->fetch();
+    $column = $pdo->query("SHOW COLUMNS FROM file_minh_chung LIKE 'so_phien_ban'")->fetch();
     if (!$column) {
-        $pdo->exec('ALTER TABLE evidence_files ADD COLUMN version_no INT NOT NULL DEFAULT 1 AFTER file_size');
+        $pdo->exec('ALTER TABLE file_minh_chung ADD COLUMN so_phien_ban INT NOT NULL DEFAULT 1');
     }
 
     $checked = true;
 }
 
+function validate_academic_year(string $year): bool
+{
+    if (!preg_match('/^(\d{4})-(\d{4})$/', $year, $matches)) {
+        return false;
+    }
+    $startYear = (int) $matches[1];
+    $endYear = (int) $matches[2];
+    return $endYear === ($startYear + 1);
+}
+
 function store_evidence_file(PDO $pdo, int $evidenceId, string $code, array $file, int $userId, array $allowedExtensions, ?int $requestedVersion = null): int
 {
+    global $maxSizeLimitsMb, $maxUploadMb;
     $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $maxMb = $maxSizeLimitsMb[$extension] ?? $maxUploadMb;
+    $maxBytes = $maxMb * 1024 * 1024;
+
     if (!in_array($extension, $allowedExtensions, true)) {
-        throw new RuntimeException('Định dạng file chưa được hỗ trợ. Chỉ nhận PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, RTF, JPG, PNG, ZIP, RAR.');
+        throw new RuntimeException('Định dạng file chưa được hỗ trợ. Chỉ nhận ZIP, PDF, DOCX, XLSX, JPG, PNG.');
+    }
+    if ((int) $file['size'] > $maxBytes) {
+        throw new RuntimeException('Dung lượng tệp .' . strtoupper($extension) . ' vượt quá giới hạn tối đa (' . $maxMb . 'MB).');
     }
 
     ensure_evidence_file_version_column($pdo);
@@ -47,7 +73,7 @@ function store_evidence_file(PDO $pdo, int $evidenceId, string $code, array $fil
     if ($requestedVersion !== null && $requestedVersion > 0) {
         $versionNo = $requestedVersion;
     } else {
-        $versionStmt = $pdo->prepare('SELECT COALESCE(MAX(version_no), 0) + 1 FROM evidence_files WHERE evidence_id = :evidence_id');
+        $versionStmt = $pdo->prepare('SELECT COALESCE(MAX(so_phien_ban), 0) + 1 FROM file_minh_chung WHERE id_minh_chung = :evidence_id');
         $versionStmt->execute(['evidence_id' => $evidenceId]);
         $versionNo = (int) $versionStmt->fetchColumn();
     }
@@ -68,7 +94,7 @@ function store_evidence_file(PDO $pdo, int $evidenceId, string $code, array $fil
 
     $relativePath = 'uploads/evidences/' . $storedName;
     $fileStmt = $pdo->prepare("
-        INSERT INTO evidence_files (evidence_id, original_name, stored_name, file_path, file_type, file_size, version_no, uploaded_by)
+        INSERT INTO file_minh_chung (id_minh_chung, ten_goc, ten_luu_tru, duong_dan, loai_file, kich_thuoc, so_phien_ban, nguoi_tai_len)
         VALUES (:evidence_id, :original_name, :stored_name, :file_path, :file_type, :file_size, :version_no, :uploaded_by)
     ");
     $fileStmt->execute([
@@ -97,21 +123,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
             throw new RuntimeException('Trạng thái minh chứng không hợp lệ.');
         }
 
-        $stmt = $pdo->prepare('UPDATE evidences SET approval_status = :status, updated_at = NOW() WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE minh_chung SET trang_thai_duyet = :status, ngay_cap_nhat = NOW() WHERE id = :id');
         $stmt->execute([
             'status' => $status,
             'id' => $evidenceId,
         ]);
 
         $logStmt = $pdo->prepare("
-            INSERT INTO audit_logs (user_id, action, module, record_id, new_value, ip_address)
-            VALUES (:user_id, 'status_update', 'evidences', :record_id, JSON_OBJECT('approval_status', :status), :ip_address)
+            INSERT INTO audit_logs (id_nguoi_dung, hanh_dong, phan_he, ten_ban_ghi, id_ban_ghi, gia_tri_moi, dia_chi_ip)
+            VALUES (:user_id, 'cap_nhat_trang_thai', 'minh_chung', :record_name, :record_id, JSON_OBJECT('trang_thai_duyet', :status), :ip_address)
         ");
         $logStmt->execute([
-            'user_id' => $userId,
-            'record_id' => $evidenceId,
-            'status' => $status,
-            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
+            'user_id'     => $userId,
+            'record_name' => 'Minh chứng #' . $evidenceId,
+            'record_id'   => $evidenceId,
+            'status'      => $status,
+            'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
         ]);
 
         $success = 'Cập nhật trạng thái minh chứng thành công.';
@@ -126,20 +153,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     try {
         $pdo->beginTransaction();
 
-        $fileStmt = $pdo->prepare('SELECT id, file_path FROM evidence_files WHERE evidence_id = :id');
+        $fileStmt = $pdo->prepare('SELECT id, duong_dan AS file_path FROM file_minh_chung WHERE id_minh_chung = :id');
         $fileStmt->execute(['id' => $evidenceId]);
         $files = $fileStmt->fetchAll();
         $fileIds = array_column($files, 'id');
 
         if ($fileIds) {
             $placeholders = implode(',', array_fill(0, count($fileIds), '?'));
-            $pdo->prepare("DELETE FROM download_logs WHERE evidence_file_id IN ($placeholders)")->execute($fileIds);
+            $pdo->prepare("DELETE FROM download_logs WHERE id_file_minh_chung IN ($placeholders)")->execute($fileIds);
         }
 
-        $pdo->prepare('DELETE FROM evidence_criteria WHERE evidence_id = :id')->execute(['id' => $evidenceId]);
-        $pdo->prepare('DELETE FROM evidence_files WHERE evidence_id = :id')->execute(['id' => $evidenceId]);
-        $pdo->prepare('DELETE FROM audit_logs WHERE module = :module AND record_id = :id')->execute(['module' => 'evidences', 'id' => $evidenceId]);
-        $pdo->prepare('DELETE FROM evidences WHERE id = :id')->execute(['id' => $evidenceId]);
+        $evStmt = $pdo->prepare('SELECT ma_minh_chung FROM minh_chung WHERE id = :id');
+        $evStmt->execute(['id' => $evidenceId]);
+        $evCode = $evStmt->fetchColumn() ?: ('#' . $evidenceId);
+
+        $pdo->prepare('DELETE FROM minh_chung_tieu_chi WHERE id_minh_chung = :id')->execute(['id' => $evidenceId]);
+        $pdo->prepare('DELETE FROM file_minh_chung WHERE id_minh_chung = :id')->execute(['id' => $evidenceId]);
+        $pdo->prepare('DELETE FROM audit_logs WHERE phan_he = :module AND id_ban_ghi = :id')->execute(['module' => 'minh_chung', 'id' => $evidenceId]);
+        $pdo->prepare('DELETE FROM minh_chung WHERE id = :id')->execute(['id' => $evidenceId]);
+
+        log_activity('xoa', 'minh_chung', $evidenceId, $evCode);
 
         $pdo->commit();
 
@@ -174,30 +207,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     $file = $_FILES['evidence_file'] ?? null;
     $extension = $file && !empty($file['name']) ? strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) : '';
 
+    $extMaxMb = $extension ? ($maxSizeLimitsMb[$extension] ?? $maxUploadMb) : $maxUploadMb;
+    $extMaxBytes = $extMaxMb * 1024 * 1024;
+
     if ($evidenceId <= 0 || $code === '' || $title === '' || $academicYear === '' || $departmentId <= 0 || empty($criteriaIds)) {
         $error = 'Vui lòng nhập đầy đủ mã, tên, năm học, đơn vị và tiêu chí.';
+    } elseif (!validate_academic_year($academicYear)) {
+        $error = 'Năm học phải đúng định dạng YYYY-YYYY (Ví dụ: 2025-2026, 2026-2027).';
     } elseif ($versionNo <= 0) {
         $error = 'Vui lòng nhập phiên bản minh chứng hợp lệ.';
     } elseif ($file && $file['error'] !== UPLOAD_ERR_NO_FILE && $file['error'] !== UPLOAD_ERR_OK) {
         $error = 'Upload file không thành công. Vui lòng thử lại.';
-    } elseif ($file && $file['error'] === UPLOAD_ERR_OK && (int) $file['size'] > $maxUploadBytes) {
-        $error = 'Không được upload file quá ' . $maxUploadMb . 'MB.';
     } elseif ($file && $file['error'] === UPLOAD_ERR_OK && !in_array($extension, $allowedExtensions, true)) {
-        $error = 'Định dạng file chưa được hỗ trợ. Chỉ nhận PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, RTF, JPG, PNG, ZIP, RAR.';
+        $error = 'Định dạng file chưa được hỗ trợ. Chỉ nhận ZIP, PDF, DOCX, XLSX, JPG, PNG.';
+    } elseif ($file && $file['error'] === UPLOAD_ERR_OK && (int) $file['size'] > $extMaxBytes) {
+        $error = 'Tệp .' . strtoupper($extension) . ' vượt quá dung lượng tối đa cho phép (' . $extMaxMb . 'MB).';
     } else {
         try {
             $pdo->beginTransaction();
 
+            $check = $pdo->prepare('SELECT id FROM minh_chung WHERE LOWER(ma_minh_chung) = LOWER(:code) AND id <> :id LIMIT 1');
+            $check->execute(['code' => $code, 'id' => $evidenceId]);
+            if ($check->fetch()) {
+                throw new RuntimeException('Mã minh chứng "' . $code . '" đã tồn tại trong hệ thống. Vui lòng nhập mã khác.');
+            }
+
             $stmt = $pdo->prepare("
-                UPDATE evidences
-                SET code = :code,
-                    title = :title,
-                    description = :description,
-                    academic_year = :academic_year,
-                    issued_date = :issued_date,
-                    evidence_type = :evidence_type,
-                    issuing_department_id = :department_id,
-                    responsible_user_id = :user_id
+                UPDATE minh_chung
+                SET ma_minh_chung = :code,
+                    tieu_de = :title,
+                    mo_ta = :description,
+                    nam_hoc = :academic_year,
+                    ngay_ban_hanh = :issued_date,
+                    loai_minh_chung = :evidence_type,
+                    id_don_vi_phu_trach = :department_id,
+                    id_nguoi_phu_trach = :user_id
                 WHERE id = :id
             ");
             $stmt->execute([
@@ -212,8 +256,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                 'id' => $evidenceId,
             ]);
 
-            $pdo->prepare('DELETE FROM evidence_criteria WHERE evidence_id = :id')->execute(['id' => $evidenceId]);
-            $linkStmt = $pdo->prepare('INSERT INTO evidence_criteria (evidence_id, criteria_id) VALUES (:evidence_id, :criteria_id)');
+            $pdo->prepare('DELETE FROM minh_chung_tieu_chi WHERE id_minh_chung = :id')->execute(['id' => $evidenceId]);
+            $linkStmt = $pdo->prepare('INSERT INTO minh_chung_tieu_chi (id_minh_chung, id_tieu_chi) VALUES (:evidence_id, :criteria_id)');
             foreach (array_unique($criteriaIds) as $criteriaId) {
                 $linkStmt->execute([
                     'evidence_id' => $evidenceId,
@@ -226,14 +270,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                 $newVersion = store_evidence_file($pdo, $evidenceId, $code, $file, $userId, $allowedExtensions, $versionNo);
             } else {
                 $latestFileStmt = $pdo->prepare('
-                    UPDATE evidence_files
-                    SET version_no = :version_no
+                    UPDATE file_minh_chung
+                    SET so_phien_ban = :version_no
                     WHERE id = (
                         SELECT latest_id FROM (
                             SELECT id AS latest_id
-                            FROM evidence_files
-                            WHERE evidence_id = :evidence_id
-                            ORDER BY version_no DESC, uploaded_at DESC, id DESC
+                            FROM file_minh_chung
+                            WHERE id_minh_chung = :evidence_id
+                            ORDER BY so_phien_ban DESC, ngay_tai_len DESC, id DESC
                             LIMIT 1
                         ) latest_file
                     )
@@ -245,6 +289,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
             }
 
             $pdo->commit();
+            log_activity('cap_nhat', 'minh_chung', $evidenceId, $code . ' - ' . $title);
             $success = $newVersion
                 ? 'Cập nhật minh chứng thành công. Tệp mới đã được lưu là phiên bản v' . $newVersion . '.'
                 : 'Cập nhật minh chứng thành công.';
@@ -272,39 +317,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
     $file = $_FILES['evidence_file'] ?? null;
     $extension = $file && !empty($file['name']) ? strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) : '';
 
+    $extMaxMb = $extension ? ($maxSizeLimitsMb[$extension] ?? $maxUploadMb) : $maxUploadMb;
+    $extMaxBytes = $extMaxMb * 1024 * 1024;
+
     if ($code === '' || $title === '' || $academicYear === '' || $departmentId <= 0 || empty($criteriaIds)) {
         $error = 'Vui lòng nhập đầy đủ mã, tên, năm học, đơn vị và tiêu chí.';
+    } elseif (!validate_academic_year($academicYear)) {
+        $error = 'Năm học phải đúng định dạng YYYY-YYYY (Ví dụ: 2025-2026, 2026-2027).';
     } elseif ($versionNo <= 0) {
         $error = 'Vui lòng nhập phiên bản minh chứng hợp lệ.';
     } elseif (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
         $error = 'Vui lòng chọn file minh chứng để upload.';
     } elseif ($file['error'] !== UPLOAD_ERR_OK) {
         $error = 'Upload file không thành công. Vui lòng thử lại.';
-    } elseif ((int) $file['size'] > $maxUploadBytes) {
-        $error = 'Không được upload file quá ' . $maxUploadMb . 'MB.';
     } elseif (!in_array($extension, $allowedExtensions, true)) {
-        $error = 'Định dạng file chưa được hỗ trợ. Chỉ nhận PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, RTF, JPG, PNG, ZIP, RAR.';
+        $error = 'Định dạng file chưa được hỗ trợ. Chỉ nhận ZIP, PDF, DOCX, XLSX, JPG, PNG.';
+    } elseif ((int) $file['size'] > $extMaxBytes) {
+        $error = 'Tệp .' . strtoupper($extension) . ' vượt quá dung lượng tối đa cho phép (' . $extMaxMb . 'MB).';
     } else {
         try {
             $pdo->beginTransaction();
 
-            $check = $pdo->prepare('SELECT id FROM evidences WHERE code = :code LIMIT 1');
+            $check = $pdo->prepare('SELECT id FROM minh_chung WHERE LOWER(ma_minh_chung) = LOWER(:code) LIMIT 1');
             $check->execute(['code' => $code]);
             if ($check->fetch()) {
-                throw new RuntimeException('Mã minh chứng đã tồn tại.');
+                throw new RuntimeException('Mã minh chứng "' . $code . '" đã tồn tại trong hệ thống. Vui lòng nhập mã khác.');
             }
 
             $stmt = $pdo->prepare("
-                INSERT INTO evidences (
-                    code,
-                    title,
-                    description,
-                    academic_year,
-                    issued_date,
-                    evidence_type,
-                    issuing_department_id,
-                    responsible_user_id,
-                    approval_status
+                INSERT INTO minh_chung (
+                    ma_minh_chung,
+                    tieu_de,
+                    mo_ta,
+                    nam_hoc,
+                    ngay_ban_hanh,
+                    loai_minh_chung,
+                    id_don_vi_phu_trach,
+                    id_nguoi_phu_trach,
+                    trang_thai_duyet
                 ) VALUES (
                     :code,
                     :title,
@@ -332,7 +382,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
 
             store_evidence_file($pdo, $evidenceId, $code, $file, $userId, $allowedExtensions, $versionNo);
 
-            $linkStmt = $pdo->prepare('INSERT INTO evidence_criteria (evidence_id, criteria_id) VALUES (:evidence_id, :criteria_id)');
+            $linkStmt = $pdo->prepare('INSERT INTO minh_chung_tieu_chi (id_minh_chung, id_tieu_chi) VALUES (:evidence_id, :criteria_id)');
             foreach (array_unique($criteriaIds) as $criteriaId) {
                 $linkStmt->execute([
                     'evidence_id' => $evidenceId,
@@ -341,14 +391,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
             }
 
             $logStmt = $pdo->prepare("
-                INSERT INTO audit_logs (user_id, action, module, record_id, new_value, ip_address)
-                VALUES (:user_id, 'create', 'evidences', :record_id, JSON_OBJECT('code', :code), :ip_address)
+                INSERT INTO audit_logs (id_nguoi_dung, hanh_dong, phan_he, ten_ban_ghi, id_ban_ghi, gia_tri_moi, dia_chi_ip)
+                VALUES (:user_id, 'them_moi', 'minh_chung', :record_name, :record_id, JSON_OBJECT('ma_minh_chung', :code), :ip_address)
             ");
             $logStmt->execute([
-                'user_id' => $userId,
-                'record_id' => $evidenceId,
-                'code' => $code,
-                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
+                'user_id'     => $userId,
+                'record_name' => $code . ' - ' . $title,
+                'record_id'   => $evidenceId,
+                'code'        => $code,
+                'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
             ]);
 
             $pdo->commit();
@@ -361,10 +412,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
         }
     }
 }
+if ($success) {
+    unset($_GET['create'], $_GET['edit']);
+}
 
 require_once __DIR__ . '/../includes/data.php';
 
-$departments = $pdo->query('SELECT id, name FROM departments ORDER BY name')->fetchAll();
+$departments = $pdo->query("SELECT id, ten_don_vi AS name FROM don_vi WHERE trang_thai = 'active' ORDER BY ten_don_vi")->fetchAll();
 $isCreatingEvidence = isset($_GET['create']);
 $editId = $isCreatingEvidence ? 0 : (int) ($_GET['edit'] ?? 0);
 $editingEvidence = null;
@@ -372,19 +426,19 @@ $editingCriteriaIds = [];
 $editingLatestFile = null;
 $editingVersionNo = 1;
 if ($editId > 0) {
-    $stmt = $pdo->prepare('SELECT * FROM evidences WHERE id = :id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT *, ma_minh_chung AS code, tieu_de AS title, mo_ta AS description, nam_hoc AS academic_year, ngay_ban_hanh AS issued_date, loai_minh_chung AS evidence_type, id_don_vi_phu_trach AS issuing_department_id, id_nguoi_phu_trach AS responsible_user_id, trang_thai_duyet AS approval_status FROM minh_chung WHERE id = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
     $editingEvidence = $stmt->fetch();
 
-    $stmt = $pdo->prepare('SELECT criteria_id FROM evidence_criteria WHERE evidence_id = :id');
+    $stmt = $pdo->prepare('SELECT id_tieu_chi AS criteria_id FROM minh_chung_tieu_chi WHERE id_minh_chung = :id');
     $stmt->execute(['id' => $editId]);
     $editingCriteriaIds = array_map('intval', array_column($stmt->fetchAll(), 'criteria_id'));
 
     $stmt = $pdo->prepare('
-        SELECT id, original_name, file_type, file_size, version_no, uploaded_at
-        FROM evidence_files
-        WHERE evidence_id = :id
-        ORDER BY version_no DESC, uploaded_at DESC, id DESC
+        SELECT id, ten_goc AS original_name, loai_file AS file_type, kich_thuoc AS file_size, so_phien_ban AS version_no, ngay_tai_len AS uploaded_at
+        FROM file_minh_chung
+        WHERE id_minh_chung = :id
+        ORDER BY so_phien_ban DESC, ngay_tai_len DESC, id DESC
         LIMIT 1
     ');
     $stmt->execute(['id' => $editId]);
@@ -447,7 +501,7 @@ $pageTitle = page_title('Quản lý minh chứng');
 $heading = 'Quản lý hồ sơ minh chứng';
 include __DIR__ . '/../includes/header.php';
 ?>
-<?php if ($editingEvidence || $isCreatingEvidence): ?><script>document.body.dataset.autoOpenModal = 'evidenceFormModal';</script><?php endif; ?>
+<?php if (($editingEvidence || $isCreatingEvidence) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'evidenceFormModal';</script><?php endif; ?>
 <div class="panel mb-4">
     <form class="row g-3 align-items-end" method="get">
         <div class="col-md-3">
@@ -560,8 +614,8 @@ include __DIR__ . '/../includes/header.php';
                         </th>
                         <th>
                             <span class="column-filter-head">
-                                <span>Đơn vị cung cấp</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc đơn vị cung cấp"><i class="bi bi-funnel"></i></button>
+                                <span>Đơn vị phụ trách</span>
+                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc đơn vị phụ trách"><i class="bi bi-funnel"></i></button>
                                 <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="6" placeholder="Lọc đơn vị"></span>
                             </span>
                         </th>
@@ -656,7 +710,6 @@ include __DIR__ . '/../includes/header.php';
                 <input type="hidden" name="action" value="<?= $editingEvidence ? 'update_evidence' : 'create_evidence' ?>">
                 <input type="hidden" name="id" value="<?= (int) ($editingEvidence['id'] ?? 0) ?>">
 
-
                 <div class="mb-3">
                     <label class="form-label">Mã minh chứng</label>
                     <input class="form-control" name="code" value="<?= htmlspecialchars($editingEvidence['code'] ?? '') ?>" placeholder="MC.06.01.01" required>
@@ -669,40 +722,19 @@ include __DIR__ . '/../includes/header.php';
                     <label class="form-label">Mô tả</label>
                     <textarea class="form-control" name="description" rows="2"><?= htmlspecialchars($editingEvidence['description'] ?? '') ?></textarea>
                 </div>
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Năm học</label>
-                        <input class="form-control" name="academic_year" value="<?= htmlspecialchars($editingEvidence['academic_year'] ?? '') ?>" placeholder="2025-2026" required>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Năm học <span class="text-danger">*</span></label>
+                        <input class="form-control" name="academic_year" value="<?= htmlspecialchars($editingEvidence['academic_year'] ?? '') ?>" placeholder="Ví dụ: 2025-2026" pattern="\d{4}-\d{4}" title="Định dạng: YYYY-YYYY (ví dụ: 2025-2026)" required>
+                        <div class="form-text">Định dạng chuẩn: YYYY-YYYY (VD: 2025-2026)</div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <label class="form-label">Ngày ban hành</label>
                         <input class="form-control" name="issued_date" value="<?= htmlspecialchars($editingEvidence['issued_date'] ?? '') ?>" type="date">
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Loại minh chứng</label>
-                        <select class="form-select" name="evidence_type">
-                            <?php $currentEvType = $editingEvidence['evidence_type'] ?? 'Minh chứng chính'; ?>
-                            <option value="Minh chứng chính" <?= $currentEvType === 'Minh chứng chính' ? 'selected' : '' ?>>Minh chứng chính</option>
-                            <option value="Minh chứng bổ sung" <?= $currentEvType === 'Minh chứng bổ sung' ? 'selected' : '' ?>>Minh chứng bổ sung</option>
-                            <option value="Minh chứng tham khảo" <?= $currentEvType === 'Minh chứng tham khảo' ? 'selected' : '' ?>>Minh chứng tham khảo</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Phiên bản</label>
-                        <input class="form-control" name="version_no" value="<?= (int) ($editingEvidence ? $editingVersionNo : 1) ?>" type="number" min="1" step="1" required>
-                    </div>
-                </div>
-                <div class="mb-3 mt-3">
-                    <label class="form-label">Đơn vị cung cấp / phụ trách</label>
-                    <select class="form-select" name="department_id" required>
-                        <option value="">Chọn đơn vị</option>
-                        <?php foreach ($departments as $department): ?>
-                            <option value="<?= $department['id'] ?>" <?= (int) ($editingEvidence['issuing_department_id'] ?? 0) === (int) $department['id'] ? 'selected' : '' ?>><?= htmlspecialchars($department['name']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Gắn tiêu chí</label>
+                    <label class="form-label">Thuộc tiêu chí</label>
                     <input class="form-control form-control-sm mb-2" type="search" data-criteria-search placeholder="Nhập mã hoặc tên tiêu chí">
                     <select class="form-select" name="criteria_ids[]" multiple size="5" required data-criteria-select>
                         <?php foreach ($criteria as $item): ?>
@@ -711,17 +743,43 @@ include __DIR__ . '/../includes/header.php';
                     </select>
                     <div class="form-text">Giữ Ctrl để chọn nhiều tiêu chí.</div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">File đính kèm</label>
-                    <input class="form-control" id="evidenceFile" name="evidence_file" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.jpg,.jpeg,.png,.zip,.rar" data-max-mb="<?= $maxUploadMb ?>" <?= $editingEvidence ? '' : 'required' ?>>
-                    <?php if ($editingLatestFile): ?>
-                        <div class="small text-secondary mt-2">
-                            Phiên bản hiện tại: v<?= (int) $editingLatestFile['version_no'] ?> · <?= htmlspecialchars($editingLatestFile['original_name']) ?> · <?= htmlspecialchars($editingLatestFile['file_type']) ?>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Đơn vị phụ trách</label>
+                        <select class="form-select" name="department_id" required>
+                            <option value="">Chọn đơn vị</option>
+                            <?php foreach ($departments as $department): ?>
+                                <option value="<?= $department['id'] ?>" <?= (int) ($editingEvidence['issuing_department_id'] ?? 0) === (int) $department['id'] ? 'selected' : '' ?>><?= htmlspecialchars($department['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Loại minh chứng</label>
+                        <select class="form-select" name="evidence_type">
+                            <?php $currentEvType = $editingEvidence['evidence_type'] ?? 'Minh chứng chính'; ?>
+                            <option value="Minh chứng chính" <?= $currentEvType === 'Minh chứng chính' ? 'selected' : '' ?>>Minh chứng chính</option>
+                            <option value="Minh chứng bổ sung" <?= $currentEvType === 'Minh chứng bổ sung' ? 'selected' : '' ?>>Minh chứng bổ sung</option>
+                            <option value="Minh chứng tham khảo" <?= $currentEvType === 'Minh chứng tham khảo' ? 'selected' : '' ?>>Minh chứng tham khảo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label">File đính kèm</label>
+                        <input class="form-control" id="evidenceFile" name="evidence_file" type="file" accept=".zip,.pdf,.docx,.xlsx,.jpg,.jpeg,.png" <?= $editingEvidence ? '' : 'required' ?> title="Chỉ hỗ trợ ZIP, PDF, DOCX, XLSX, JPG, PNG">
+                        <?php if ($editingLatestFile): ?>
+                            <div class="small text-secondary mt-2">
+                                Phiên bản hiện tại: v<?= (int) $editingLatestFile['version_no'] ?> · <?= htmlspecialchars($editingLatestFile['original_name']) ?> · <?= htmlspecialchars($editingLatestFile['file_type']) ?>
+                            </div>
+                        <?php endif; ?>
+                        <div class="form-text mt-1">
+                            <?= $editingEvidence ? 'Chọn tệp mới nếu cần cập nhật phiên bản minh chứng. <br>' : '' ?>
+                            <strong>Giới hạn dung lượng:</strong> ZIP (100MB) | PDF (50MB) | DOCX / XLSX (20MB) | JPG / PNG (10MB)
                         </div>
-                    <?php endif; ?>
-                    <div class="form-text"><?= $editingEvidence ? 'Chọn tệp mới nếu cần cập nhật phiên bản minh chứng. ' : '' ?>Dung lượng tối đa: <?= $maxUploadMb ?>MB.</div>
-                    <div class="alert alert-danger mt-2 d-none" id="fileSizeAlert">
-                        Không được upload file quá <?= $maxUploadMb ?>MB.
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Phiên bản</label>
+                        <input class="form-control" name="version_no" value="<?= (int) ($editingEvidence ? $editingVersionNo : 1) ?>" type="number" min="1" step="1" required>
                     </div>
                 </div>
                 <div class="d-flex gap-2 justify-content-end">

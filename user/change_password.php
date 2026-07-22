@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirmPassword = $_POST['confirm_password'] ?? '';
     $userId = (int) $_SESSION['user_id'];
 
-    $stmt = db()->prepare('SELECT password_hash FROM users WHERE id = :id LIMIT 1');
+    $stmt = db()->prepare('SELECT password_hash FROM nguoi_dung WHERE id = :id LIMIT 1');
     $stmt->execute(['id' => $userId]);
     $user = $stmt->fetch();
 
@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($newPassword !== $confirmPassword) {
         $error = 'Mật khẩu xác nhận chưa trùng khớp.';
     } else {
-        $update = db()->prepare('UPDATE users SET password_hash = :password_hash, updated_at = NOW() WHERE id = :id');
+        $update = db()->prepare('UPDATE nguoi_dung SET password_hash = :password_hash, updated_at = NOW() WHERE id = :id');
         $update->execute([
             'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
             'id' => $userId,

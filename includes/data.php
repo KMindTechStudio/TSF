@@ -14,10 +14,13 @@ function vn_criteria_status(string $status): string
 {
     switch ($status) {
         case 'complete':
+        case 'du_minh_chung':
             return 'Đủ minh chứng';
         case 'need_update':
+        case 'can_bo_sung':
             return 'Cần bổ sung';
         case 'missing':
+        case 'thieu_minh_chung':
             return 'Thiếu minh chứng';
         default:
             return 'Chưa xác định';
@@ -48,49 +51,40 @@ function standard_status_from_counts(int $missing, int $needUpdate): string
     if ($missing > 0) {
         return 'Thiếu minh chứng';
     }
-
     if ($needUpdate > 0) {
         return 'Cần bổ sung';
     }
-
     return 'Đủ minh chứng';
 }
 
 $pdo = db();
 
-$evidenceFileVersionColumn = $pdo->query("SHOW COLUMNS FROM evidence_files LIKE 'version_no'")->fetch();
-if (!$evidenceFileVersionColumn) {
-    $pdo->exec('ALTER TABLE evidence_files ADD COLUMN version_no INT NOT NULL DEFAULT 1 AFTER file_size');
-}
-
-$userCodeColumn = $pdo->query("SHOW COLUMNS FROM users LIKE 'user_code'")->fetch();
-if (!$userCodeColumn) {
-    $pdo->exec("ALTER TABLE users ADD COLUMN user_code VARCHAR(50) NULL AFTER id");
-    $pdo->exec("UPDATE users SET user_code = CONCAT('ND', LPAD(id, 3, '0')) WHERE user_code IS NULL OR user_code = ''");
-}
-
-$rolesRows = $pdo->query('SELECT code, name FROM roles ORDER BY id')->fetchAll();
+// ─── Roles ───────────────────────────────────────────────────────────────────
+$rolesRows = $pdo->query('SELECT ma_vai_tro, ten_vai_tro FROM vai_tro ORDER BY id')->fetchAll();
 $roles = [];
 foreach ($rolesRows as $row) {
-    $roles[$row['code']] = $row['name'];
+    $roles[$row['ma_vai_tro']] = $row['ten_vai_tro'];
 }
 
-$programRow = $pdo->query('SELECT * FROM training_programs ORDER BY id LIMIT 1')->fetch();
+// ─── Training program ────────────────────────────────────────────────────────
+$programRow = $pdo->query('SELECT * FROM chuong_trinh_dao_tao ORDER BY id LIMIT 1')->fetch();
 $trainingProgram = [
-    'name'   => $programRow['name'] ?? 'Công nghệ thông tin',
-    'code'   => $programRow['code'] ?? '7480201',
-    'degree' => $programRow['degree_level'] ?? 'Đại học chính quy',
+    'name'   => $programRow['ten_chuong_trinh'] ?? 'Công nghệ thông tin',
+    'code'   => $programRow['ma_chuong_trinh'] ?? '7480201',
+    'degree' => $programRow['trinh_do_dao_tao'] ?? 'Đại học chính quy',
     'school' => 'Trường Đại học Tài chính - Ngân hàng Hà Nội',
-    'cycle'  => $programRow['accreditation_cycle'] ?? 'Chu kỳ kiểm định 2026-2031',
+    'cycle'  => $programRow['chu_ky_kiem_dinh'] ?? 'Chu kỳ kiểm định 2026-2031',
 ];
 
+// ─── Current user ────────────────────────────────────────────────────────────
 $sessionUserId = $_SESSION['user_id'] ?? null;
+$userRow = null;
 if ($sessionUserId) {
     $stmt = $pdo->prepare("
-        SELECT u.*, r.code AS role_code, r.name AS role_name, d.name AS department_name
-        FROM users u
-        JOIN roles r ON r.id = u.role_id
-        LEFT JOIN departments d ON d.id = u.department_id
+        SELECT u.*, v.ma_vai_tro AS role_code, v.ten_vai_tro AS role_name, d.ten_don_vi AS department_name
+        FROM nguoi_dung u
+        JOIN vai_tro v ON v.id = u.id_vai_tro
+        LEFT JOIN don_vi d ON d.id = u.id_don_vi
         WHERE u.id = :id
         LIMIT 1
     ");
@@ -100,112 +94,118 @@ if ($sessionUserId) {
 
 $currentUser = [
     'id'         => $userRow['id'] ?? 1,
-    'name'       => $userRow['full_name'] ?? 'Quản trị viên',
+    'name'       => $userRow['ho_ten'] ?? 'Quản trị viên',
     'role'       => $userRow['role_code'] ?? 'admin',
     'department' => $userRow['department_name'] ?? 'Khoa Công nghệ thông tin',
-    'avatar'     => $userRow['avatar_path'] ?? null,
+    'avatar'     => $userRow['duong_dan_anh_dai_dien'] ?? null,
 ];
 
+// ─── Standard sets ───────────────────────────────────────────────────────────
 $standardSets = [];
-$stmt = $pdo->query('SELECT id, name, version_year, status FROM standard_sets ORDER BY id');
+$stmt = $pdo->query('SELECT id, ten_bo_tieu_chuan, nam_ban_hanh, trang_thai FROM bo_tieu_chuan ORDER BY id');
 foreach ($stmt->fetchAll() as $row) {
     $standardSets[] = [
         'id'      => (int) $row['id'],
-        'name'    => $row['name'],
-        'version' => $row['version_year'],
-        'status'  => $row['status'] === 'active' ? 'Đang áp dụng' : 'Ngưng áp dụng',
+        'name'    => $row['ten_bo_tieu_chuan'],
+        'version' => $row['nam_ban_hanh'],
+        'status'  => $row['trang_thai'] === 'active' ? 'Đang áp dụng' : 'Ngưng áp dụng',
     ];
 }
 
+// ─── Standards ───────────────────────────────────────────────────────────────
 $standards = [];
 $stmt = $pdo->query("
     SELECT
         s.id,
-        s.code,
-        s.name,
+        s.ma_tieu_chuan AS code,
+        s.ten_tieu_chuan AS name,
         COUNT(DISTINCT c.id) AS criteria_count,
-        COUNT(DISTINCT ec.evidence_id) AS evidence_count,
-        SUM(CASE WHEN c.evidence_status = 'missing' THEN 1 ELSE 0 END) AS missing_count,
-        SUM(CASE WHEN c.evidence_status = 'need_update' THEN 1 ELSE 0 END) AS need_update_count
-    FROM standards s
-    LEFT JOIN criteria c ON c.standard_id = s.id
-    LEFT JOIN evidence_criteria ec ON ec.criteria_id = c.id
-    GROUP BY s.id, s.code, s.name, s.display_order
-    ORDER BY s.display_order, s.id
+        COUNT(DISTINCT ec.id_minh_chung) AS evidence_count,
+        SUM(CASE WHEN c.trang_thai IN ('missing', 'thieu_minh_chung') THEN 1 ELSE 0 END) AS missing_count,
+        SUM(CASE WHEN c.trang_thai IN ('need_update', 'can_bo_sung') THEN 1 ELSE 0 END) AS need_update_count
+    FROM tieu_chuan s
+    LEFT JOIN tieu_chi c ON c.id_tieu_chuan = s.id
+    LEFT JOIN minh_chung_tieu_chi ec ON ec.id_tieu_chi = c.id
+    GROUP BY s.id, s.ma_tieu_chuan, s.ten_tieu_chuan, s.thu_tu_hien_thi
+    ORDER BY s.thu_tu_hien_thi, s.id
 ");
 foreach ($stmt->fetchAll() as $row) {
     $standards[] = [
-        'id'       => (int) $row['id'],
-        'code'     => $row['code'],
-        'name'     => $row['name'],
-        'criteria' => (int) $row['criteria_count'],
-        'evidences'=> (int) $row['evidence_count'],
-        'status'   => standard_status_from_counts((int) $row['missing_count'], (int) $row['need_update_count']),
+        'id'        => (int) $row['id'],
+        'code'      => $row['code'],
+        'name'      => $row['name'],
+        'criteria'  => (int) $row['criteria_count'],
+        'evidences' => (int) $row['evidence_count'],
+        'status'    => standard_status_from_counts((int) $row['missing_count'], (int) $row['need_update_count']),
     ];
 }
 
+// ─── Criteria ────────────────────────────────────────────────────────────────
 $criteria = [];
 $stmt = $pdo->query("
     SELECT
         c.id,
-        c.code,
-        c.name,
-        c.evidence_status,
-        s.code AS standard_code,
-        COALESCE(d.name, 'Chưa phân công') AS owner,
-        COUNT(ec.evidence_id) AS evidence_count
-    FROM criteria c
-    JOIN standards s ON s.id = c.standard_id
-    LEFT JOIN departments d ON d.id = c.department_id
-    LEFT JOIN evidence_criteria ec ON ec.criteria_id = c.id
-    GROUP BY c.id, c.code, c.name, c.evidence_status, s.code, d.name, c.display_order, s.display_order
-    ORDER BY s.display_order, c.display_order, c.id
+        c.ma_tieu_chi AS code,
+        c.ten_tieu_chi AS name,
+        c.noi_dung_mo_ta AS description,
+        c.trang_thai AS evidence_status,
+        s.ma_tieu_chuan AS standard_code,
+        COALESCE(d.ten_don_vi, 'Chưa phân công') AS owner,
+        COUNT(ec.id_minh_chung) AS evidence_count
+    FROM tieu_chi c
+    JOIN tieu_chuan s ON s.id = c.id_tieu_chuan
+    LEFT JOIN don_vi d ON d.id = c.id_don_vi
+    LEFT JOIN minh_chung_tieu_chi ec ON ec.id_tieu_chi = c.id
+    GROUP BY c.id, c.ma_tieu_chi, c.ten_tieu_chi, c.noi_dung_mo_ta, c.trang_thai, s.ma_tieu_chuan, d.ten_don_vi, c.thu_tu_hien_thi, s.thu_tu_hien_thi
+    ORDER BY s.thu_tu_hien_thi, c.thu_tu_hien_thi, c.id
 ");
 foreach ($stmt->fetchAll() as $row) {
     $criteria[] = [
-        'id'         => (int) $row['id'],
-        'code'       => $row['code'],
-        'standard'   => $row['standard_code'],
-        'name'       => $row['name'],
-        'owner'      => $row['owner'],
-        'status_raw' => $row['evidence_status'],
-        'status'     => vn_criteria_status($row['evidence_status']),
-        'evidences'  => (int) $row['evidence_count'],
+        'id'          => (int) $row['id'],
+        'code'        => $row['code'],
+        'standard'    => $row['standard_code'],
+        'name'        => $row['name'],
+        'description' => $row['description'] ?? '',
+        'owner'       => $row['owner'],
+        'status_raw'  => $row['evidence_status'],
+        'status'      => vn_criteria_status($row['evidence_status']),
+        'evidences'   => (int) $row['evidence_count'],
     ];
 }
 
+// ─── Evidences ───────────────────────────────────────────────────────────────
 $evidences = [];
 $stmt = $pdo->query("
     SELECT
         e.id,
-        e.code,
-        e.title,
-        e.description,
-        e.academic_year,
-        e.issued_date,
-        COALESCE(e.evidence_type, 'Minh chứng chính') AS evidence_type,
-        e.approval_status,
-        DATE_FORMAT(e.updated_at, '%d/%m/%Y') AS updated_date,
-        COALESCE(d.name, 'Chưa xác định') AS department_name,
+        e.ma_minh_chung AS code,
+        e.tieu_de AS title,
+        e.mo_ta AS description,
+        e.nam_hoc AS academic_year,
+        e.ngay_ban_hanh AS issued_date,
+        COALESCE(e.loai_minh_chung, 'Minh chứng chính') AS evidence_type,
+        e.trang_thai_duyet AS approval_status,
+        DATE_FORMAT(e.ngay_cap_nhat, '%d/%m/%Y') AS updated_date,
+        COALESCE(d.ten_don_vi, 'Chưa xác định') AS department_name,
         latest_file.id AS file_id,
-        COALESCE(latest_file.file_type, 'N/A') AS file_type,
-        COALESCE(latest_file.version_no, 1) AS version_no,
-        COALESCE(GROUP_CONCAT(DISTINCT s.code ORDER BY s.code SEPARATOR ', '), 'Chưa gắn') AS standard_codes,
-        COALESCE(GROUP_CONCAT(DISTINCT c.code ORDER BY c.code SEPARATOR ', '), 'Chưa gắn') AS criteria_codes
-    FROM evidences e
-    LEFT JOIN departments d ON d.id = e.issuing_department_id
-    LEFT JOIN evidence_files latest_file ON latest_file.id = (
+        COALESCE(latest_file.loai_file, 'N/A') AS file_type,
+        COALESCE(latest_file.so_phien_ban, 1) AS version_no,
+        COALESCE(GROUP_CONCAT(DISTINCT s.ma_tieu_chuan ORDER BY s.ma_tieu_chuan SEPARATOR ', '), 'Chưa gắn') AS standard_codes,
+        COALESCE(GROUP_CONCAT(DISTINCT c.ma_tieu_chi ORDER BY c.ma_tieu_chi SEPARATOR ', '), 'Chưa gắn') AS criteria_codes
+    FROM minh_chung e
+    LEFT JOIN don_vi d ON d.id = e.id_don_vi_phu_trach
+    LEFT JOIN file_minh_chung latest_file ON latest_file.id = (
         SELECT ef2.id
-        FROM evidence_files ef2
-        WHERE ef2.evidence_id = e.id
-        ORDER BY ef2.version_no DESC, ef2.uploaded_at DESC, ef2.id DESC
+        FROM file_minh_chung ef2
+        WHERE ef2.id_minh_chung = e.id
+        ORDER BY ef2.so_phien_ban DESC, ef2.ngay_tai_len DESC, ef2.id DESC
         LIMIT 1
     )
-    LEFT JOIN evidence_criteria ec ON ec.evidence_id = e.id
-    LEFT JOIN criteria c ON c.id = ec.criteria_id
-    LEFT JOIN standards s ON s.id = c.standard_id
-    GROUP BY e.id, e.code, e.title, e.description, e.academic_year, e.issued_date, e.evidence_type, e.approval_status, e.updated_at, d.name, latest_file.id, latest_file.file_type, latest_file.version_no
-    ORDER BY e.updated_at DESC, e.id DESC
+    LEFT JOIN minh_chung_tieu_chi ec ON ec.id_minh_chung = e.id
+    LEFT JOIN tieu_chi c ON c.id = ec.id_tieu_chi
+    LEFT JOIN tieu_chuan s ON s.id = c.id_tieu_chuan
+    GROUP BY e.id, e.ma_minh_chung, e.tieu_de, e.mo_ta, e.nam_hoc, e.ngay_ban_hanh, e.loai_minh_chung, e.trang_thai_duyet, e.ngay_cap_nhat, d.ten_don_vi, latest_file.id, latest_file.loai_file, latest_file.so_phien_ban
+    ORDER BY e.ngay_cap_nhat DESC, e.id DESC
 ");
 foreach ($stmt->fetchAll() as $row) {
     $evidences[] = [
@@ -228,55 +228,89 @@ foreach ($stmt->fetchAll() as $row) {
     ];
 }
 
+// ─── Users ───────────────────────────────────────────────────────────────────
 $users = [];
 $stmt = $pdo->query("
     SELECT
         u.id,
-        COALESCE(u.user_code, CONCAT('ND', LPAD(u.id, 3, '0'))) AS user_code,
-        u.full_name,
-        u.username,
+        COALESCE(u.ma_nguoi_dung, CONCAT('ND', LPAD(u.id, 3, '0'))) AS user_code,
+        u.ho_ten,
+        u.ten_dang_nhap,
         u.email,
-        u.status,
-        r.name AS role_name,
-        COALESCE(d.name, 'Chưa phân đơn vị') AS department_name
-    FROM users u
-    JOIN roles r ON r.id = u.role_id
-    LEFT JOIN departments d ON d.id = u.department_id
+        u.trang_thai,
+        v.ten_vai_tro AS role_name,
+        COALESCE(d.ten_don_vi, 'Chưa phân đơn vị') AS department_name
+    FROM nguoi_dung u
+    JOIN vai_tro v ON v.id = u.id_vai_tro
+    LEFT JOIN don_vi d ON d.id = u.id_don_vi
     ORDER BY u.id
 ");
 foreach ($stmt->fetchAll() as $row) {
     $users[] = [
         'id'         => (int) $row['id'],
         'code'       => $row['user_code'],
-        'name'       => $row['full_name'],
-        'username'   => $row['username'],
+        'name'       => $row['ho_ten'],
+        'username'   => $row['ten_dang_nhap'],
         'email'      => $row['email'],
         'role'       => $row['role_name'],
         'department' => $row['department_name'],
-        'status_raw' => $row['status'],
-        'status'     => vn_user_status($row['status']),
+        'status_raw' => $row['trang_thai'],
+        'status'     => vn_user_status($row['trang_thai']),
     ];
 }
 
+// ─── Activity logs ───────────────────────────────────────────────────────────
 $activityLogs = [];
 $stmt = $pdo->query("
     SELECT
-        DATE_FORMAT(al.created_at, '%d/%m/%Y %H:%i') AS action_time,
-        COALESCE(u.full_name, 'Hệ thống') AS actor,
-        al.action,
-        al.module,
-        al.record_id
+        DATE_FORMAT(al.ngay_tao, '%d/%m/%Y %H:%i') AS action_time,
+        COALESCE(u.ho_ten, 'Hệ thống') AS actor,
+        al.hanh_dong,
+        al.phan_he,
+        al.ten_ban_ghi,
+        al.id_ban_ghi
     FROM audit_logs al
-    LEFT JOIN users u ON u.id = al.user_id
-    ORDER BY al.created_at DESC
-    LIMIT 5
+    LEFT JOIN nguoi_dung u ON u.id = al.id_nguoi_dung
+    ORDER BY al.ngay_tao DESC
+    LIMIT 6
 ");
 foreach ($stmt->fetchAll() as $row) {
+    $moduleNames = [
+        'minh_chung'  => 'Minh chứng',
+        'evidences'   => 'Minh chứng',
+        'tieu_chuan'  => 'Tiêu chuẩn',
+        'standards'   => 'Tiêu chuẩn',
+        'tieu_chi'    => 'Tiêu chí',
+        'criteria'    => 'Tiêu chí',
+        'don_vi'      => 'Đơn vị',
+        'departments' => 'Đơn vị',
+        'nguoi_dung'  => 'Tài khoản',
+        'users'       => 'Tài khoản',
+    ];
+    $actionNames = [
+        'them_moi'            => 'Thêm mới',
+        'cap_nhat'            => 'Cập nhật',
+        'xoa'                 => 'Xóa',
+        'xem'                 => 'Xem chi tiết',
+        'tai_ve'              => 'Tải xuống file',
+        'cap_nhat_trang_thai' => 'Cập nhật trạng thái',
+        'ra_soat'             => 'Rà soát',
+        'create'              => 'Thêm mới',
+        'update'              => 'Cập nhật',
+        'delete'              => 'Xóa',
+        'status_update'       => 'Cập nhật trạng thái',
+        'review'              => 'Rà soát',
+    ];
+
+    $actLabel = $actionNames[$row['hanh_dong']] ?? $row['hanh_dong'];
+    $modLabel = $moduleNames[$row['phan_he']] ?? $row['phan_he'];
+    $target   = $row['ten_ban_ghi'] ? $row['ten_ban_ghi'] : ('#' . $row['id_ban_ghi']);
+
     $activityLogs[] = [
         'time'   => $row['action_time'],
         'actor'  => $row['actor'],
-        'action' => strtoupper($row['action']) . ' #' . $row['record_id'],
-        'module' => $row['module'],
+        'action' => $actLabel . ' ' . mb_strtolower($modLabel) . ': ' . $target,
+        'module' => $modLabel,
     ];
 }
 ?>

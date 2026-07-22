@@ -110,18 +110,18 @@ CREATE TABLE standards (
 
 CREATE TABLE criteria (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    standard_id INT NOT NULL,
-    department_id INT NULL,
-    code VARCHAR(50) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    description TEXT NULL,
-    evidence_status ENUM('complete', 'need_update', 'missing') NOT NULL DEFAULT 'missing',
-    display_order INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_criteria_code_standard (standard_id, code),
-    CONSTRAINT fk_criteria_standard FOREIGN KEY (standard_id) REFERENCES standards(id),
-    CONSTRAINT fk_criteria_department FOREIGN KEY (department_id) REFERENCES departments(id)
+    id_tieu_chuan INT NOT NULL,
+    id_don_vi INT NULL,
+    ma_tieu_chi VARCHAR(50) NOT NULL,
+    ten_tieu_chi VARCHAR(255) NOT NULL,
+    noi_dung_mo_ta TEXT NULL,
+    trang_thai VARCHAR(50) NOT NULL DEFAULT 'thieu_minh_chung',
+    thu_tu_hien_thi INT NOT NULL DEFAULT 0,
+    ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ngay_cap_nhat TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_criteria_code_standard (id_tieu_chuan, ma_tieu_chi),
+    CONSTRAINT fk_criteria_standard FOREIGN KEY (id_tieu_chuan) REFERENCES standards(id),
+    CONSTRAINT fk_criteria_department FOREIGN KEY (id_don_vi) REFERENCES departments(id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE evidences (

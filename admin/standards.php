@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includes/helpers.php';
 require_roles(['admin']);
 require_once __DIR__ . '/../config/database.php';
@@ -12,67 +12,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         if ($action === 'save_standard') {
-            $id = (int) ($_POST['id'] ?? 0);
-            $standardSetId = (int) ($_POST['standard_set_id'] ?? 0);
-            $code = trim($_POST['code'] ?? '');
-            $name = trim($_POST['name'] ?? '');
-            $description = trim($_POST['description'] ?? '');
+            $id            = (int) ($_POST['id'] ?? 0);
+            $standardSetId = (int) ($_POST['id_bo_tieu_chuan'] ?? 1);
+            $code          = trim($_POST['ma_tieu_chuan'] ?? '');
+            $name          = trim($_POST['ten_tieu_chuan'] ?? '');
+            $description   = trim($_POST['mo_ta'] ?? '');
 
             if ($standardSetId <= 0 || $code === '' || $name === '') {
                 throw new RuntimeException('Vui lòng nhập đầy đủ bộ tiêu chuẩn, mã và tên tiêu chuẩn.');
             }
 
+            $check = $pdo->prepare('SELECT id FROM tieu_chuan WHERE UPPER(ma_tieu_chuan) = UPPER(:code) AND id <> :id LIMIT 1');
+            $check->execute(['code' => $code, 'id' => $id]);
+            if ($check->fetch()) {
+                throw new RuntimeException('Mã tiêu chuẩn đã tồn tại trong hệ thống.');
+            }
+
             if ($id > 0) {
-                $stmt = $pdo->prepare('UPDATE standards SET standard_set_id = :set_id, code = :code, name = :name, description = :description WHERE id = :id');
+                $stmt = $pdo->prepare('UPDATE tieu_chuan SET id_bo_tieu_chuan = :set_id, ma_tieu_chuan = :code, ten_tieu_chuan = :name, mo_ta = :description WHERE id = :id');
                 $stmt->execute([
-                    'set_id' => $standardSetId,
-                    'code' => $code,
-                    'name' => $name,
+                    'set_id'      => $standardSetId,
+                    'code'        => $code,
+                    'name'        => $name,
                     'description' => $description,
-                    'id' => $id,
+                    'id'          => $id,
                 ]);
+                log_activity('cap_nhat', 'tieu_chuan', $id, $code . ' - ' . $name);
                 $success = 'Cập nhật tiêu chuẩn thành công.';
             } else {
-                $order = (int) $pdo->query('SELECT COALESCE(MAX(display_order), 0) + 1 FROM standards')->fetchColumn();
-                $stmt = $pdo->prepare('INSERT INTO standards (standard_set_id, code, name, description, display_order) VALUES (:set_id, :code, :name, :description, :display_order)');
+                $order = (int) $pdo->query('SELECT COALESCE(MAX(thu_tu_hien_thi), 0) + 1 FROM tieu_chuan')->fetchColumn();
+                $stmt  = $pdo->prepare('INSERT INTO tieu_chuan (id_bo_tieu_chuan, ma_tieu_chuan, ten_tieu_chuan, mo_ta, thu_tu_hien_thi) VALUES (:set_id, :code, :name, :description, :display_order)');
                 $stmt->execute([
-                    'set_id' => $standardSetId,
-                    'code' => $code,
-                    'name' => $name,
-                    'description' => $description,
+                    'set_id'        => $standardSetId,
+                    'code'          => $code,
+                    'name'          => $name,
+                    'description'   => $description,
                     'display_order' => $order,
                 ]);
+                $newId = (int) $pdo->lastInsertId();
+                log_activity('them_moi', 'tieu_chuan', $newId, $code . ' - ' . $name);
                 $success = 'Thêm tiêu chuẩn thành công.';
             }
         }
 
         if ($action === 'delete_standard') {
-            $id = (int) ($_POST['id'] ?? 0);
-            $stmt = $pdo->prepare('DELETE FROM standards WHERE id = :id');
+            $id   = (int) ($_POST['id'] ?? 0);
+            $stmtName = $pdo->prepare('SELECT ma_tieu_chuan FROM tieu_chuan WHERE id = :id');
+            $stmtName->execute(['id' => $id]);
+            $stdCode = $stmtName->fetchColumn() ?: ('#' . $id);
+
+            $stmt = $pdo->prepare('DELETE FROM tieu_chuan WHERE id = :id');
             $stmt->execute(['id' => $id]);
+            log_activity('xoa', 'tieu_chuan', $id, $stdCode);
             $success = 'Xóa tiêu chuẩn thành công.';
         }
     } catch (Throwable $exception) {
         $error = 'Không thể thực hiện thao tác: ' . $exception->getMessage();
     }
+    unset($_GET['create'], $_GET['edit']);
 }
 
 require_once __DIR__ . '/../includes/data.php';
 
 $isCreatingStandard = isset($_GET['create']);
-$editId = $isCreatingStandard ? 0 : (int) ($_GET['edit'] ?? 0);
-$editingStandard = null;
+$editId             = $isCreatingStandard ? 0 : (int) ($_GET['edit'] ?? 0);
+$editingStandard    = null;
 if ($editId > 0) {
-    $stmt = $pdo->prepare('SELECT * FROM standards WHERE id = :id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT * FROM tieu_chuan WHERE id = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
     $editingStandard = $stmt->fetch();
 }
 
 $pageTitle = page_title('Quản lý tiêu chuẩn');
-$heading = 'Quản lý tiêu chuẩn kiểm định';
+$heading   = 'Quản lý tiêu chuẩn kiểm định';
 include __DIR__ . '/../includes/header.php';
 ?>
-<?php if ($editingStandard || $isCreatingStandard): ?><script>document.body.dataset.autoOpenModal = 'standardFormModal';</script><?php endif; ?>
+<?php if (($editingStandard || $isCreatingStandard) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'standardFormModal';</script><?php endif; ?>
 <?php if ($success): ?><div class="alert alert-success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
@@ -87,7 +102,7 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             </div>
             <div class="table-responsive">
-                <table class="table" data-page-size="5">
+                <table class="table" data-page-size="10">
                     <thead><tr><th>Mã</th><th>Tên tiêu chuẩn</th><th>Tiêu chí</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
                     <tbody>
                     <?php foreach ($standards as $standard): ?>
@@ -128,21 +143,21 @@ include __DIR__ . '/../includes/header.php';
                     <input type="hidden" name="id" value="<?= (int) ($editingStandard['id'] ?? 0) ?>">
                     <div class="mb-3">
                         <label class="form-label">Mã tiêu chuẩn</label>
-                        <input class="form-control" name="code" value="<?= htmlspecialchars($editingStandard['code'] ?? '') ?>" placeholder="VD: TC06" required>
+                        <input class="form-control" name="ma_tieu_chuan" value="<?= htmlspecialchars($editingStandard['ma_tieu_chuan'] ?? '') ?>" placeholder="VD: TC06" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Tên tiêu chuẩn</label>
-                        <textarea class="form-control" name="name" rows="3" placeholder="Nhập nội dung tiêu chuẩn" required><?= htmlspecialchars($editingStandard['name'] ?? '') ?></textarea>
+                        <textarea class="form-control" name="ten_tieu_chuan" rows="3" placeholder="Nhập nội dung tiêu chuẩn" required><?= htmlspecialchars($editingStandard['ten_tieu_chuan'] ?? '') ?></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Mô tả</label>
-                        <textarea class="form-control" name="description" rows="3"><?= htmlspecialchars($editingStandard['description'] ?? '') ?></textarea>
+                        <textarea class="form-control" name="mo_ta" rows="3"><?= htmlspecialchars($editingStandard['mo_ta'] ?? '') ?></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Bộ tiêu chuẩn</label>
-                        <select class="form-select" name="standard_set_id" required>
+                        <select class="form-select" name="id_bo_tieu_chuan" required>
                             <?php foreach ($standardSets as $set): ?>
-                                <option value="<?= $set['id'] ?>" <?= (int) ($editingStandard['standard_set_id'] ?? 1) === (int) $set['id'] ? 'selected' : '' ?>>
+                                <option value="<?= $set['id'] ?>" <?= (int) ($editingStandard['id_bo_tieu_chuan'] ?? 1) === (int) $set['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($set['name'] . ' - ' . $set['version']) ?>
                                 </option>
                             <?php endforeach; ?>

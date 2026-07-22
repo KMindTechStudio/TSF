@@ -29,14 +29,14 @@ function ensure_remember_tokens_table(): void
     db()->exec("
         CREATE TABLE IF NOT EXISTS remember_tokens (
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
-            token_hash VARCHAR(255) NOT NULL,
-            expires_at DATETIME NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_remember_token_hash (token_hash),
-            KEY idx_remember_user (user_id),
-            KEY idx_remember_expires (expires_at),
-            CONSTRAINT fk_remember_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            id_nguoi_dung INT NOT NULL,
+            ma_token VARCHAR(255) NOT NULL,
+            het_han DATETIME NOT NULL,
+            ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_remember_token_hash (ma_token),
+            KEY idx_remember_user (id_nguoi_dung),
+            KEY idx_remember_expires (het_han),
+            CONSTRAINT fk_remember_tokens_user FOREIGN KEY (id_nguoi_dung) REFERENCES nguoi_dung(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
 
@@ -51,7 +51,7 @@ function create_login_token(int $userId, bool $remember = false): void
     $days = $remember ? 30 : 7;
     $expiresAt = (new DateTimeImmutable('+' . $days . ' days'))->format('Y-m-d H:i:s');
 
-    $stmt = db()->prepare('INSERT INTO remember_tokens (user_id, token_hash, expires_at) VALUES (:user_id, :token_hash, :expires_at)');
+    $stmt = db()->prepare('INSERT INTO remember_tokens (id_nguoi_dung, ma_token, het_han) VALUES (:user_id, :token_hash, :expires_at)');
     $stmt->execute([
         'user_id' => $userId,
         'token_hash' => hash('sha256', $token),
@@ -72,7 +72,7 @@ function clear_login_token(): void
 
     if ($token !== '') {
         ensure_remember_tokens_table();
-        $stmt = db()->prepare('DELETE FROM remember_tokens WHERE token_hash = :token_hash');
+        $stmt = db()->prepare('DELETE FROM remember_tokens WHERE ma_token = :token_hash');
         $stmt->execute(['token_hash' => hash('sha256', $token)]);
     }
 
@@ -99,12 +99,12 @@ function restore_login_from_cookie(): bool
     ensure_remember_tokens_table();
 
     $stmt = db()->prepare("
-        SELECT rt.id AS token_id, rt.user_id, u.status, r.code AS role_code
+        SELECT rt.id AS token_id, rt.id_nguoi_dung AS user_id, u.trang_thai AS status, v.ma_vai_tro AS role_code
         FROM remember_tokens rt
-        JOIN users u ON u.id = rt.user_id
-        JOIN roles r ON r.id = u.role_id
-        WHERE rt.token_hash = :token_hash
-          AND rt.expires_at > NOW()
+        JOIN nguoi_dung u ON u.id = rt.id_nguoi_dung
+        JOIN vai_tro v ON v.id = u.id_vai_tro
+        WHERE rt.ma_token = :token_hash
+          AND rt.het_han > NOW()
         LIMIT 1
     ");
     $stmt->execute(['token_hash' => hash('sha256', $token)]);
@@ -168,6 +168,37 @@ function user_can_manage_accounts(): bool
 function user_can_manage_accreditation(): bool
 {
     return current_role() === 'admin';
+}
+
+function log_activity(string $action, string $module, ?int $recordId = null, ?string $recordName = null, ?array $newValue = null): void
+{
+    try {
+        $pdo = db();
+        $hasCol = $pdo->query("SHOW COLUMNS FROM audit_logs LIKE 'ten_ban_ghi'")->fetch();
+        if (!$hasCol) {
+            $pdo->exec("ALTER TABLE audit_logs ADD COLUMN ten_ban_ghi VARCHAR(255) NULL AFTER phan_he");
+        }
+
+        $userId = $_SESSION['user_id'] ?? null;
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $jsonVal = $newValue !== null ? json_encode($newValue, JSON_UNESCAPED_UNICODE) : null;
+
+        $stmt = $pdo->prepare("
+            INSERT INTO audit_logs (id_nguoi_dung, hanh_dong, phan_he, ten_ban_ghi, id_ban_ghi, gia_tri_moi, dia_chi_ip)
+            VALUES (:user_id, :action, :module, :record_name, :record_id, :new_val, :ip)
+        ");
+        $stmt->execute([
+            'user_id'     => $userId,
+            'action'      => $action,
+            'module'      => $module,
+            'record_name' => $recordName,
+            'record_id'   => $recordId,
+            'new_val'     => $jsonVal,
+            'ip'          => $ip,
+        ]);
+    } catch (Throwable $e) {
+        // Silently swallow audit logging errors to prevent breaking main operations
+    }
 }
 
 function is_active(string $page): string

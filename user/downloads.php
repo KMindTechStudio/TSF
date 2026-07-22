@@ -1,21 +1,21 @@
 <?php
 require_once __DIR__ . '/../includes/helpers.php';
-require_roles(['admin']);
+require_login();
 require_once __DIR__ . '/../includes/data.php';
 
 $stmt = db()->query("
     SELECT
-        DATE_FORMAT(dl.downloaded_at, '%d/%m/%Y %H:%i') AS downloaded_time,
-        e.code,
-        e.title,
-        COALESCE(u.full_name, 'Khách') AS downloader,
-        ef.file_type,
+        DATE_FORMAT(dl.ngay_tai, '%d/%m/%Y %H:%i') AS downloaded_time,
+        e.ma_minh_chung AS code,
+        e.tieu_de AS title,
+        COALESCE(u.ho_ten, 'Khách') AS downloader,
+        ef.loai_file AS file_type,
         ef.id AS file_id
     FROM download_logs dl
-    JOIN evidence_files ef ON ef.id = dl.evidence_file_id
-    JOIN evidences e ON e.id = ef.evidence_id
-    LEFT JOIN users u ON u.id = dl.user_id
-    ORDER BY dl.downloaded_at DESC, dl.id DESC
+    JOIN file_minh_chung ef ON ef.id = dl.id_file_minh_chung
+    JOIN minh_chung e ON e.id = ef.id_minh_chung
+    LEFT JOIN nguoi_dung u ON u.id = dl.id_nguoi_dung
+    ORDER BY dl.ngay_tai DESC, dl.id DESC
     LIMIT 30
 ");
 $downloadRows = $stmt->fetchAll();

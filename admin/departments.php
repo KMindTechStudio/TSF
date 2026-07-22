@@ -5,10 +5,10 @@ require_once __DIR__ . '/../config/database.php';
 
 $pdo = db();
 
-// Auto-migrate: add status column if not exists
-$hasStatus = $pdo->query("SHOW COLUMNS FROM departments LIKE 'status'")->fetch();
+// Auto-migrate: add trang_thai column if not exists
+$hasStatus = $pdo->query("SHOW COLUMNS FROM don_vi LIKE 'trang_thai'")->fetch();
 if (!$hasStatus) {
-    $pdo->exec("ALTER TABLE departments ADD COLUMN status ENUM('active','inactive') NOT NULL DEFAULT 'active' AFTER name");
+    $pdo->exec("ALTER TABLE don_vi ADD COLUMN trang_thai ENUM('active','inactive') NOT NULL DEFAULT 'active'");
 }
 
 $success = '';
@@ -20,68 +20,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if ($action === 'save_department') {
             $id     = (int) ($_POST['id'] ?? 0);
-            $code   = trim($_POST['code'] ?? '');
-            $name   = trim($_POST['name'] ?? '');
-            $status = in_array($_POST['status'] ?? '', ['active', 'inactive'], true)
-                      ? $_POST['status'] : 'active';
+            $code   = trim($_POST['ma_don_vi'] ?? '');
+            $name   = trim($_POST['ten_don_vi'] ?? '');
+            $status = in_array($_POST['trang_thai'] ?? '', ['active', 'inactive'], true)
+                      ? $_POST['trang_thai'] : 'active';
 
             if ($code === '' || $name === '') {
                 throw new RuntimeException('Vui lòng nhập đầy đủ mã và tên đơn vị.');
             }
 
             // Check duplicate
-            $check = $pdo->prepare('SELECT id FROM departments WHERE (code = :code OR name = :name) AND id <> :id LIMIT 1');
+            $check = $pdo->prepare('SELECT id FROM don_vi WHERE (ma_don_vi = :code OR ten_don_vi = :name) AND id <> :id LIMIT 1');
             $check->execute(['code' => $code, 'name' => $name, 'id' => $id]);
             if ($check->fetch()) {
                 throw new RuntimeException('Mã hoặc tên đơn vị đã tồn tại.');
             }
 
             if ($id > 0) {
-                $stmt = $pdo->prepare('UPDATE departments SET code = :code, name = :name, status = :status WHERE id = :id');
+                $stmt = $pdo->prepare('UPDATE don_vi SET ma_don_vi = :code, ten_don_vi = :name, trang_thai = :status WHERE id = :id');
                 $stmt->execute(['code' => $code, 'name' => $name, 'status' => $status, 'id' => $id]);
+                log_activity('cap_nhat', 'don_vi', $id, $name);
                 $success = 'Cập nhật đơn vị thành công.';
             } else {
-                $stmt = $pdo->prepare('INSERT INTO departments (code, name, status) VALUES (:code, :name, :status)');
+                $stmt = $pdo->prepare('INSERT INTO don_vi (ma_don_vi, ten_don_vi, trang_thai) VALUES (:code, :name, :status)');
                 $stmt->execute(['code' => $code, 'name' => $name, 'status' => $status]);
+                $newId = (int) $pdo->lastInsertId();
+                log_activity('them_moi', 'don_vi', $newId, $name);
                 $success = 'Thêm đơn vị thành công.';
             }
         }
 
         if ($action === 'update_department_status') {
             $id     = (int) ($_POST['id'] ?? 0);
-            $status = in_array($_POST['status'] ?? '', ['active', 'inactive'], true)
-                      ? $_POST['status'] : null;
+            $status = in_array($_POST['trang_thai'] ?? '', ['active', 'inactive'], true)
+                      ? $_POST['trang_thai'] : null;
             if ($id <= 0 || $status === null) {
                 throw new RuntimeException('Trạng thái đơn vị không hợp lệ.');
             }
-            $stmt = $pdo->prepare('UPDATE departments SET status = :status WHERE id = :id');
+            $stmt = $pdo->prepare('UPDATE don_vi SET trang_thai = :status WHERE id = :id');
             $stmt->execute(['status' => $status, 'id' => $id]);
+            log_activity('cap_nhat_trang_thai', 'don_vi', $id, 'Đơn vị #' . $id, ['trang_thai' => $status]);
             $success = 'Cập nhật trạng thái đơn vị thành công.';
         }
 
         if ($action === 'delete_department') {
             $id = (int) ($_POST['id'] ?? 0);
+            $stmtName = $pdo->prepare('SELECT ten_don_vi FROM don_vi WHERE id = :id');
+            $stmtName->execute(['id' => $id]);
+            $deptName = $stmtName->fetchColumn() ?: ('#' . $id);
 
             foreach ([
-                ['users',    'department_id'],
-                ['criteria', 'department_id'],
-                ['evidences','issuing_department_id'],
+                ['nguoi_dung',  'id_don_vi'],
+                ['tieu_chi',    'id_don_vi'],
+                ['minh_chung',  'id_don_vi_phu_trach'],
             ] as [$table, $col]) {
                 $chk = $pdo->prepare("SELECT COUNT(*) FROM `$table` WHERE `$col` = :id");
                 $chk->execute(['id' => $id]);
                 if ((int) $chk->fetchColumn() > 0) {
-                    $labels = ['users' => 'tài khoản người dùng', 'criteria' => 'tiêu chí', 'evidences' => 'minh chứng'];
-                    throw new RuntimeException("Không thể xóa vì đơn vị đang được dùng bởi {$labels[$table]}.");
+                    $labels = ['nguoi_dung' => 'tài khoản người dùng', 'tieu_chi' => 'tiêu chí', 'minh_chung' => 'minh chứng'];
+                    throw new RuntimeException("Không thể xóa vì đơn vị đang được dùng bời {$labels[$table]}.");
                 }
             }
 
-            $stmt = $pdo->prepare('DELETE FROM departments WHERE id = :id');
+            $stmt = $pdo->prepare('DELETE FROM don_vi WHERE id = :id');
             $stmt->execute(['id' => $id]);
+            log_activity('xoa', 'don_vi', $id, $deptName);
             $success = 'Xóa đơn vị thành công.';
         }
     } catch (Throwable $e) {
         $error = 'Không thể thực hiện thao tác: ' . $e->getMessage();
     }
+    unset($_GET['create'], $_GET['edit']);
 }
 
 require_once __DIR__ . '/../includes/data.php';
@@ -90,18 +99,18 @@ $isCreating  = isset($_GET['create']);
 $editId      = $isCreating ? 0 : (int) ($_GET['edit'] ?? 0);
 $editingItem = null;
 if ($editId > 0) {
-    $stmt = $pdo->prepare('SELECT * FROM departments WHERE id = :id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT * FROM don_vi WHERE id = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
     $editingItem = $stmt->fetch();
 }
 
-$deptRows = $pdo->query('SELECT id, code, name, status FROM departments ORDER BY name')->fetchAll();
+$deptRows = $pdo->query('SELECT id, ma_don_vi AS code, ten_don_vi AS name, trang_thai AS status FROM don_vi ORDER BY ten_don_vi')->fetchAll();
 
 $pageTitle = page_title('Quản lý đơn vị');
 $heading   = 'Quản lý đơn vị';
 include __DIR__ . '/../includes/header.php';
 ?>
-<?php if ($editingItem || $isCreating): ?><script>document.body.dataset.autoOpenModal = 'departmentFormModal';</script><?php endif; ?>
+<?php if (($editingItem || $isCreating) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'departmentFormModal';</script><?php endif; ?>
 <?php if ($success): ?><div class="alert alert-success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
@@ -138,7 +147,7 @@ include __DIR__ . '/../includes/header.php';
                             <?= status_select(
                                 $dept['status'],
                                 ['active' => 'Đang áp dụng', 'inactive' => 'Ngưng áp dụng'],
-                                'status',
+                                'trang_thai',
                                 false,
                                 '',
                                 'Cập nhật trạng thái đơn vị'
@@ -189,24 +198,24 @@ include __DIR__ . '/../includes/header.php';
 
                     <div class="mb-3">
                         <label class="form-label">Mã đơn vị <span class="text-danger">*</span></label>
-                        <input class="form-control" name="code"
-                               value="<?= htmlspecialchars($editingItem['code'] ?? '') ?>"
+                        <input class="form-control" name="ma_don_vi"
+                               value="<?= htmlspecialchars($editingItem['ma_don_vi'] ?? '') ?>"
                                placeholder="VD: KHOA_CNTT" required>
                         <div class="form-text">Không dấu cách, dùng để tra cứu nhanh.</div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Tên đơn vị <span class="text-danger">*</span></label>
-                        <input class="form-control" name="name"
-                               value="<?= htmlspecialchars($editingItem['name'] ?? '') ?>"
+                        <input class="form-control" name="ten_don_vi"
+                               value="<?= htmlspecialchars($editingItem['ten_don_vi'] ?? '') ?>"
                                placeholder="VD: Khoa Công nghệ thông tin" required>
                     </div>
 
                     <div class="mb-4">
                         <label class="form-label">Trạng thái</label>
-                        <select class="form-select" name="status">
-                            <option value="active" <?= ($editingItem['status'] ?? 'active') === 'active' ? 'selected' : '' ?>>Đang áp dụng</option>
-                            <option value="inactive" <?= ($editingItem['status'] ?? '') === 'inactive' ? 'selected' : '' ?>>Ngưng áp dụng</option>
+                        <select class="form-select" name="trang_thai">
+                            <option value="active" <?= ($editingItem['trang_thai'] ?? 'active') === 'active' ? 'selected' : '' ?>>Đang áp dụng</option>
+                            <option value="inactive" <?= ($editingItem['trang_thai'] ?? '') === 'inactive' ? 'selected' : '' ?>>Ngưng áp dụng</option>
                         </select>
                     </div>
 

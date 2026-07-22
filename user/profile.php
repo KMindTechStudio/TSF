@@ -5,7 +5,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../includes/helpers.php';
 require_login();
-require_roles(['admin']);
 require_once __DIR__ . '/../config/database.php';
 
 $pdo = db();
@@ -27,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Email chưa đúng định dạng.';
     } else {
-        $check = $pdo->prepare('SELECT id FROM users WHERE email = :email AND id <> :id LIMIT 1');
+        $check = $pdo->prepare('SELECT id FROM nguoi_dung WHERE email = :email AND id <> :id LIMIT 1');
         $check->execute([
             'email' => $email,
             'id' => $userId,
@@ -69,11 +68,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$error) {
         if ($avatarPath) {
             $stmt = $pdo->prepare("
-                UPDATE users
-                SET full_name = :full_name,
+                UPDATE nguoi_dung
+                SET ho_ten = :full_name,
                     email = :email,
-                    department_id = :department_id,
-                    avatar_path = :avatar_path
+                    id_don_vi = :department_id,
+                    duong_dan_anh_dai_dien = :avatar_path
                 WHERE id = :id
             ");
             $stmt->execute([
@@ -85,10 +84,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         } else {
             $stmt = $pdo->prepare("
-                UPDATE users
-                SET full_name = :full_name,
+                UPDATE nguoi_dung
+                SET ho_ten = :full_name,
                     email = :email,
-                    department_id = :department_id
+                    id_don_vi = :department_id
                 WHERE id = :id
             ");
             $stmt->execute([
@@ -106,17 +105,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 require_once __DIR__ . '/../includes/data.php';
 
 $stmt = $pdo->prepare("
-    SELECT u.*, r.name AS role_name, d.name AS department_name
-    FROM users u
-    JOIN roles r ON r.id = u.role_id
-    LEFT JOIN departments d ON d.id = u.department_id
+    SELECT u.*,
+           u.id_don_vi AS department_id,
+           u.ten_dang_nhap AS username,
+           u.trang_thai AS status,
+           u.ho_ten AS full_name,
+           u.duong_dan_anh_dai_dien AS avatar_path,
+           r.ten_vai_tro AS role_name,
+           d.ten_don_vi AS department_name
+    FROM nguoi_dung u
+    JOIN vai_tro r ON r.id = u.id_vai_tro
+    LEFT JOIN don_vi d ON d.id = u.id_don_vi
     WHERE u.id = :id
     LIMIT 1
 ");
 $stmt->execute(['id' => $userId]);
 $profile = $stmt->fetch();
 
-$departments = $pdo->query('SELECT id, name FROM departments ORDER BY name')->fetchAll();
+$departments = $pdo->query("SELECT id, ten_don_vi AS name FROM don_vi WHERE trang_thai = 'active' ORDER BY ten_don_vi")->fetchAll();
 
 $pageTitle = page_title('Thông tin cá nhân');
 $heading = 'Thông tin cá nhân';

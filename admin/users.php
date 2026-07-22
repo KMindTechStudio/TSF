@@ -16,10 +16,10 @@ function ensure_user_code_column(PDO $pdo): void
         return;
     }
 
-    $column = $pdo->query("SHOW COLUMNS FROM users LIKE 'user_code'")->fetch();
+    $column = $pdo->query("SHOW COLUMNS FROM nguoi_dung LIKE 'ma_nguoi_dung'")->fetch();
     if (!$column) {
-        $pdo->exec("ALTER TABLE users ADD COLUMN user_code VARCHAR(50) NULL AFTER id");
-        $pdo->exec("UPDATE users SET user_code = CONCAT('ND', LPAD(id, 3, '0')) WHERE user_code IS NULL OR user_code = ''");
+        $pdo->exec("ALTER TABLE nguoi_dung ADD COLUMN ma_nguoi_dung VARCHAR(50) NULL AFTER id");
+        $pdo->exec("UPDATE nguoi_dung SET ma_nguoi_dung = CONCAT('ND', LPAD(id, 3, '0')) WHERE ma_nguoi_dung IS NULL OR ma_nguoi_dung = ''");
     }
 
     $checked = true;
@@ -40,14 +40,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         if ($action === 'save_user') {
-            $id = (int) ($_POST['id'] ?? 0);
-            $userCode = trim($_POST['user_code'] ?? '');
-            $fullName = trim($_POST['full_name'] ?? '');
-            $username = trim($_POST['username'] ?? '');
-            $roleId = (int) ($_POST['role_id'] ?? 0);
-            $departmentId = (int) ($_POST['department_id'] ?? 0);
-            $status = $_POST['status'] ?? 'active';
-            $password = $_POST['password'] ?? '';
+            $id           = (int) ($_POST['id'] ?? 0);
+            $userCode     = trim($_POST['ma_nguoi_dung'] ?? '');
+            $fullName     = trim($_POST['ho_ten'] ?? '');
+            $username     = trim($_POST['ten_dang_nhap'] ?? '');
+            $roleId       = (int) ($_POST['id_vai_tro'] ?? 0);
+            $departmentId = (int) ($_POST['id_don_vi'] ?? 0);
+            $status       = $_POST['trang_thai'] ?? 'active';
+            $password     = $_POST['password'] ?? '';
 
             if ($userCode === '' || $fullName === '' || $username === '' || $roleId <= 0 || $departmentId <= 0) {
                 throw new RuntimeException('Vui lòng nhập đầy đủ mã người dùng, họ tên, đơn vị, vai trò và tên đăng nhập.');
@@ -57,68 +57,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Trạng thái tài khoản không hợp lệ.');
             }
 
-            $check = $pdo->prepare('SELECT id FROM users WHERE (user_code = :user_code OR username = :username) AND id <> :id LIMIT 1');
+            $check = $pdo->prepare('SELECT id FROM nguoi_dung WHERE (ma_nguoi_dung = :user_code OR ten_dang_nhap = :username) AND id <> :id LIMIT 1');
             $check->execute([
                 'user_code' => $userCode,
-                'username' => $username,
-                'id' => $id,
+                'username'  => $username,
+                'id'        => $id,
             ]);
             if ($check->fetch()) {
                 throw new RuntimeException('Mã người dùng hoặc tên đăng nhập đã tồn tại.');
             }
 
             if ($id > 0) {
-                $emailStmt = $pdo->prepare('SELECT email FROM users WHERE id = :id LIMIT 1');
+                $emailStmt = $pdo->prepare('SELECT email FROM nguoi_dung WHERE id = :id LIMIT 1');
                 $emailStmt->execute(['id' => $id]);
                 $currentEmail = $emailStmt->fetchColumn() ?: default_user_email($username, $id);
 
                 if ($password !== '') {
                     $stmt = $pdo->prepare("
-                        UPDATE users
-                        SET user_code = :user_code,
-                            role_id = :role_id,
-                            department_id = :department_id,
-                            full_name = :full_name,
-                            username = :username,
+                        UPDATE nguoi_dung
+                        SET ma_nguoi_dung = :user_code,
+                            id_vai_tro = :role_id,
+                            id_don_vi = :department_id,
+                            ho_ten = :full_name,
+                            ten_dang_nhap = :username,
                             email = :email,
-                            password_hash = :password_hash,
-                            status = :status
+                            mat_khau_hash = :password_hash,
+                            trang_thai = :status
                         WHERE id = :id
                     ");
                     $stmt->execute([
-                        'user_code' => $userCode,
-                        'role_id' => $roleId,
+                        'user_code'     => $userCode,
+                        'role_id'       => $roleId,
                         'department_id' => $departmentId,
-                        'full_name' => $fullName,
-                        'username' => $username,
-                        'email' => $currentEmail,
+                        'full_name'     => $fullName,
+                        'username'      => $username,
+                        'email'         => $currentEmail,
                         'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-                        'status' => $status,
-                        'id' => $id,
+                        'status'        => $status,
+                        'id'            => $id,
                     ]);
+                    log_activity('cap_nhat', 'nguoi_dung', $id, $fullName . ' (' . $username . ')');
                     $success = 'Cập nhật thông tin và đặt lại mật khẩu thành công.';
                 } else {
                     $stmt = $pdo->prepare("
-                        UPDATE users
-                        SET user_code = :user_code,
-                            role_id = :role_id,
-                            department_id = :department_id,
-                            full_name = :full_name,
-                            username = :username,
+                        UPDATE nguoi_dung
+                        SET ma_nguoi_dung = :user_code,
+                            id_vai_tro = :role_id,
+                            id_don_vi = :department_id,
+                            ho_ten = :full_name,
+                            ten_dang_nhap = :username,
                             email = :email,
-                            status = :status
+                            trang_thai = :status
                         WHERE id = :id
                     ");
                     $stmt->execute([
-                        'user_code' => $userCode,
-                        'role_id' => $roleId,
+                        'user_code'     => $userCode,
+                        'role_id'       => $roleId,
                         'department_id' => $departmentId,
-                        'full_name' => $fullName,
-                        'username' => $username,
-                        'email' => $currentEmail,
-                        'status' => $status,
-                        'id' => $id,
+                        'full_name'     => $fullName,
+                        'username'      => $username,
+                        'email'         => $currentEmail,
+                        'status'        => $status,
+                        'id'            => $id,
                     ]);
+                    log_activity('cap_nhat', 'nguoi_dung', $id, $fullName . ' (' . $username . ')');
                     $success = 'Cập nhật thông tin tài khoản thành công.';
                 }
             } else {
@@ -127,19 +129,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $stmt = $pdo->prepare("
-                    INSERT INTO users (user_code, role_id, department_id, full_name, username, email, password_hash, status)
+                    INSERT INTO nguoi_dung (ma_nguoi_dung, id_vai_tro, id_don_vi, ho_ten, ten_dang_nhap, email, mat_khau_hash, trang_thai)
                     VALUES (:user_code, :role_id, :department_id, :full_name, :username, :email, :password_hash, :status)
                 ");
                 $stmt->execute([
-                    'user_code' => $userCode,
-                    'role_id' => $roleId,
+                    'user_code'     => $userCode,
+                    'role_id'       => $roleId,
                     'department_id' => $departmentId,
-                    'full_name' => $fullName,
-                    'username' => $username,
-                    'email' => default_user_email($username),
+                    'full_name'     => $fullName,
+                    'username'      => $username,
+                    'email'         => default_user_email($username),
                     'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-                    'status' => $status,
+                    'status'        => $status,
                 ]);
+                $newId = (int) $pdo->lastInsertId();
+                log_activity('them_moi', 'nguoi_dung', $newId, $fullName . ' (' . $username . ')');
                 $success = 'Tạo tài khoản mới thành công.';
             }
         }
@@ -149,8 +153,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($id === (int) $currentUserId) {
                 throw new RuntimeException('Không thể xóa tài khoản đang đăng nhập.');
             }
-            $stmt = $pdo->prepare('DELETE FROM users WHERE id = :id');
+            $stmtName = $pdo->prepare('SELECT ho_ten, ten_dang_nhap FROM nguoi_dung WHERE id = :id');
+            $stmtName->execute(['id' => $id]);
+            $uRow = $stmtName->fetch();
+            $uName = $uRow ? ($uRow['ho_ten'] . ' (' . $uRow['ten_dang_nhap'] . ')') : ('#' . $id);
+
+            $stmt = $pdo->prepare('DELETE FROM nguoi_dung WHERE id = :id');
             $stmt->execute(['id' => $id]);
+            log_activity('xoa', 'nguoi_dung', $id, $uName);
             $success = 'Xóa tài khoản thành công.';
         }
 
@@ -159,14 +169,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($id === (int) $currentUserId) {
                 throw new RuntimeException('Không thể khóa tài khoản đang đăng nhập.');
             }
-            $stmt = $pdo->prepare("UPDATE users SET status = IF(status = 'active', 'locked', 'active') WHERE id = :id");
+            $stmtName = $pdo->prepare('SELECT ho_ten, ten_dang_nhap FROM nguoi_dung WHERE id = :id');
+            $stmtName->execute(['id' => $id]);
+            $uRow = $stmtName->fetch();
+            $uName = $uRow ? ($uRow['ho_ten'] . ' (' . $uRow['ten_dang_nhap'] . ')') : ('#' . $id);
+
+            $stmt = $pdo->prepare("UPDATE nguoi_dung SET trang_thai = IF(trang_thai = 'active', 'locked', 'active') WHERE id = :id");
             $stmt->execute(['id' => $id]);
+            log_activity('cap_nhat_trang_thai', 'nguoi_dung', $id, $uName);
             $success = 'Cập nhật trạng thái tài khoản thành công.';
         }
 
         if ($action === 'update_user_status') {
-            $id = (int) ($_POST['id'] ?? 0);
-            $status = $_POST['status'] ?? '';
+            $id     = (int) ($_POST['id'] ?? 0);
+            $status = $_POST['trang_thai'] ?? '';
 
             if ($id === (int) $currentUserId && $status === 'locked') {
                 throw new RuntimeException('Không thể khóa tài khoản đang đăng nhập.');
@@ -176,36 +192,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Trạng thái tài khoản không hợp lệ.');
             }
 
-            $stmt = $pdo->prepare('UPDATE users SET status = :status WHERE id = :id');
+            $stmt = $pdo->prepare('UPDATE nguoi_dung SET trang_thai = :status WHERE id = :id');
             $stmt->execute([
                 'status' => $status,
-                'id' => $id,
+                'id'     => $id,
             ]);
             $success = 'Cập nhật trạng thái tài khoản thành công.';
         }
     } catch (Throwable $exception) {
         $error = 'Không thể thực hiện thao tác: ' . $exception->getMessage();
     }
+    unset($_GET['create'], $_GET['edit']);
 }
 
 require_once __DIR__ . '/../includes/data.php';
 
-$roleRows = $pdo->query('SELECT id, code, name FROM roles ORDER BY id')->fetchAll();
-$departments = $pdo->query('SELECT id, name FROM departments ORDER BY name')->fetchAll();
+$roleRows    = $pdo->query('SELECT id, ma_vai_tro AS code, ten_vai_tro AS name FROM vai_tro ORDER BY id')->fetchAll();
+$departments = $pdo->query("SELECT id, ten_don_vi AS name FROM don_vi WHERE trang_thai = 'active' ORDER BY ten_don_vi")->fetchAll();
+
 $isCreatingUser = isset($_GET['create']);
-$editId = $isCreatingUser ? 0 : (int) ($_GET['edit'] ?? 0);
-$editingUser = null;
+$editId         = $isCreatingUser ? 0 : (int) ($_GET['edit'] ?? 0);
+$editingUser    = null;
 if ($editId > 0) {
-    $stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT * FROM nguoi_dung WHERE id = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
     $editingUser = $stmt->fetch();
 }
 
 $pageTitle = page_title('Quản lý tài khoản');
-$heading = 'Quản lý tài khoản và phân quyền';
+$heading   = 'Quản lý tài khoản và phân quyền';
 include __DIR__ . '/../includes/header.php';
 ?>
-<?php if ($editingUser || $isCreatingUser): ?><script>document.body.dataset.autoOpenModal = 'accountFormModal';</script><?php endif; ?>
+<?php if (($editingUser || $isCreatingUser) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'accountFormModal';</script><?php endif; ?>
 <?php if ($success): ?><div class="alert alert-success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
@@ -217,7 +235,7 @@ include __DIR__ . '/../includes/header.php';
                 <a class="btn btn-primary" href="<?= base_url('admin/users.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm mới</a>
             </div>
             <div class="table-responsive">
-                <table class="table">
+                <table class="table" data-page-size="10">
                     <thead>
                     <tr>
                         <th>Mã người dùng</th>
@@ -241,7 +259,7 @@ include __DIR__ . '/../includes/header.php';
                                 <form method="post" class="status-update-form">
                                     <input type="hidden" name="action" value="update_user_status">
                                     <input type="hidden" name="id" value="<?= $user['id'] ?>">
-                                    <?= status_select($user['status_raw'] ?? 'active', ['active' => 'Đang hoạt động', 'locked' => 'Khóa'], 'status', (int) $user['id'] === (int) $currentUserId, '', 'Cập nhật trạng thái tài khoản') ?>
+                                    <?= status_select($user['status_raw'] ?? 'active', ['active' => 'Đang hoạt động', 'locked' => 'Khóa'], 'trang_thai', (int) $user['id'] === (int) $currentUserId, '', 'Cập nhật trạng thái tài khoản') ?>
                                 </form>
                             </td>
                             <td class="text-end action-cell">
@@ -282,18 +300,18 @@ include __DIR__ . '/../includes/header.php';
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label">Mã người dùng</label>
-                            <input class="form-control" name="user_code" value="<?= htmlspecialchars($editingUser['user_code'] ?? '') ?>" placeholder="VD: ND001" required>
+                            <input class="form-control" name="ma_nguoi_dung" value="<?= htmlspecialchars($editingUser['ma_nguoi_dung'] ?? '') ?>" placeholder="VD: ND001" required>
                         </div>
                         <div class="col-md-8">
                             <label class="form-label">Họ tên</label>
-                            <input class="form-control" name="full_name" value="<?= htmlspecialchars($editingUser['full_name'] ?? '') ?>" required>
+                            <input class="form-control" name="ho_ten" value="<?= htmlspecialchars($editingUser['ho_ten'] ?? '') ?>" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Đơn vị</label>
-                            <select class="form-select" name="department_id" required>
+                            <select class="form-select" name="id_don_vi" required>
                                 <option value="">Chọn đơn vị</option>
                                 <?php foreach ($departments as $department): ?>
-                                    <option value="<?= $department['id'] ?>" <?= (int) ($editingUser['department_id'] ?? 0) === (int) $department['id'] ? 'selected' : '' ?>>
+                                    <option value="<?= $department['id'] ?>" <?= (int) ($editingUser['id_don_vi'] ?? 0) === (int) $department['id'] ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($department['name']) ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -301,9 +319,9 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Vai trò</label>
-                            <select class="form-select" name="role_id" required>
+                            <select class="form-select" name="id_vai_tro" required>
                                 <?php foreach ($roleRows as $role): ?>
-                                    <option value="<?= $role['id'] ?>" <?= (int) ($editingUser['role_id'] ?? 0) === (int) $role['id'] ? 'selected' : '' ?>>
+                                    <option value="<?= $role['id'] ?>" <?= (int) ($editingUser['id_vai_tro'] ?? 0) === (int) $role['id'] ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($role['name']) ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -311,7 +329,7 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Tên đăng nhập</label>
-                            <input class="form-control" name="username" value="<?= htmlspecialchars($editingUser['username'] ?? '') ?>" required>
+                            <input class="form-control" name="ten_dang_nhap" value="<?= htmlspecialchars($editingUser['ten_dang_nhap'] ?? '') ?>" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><?= $editingUser ? 'Mật khẩu mới' : 'Mật khẩu' ?></label>
@@ -320,9 +338,9 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Trạng thái</label>
-                            <select class="form-select" name="status">
-                                <option value="active" <?= ($editingUser['status'] ?? 'active') === 'active' ? 'selected' : '' ?>>Đang hoạt động</option>
-                                <option value="locked" <?= ($editingUser['status'] ?? '') === 'locked' ? 'selected' : '' ?>>Khóa</option>
+                            <select class="form-select" name="trang_thai">
+                                <option value="active" <?= ($editingUser['trang_thai'] ?? 'active') === 'active' ? 'selected' : '' ?>>Đang hoạt động</option>
+                                <option value="locked" <?= ($editingUser['trang_thai'] ?? '') === 'locked' ? 'selected' : '' ?>>Khóa</option>
                             </select>
                         </div>
                     </div>

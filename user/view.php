@@ -16,11 +16,11 @@ if ($fileId <= 0) {
 $stmt = db()->prepare("
     SELECT
         ef.id,
-        ef.original_name,
-        ef.file_path,
-        e.code AS evidence_code
-    FROM evidence_files ef
-    JOIN evidences e ON e.id = ef.evidence_id
+        ef.ten_goc AS original_name,
+        ef.duong_dan AS file_path,
+        e.ma_minh_chung AS evidence_code
+    FROM file_minh_chung ef
+    JOIN minh_chung e ON e.id = ef.id_minh_chung
     WHERE ef.id = :id
     LIMIT 1
 ");
@@ -40,6 +40,8 @@ if (!$absolutePath || strpos($absolutePath, $projectRoot) !== 0 || !is_file($abs
     header('Location: ' . base_url('user/search.php?download_error=missing_file'));
     exit;
 }
+
+log_activity('xem', 'minh_chung', (int) $file['id'], $file['evidence_code'] . ' - ' . $file['original_name']);
 
 $displayName = $file['original_name'] ?: basename($absolutePath);
 $mimeType = mime_content_type($absolutePath) ?: 'application/octet-stream';

@@ -179,7 +179,7 @@ include __DIR__ . '/../includes/header.php';
                     <th>Năm học</th>
                     <th>Ngày ban hành</th>
                     <th>Thuộc tiêu chí</th>
-                    <th>Đơn vị cung cấp</th>
+                    <th>Đơn vị phụ trách</th>
                     <th>Loại minh chứng</th>
                     <th>File đính kèm</th>
                     <th>Trạng thái</th>
