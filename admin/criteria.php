@@ -177,7 +177,7 @@ include __DIR__ . '/../includes/header.php';
             <input class="form-control" name="search" id="criterionSearchInput" placeholder="Nhập mã tiêu chí, tên, thuộc tiêu chuẩn hoặc mô tả..." value="<?= htmlspecialchars($searchKeyword) ?>">
         </div>
         <div class="col-md-2">
-            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-funnel me-1"></i> Lọc</button>
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search me-1"></i> Tìm kiếm</button>
         </div>
     </form>
 </div>

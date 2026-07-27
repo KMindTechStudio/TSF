@@ -28,16 +28,7 @@ foreach ($evidences as $e) {
 }
 ksort($evidenceByYear); // Sort by year
 
-// 3. Aggregate evidence by department
-$evidenceByDept = [];
-foreach ($evidences as $e) {
-    $d = $e['department'];
-    if (!isset($evidenceByDept[$d])) $evidenceByDept[$d] = 0;
-    $evidenceByDept[$d]++;
-}
-arsort($evidenceByDept); // Sort by count descending
-
-// 4. Sort criteria by evidence count
+// 3. Sort criteria by evidence count
 $criteriaSorted = $criteria;
 usort($criteriaSorted, function($a, $b) {
     return $b['evidences'] <=> $a['evidences']; // Descending
@@ -53,11 +44,6 @@ foreach ($standards as $s) {
 $maxYearEvidence = 1;
 foreach ($evidenceByYear as $count) {
     if ($count > $maxYearEvidence) $maxYearEvidence = $count;
-}
-
-$maxDeptEvidence = 1;
-foreach ($evidenceByDept as $count) {
-    if ($count > $maxDeptEvidence) $maxDeptEvidence = $count;
 }
 
 $maxCriteriaEvidence = 1;
@@ -145,7 +131,7 @@ include __DIR__ . '/../includes/header.php';
     </div>
 
     <!-- Panel 3: Theo năm học -->
-    <div class="col-xl-6">
+    <div class="col-xl-12">
         <div class="panel h-100">
             <h2 class="h5 mb-4">Số lượng minh chứng theo năm học</h2>
             <?php if (empty($evidenceByYear)): ?>
@@ -165,28 +151,7 @@ include __DIR__ . '/../includes/header.php';
             <?php endforeach; ?>
         </div>
     </div>
-
-    <!-- Panel 4: Theo đơn vị -->
-    <div class="col-xl-6">
-        <div class="panel h-100">
-            <h2 class="h5 mb-4">Số lượng minh chứng theo đơn vị</h2>
-            <?php if (empty($evidenceByDept)): ?>
-                <p class="text-secondary small">Chưa có dữ liệu minh chứng.</p>
-            <?php endif; ?>
-            <?php foreach ($evidenceByDept as $dept => $count): ?>
-                <?php $percent = ($maxDeptEvidence > 0) ? min(100, ($count / $maxDeptEvidence) * 100) : 0; ?>
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="fw-semibold"><?= htmlspecialchars($dept) ?></span>
-                        <span><span class="count-up" data-count-to="<?= $count ?>">0</span> <span data-i18n="minh chứng">minh chứng</span></span>
-                    </div>
-                    <div class="progress" style="height: 8px;">
-                        <div class="progress-bar bg-warning progress-animate" data-progress-to="<?= $percent ?>" style="width: 0%"></div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
+

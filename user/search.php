@@ -6,12 +6,11 @@ $searchCode = trim($_GET['code'] ?? '');
 $searchName = trim($_GET['name'] ?? '');
 $selectedStandard = trim($_GET['standard'] ?? '');
 $selectedCriterion = trim($_GET['criterion'] ?? '');
-$selectedDepartment = trim($_GET['department'] ?? '');
 $selectedYear = trim($_GET['year'] ?? '');
 $selectedType = trim($_GET['type'] ?? '');
 $downloadError = $_GET['download_error'] ?? '';
 
-$filteredEvidences = array_filter($evidences, function ($item) use ($searchCode, $searchName, $selectedStandard, $selectedCriterion, $selectedDepartment, $selectedYear, $selectedType, $criteria) {
+$filteredEvidences = array_filter($evidences, function ($item) use ($searchCode, $searchName, $selectedStandard, $selectedCriterion, $selectedYear, $selectedType, $criteria) {
     if ($searchCode !== '' && !search_contains($item['code'] ?? '', $searchCode)) {
         return false;
     }
@@ -45,10 +44,6 @@ $filteredEvidences = array_filter($evidences, function ($item) use ($searchCode,
         return false;
     }
 
-    if ($selectedDepartment !== '' && ($item['department'] ?? '') !== $selectedDepartment) {
-        return false;
-    }
-
     if ($selectedYear !== '' && ($item['year'] ?? '') !== $selectedYear) {
         return false;
     }
@@ -63,23 +58,22 @@ $filteredEvidences = array_filter($evidences, function ($item) use ($searchCode,
 $filteredEvidences = array_values($filteredEvidences);
 $years = array_values(array_unique(array_filter(array_column($evidences, 'year'))));
 $types = array_values(array_unique(array_filter(array_column($evidences, 'type'))));
-$departmentsList = array_values(array_unique(array_filter(array_column($evidences, 'department'))));
 
-$pageTitle = page_title('Tra cứu minh chứng');
-$heading = 'Tra cứu và khai thác minh chứng';
+$pageTitle = page_title('Tìm kiếm minh chứng');
+$heading = 'Tìm kiếm và khai thác minh chứng';
 include __DIR__ . '/../includes/header.php';
 ?>
 <div class="panel mb-4">
     <form class="row g-3 align-items-end" method="get">
-        <div class="col-md-6 col-lg-3">
+        <div class="col-md-6 col-lg-4">
             <label class="form-label">Mã minh chứng</label>
             <input class="form-control" name="code" value="<?= htmlspecialchars($searchCode) ?>" placeholder="Mã minh chứng">
         </div>
-        <div class="col-md-6 col-lg-3">
+        <div class="col-md-6 col-lg-4">
             <label class="form-label">Tên minh chứng</label>
             <input class="form-control" name="name" value="<?= htmlspecialchars($searchName) ?>" placeholder="Tên minh chứng">
         </div>
-        <div class="col-md-6 col-lg-3">
+        <div class="col-md-6 col-lg-4">
             <label class="form-label">Tiêu chuẩn</label>
             <select class="form-select" name="standard">
                 <option value="">Tất cả tiêu chuẩn</option>
@@ -97,17 +91,6 @@ include __DIR__ . '/../includes/header.php';
                 <?php foreach ($criteria as $criterion): ?>
                     <option value="<?= htmlspecialchars($criterion['code']) ?>" <?= $selectedCriterion === $criterion['code'] ? 'selected' : '' ?>>
                         <?= htmlspecialchars($criterion['code']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="col-md-6 col-lg-3">
-            <label class="form-label">Đơn vị</label>
-            <select class="form-select" name="department">
-                <option value="">Tất cả đơn vị</option>
-                <?php foreach ($departmentsList as $dept): ?>
-                    <option value="<?= htmlspecialchars($dept) ?>" <?= $selectedDepartment === $dept ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($dept) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -149,7 +132,7 @@ include __DIR__ . '/../includes/header.php';
 <div class="panel">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h2 class="h5 mb-0">Kết quả tra cứu</h2>
+            <h2 class="h5 mb-0">Kết quả tìm kiếm</h2>
             <?php if ($searchCode !== '' || $searchName !== ''): ?>
                 <small class="text-secondary">
                     <?php 
@@ -179,7 +162,6 @@ include __DIR__ . '/../includes/header.php';
                     <th>Năm học</th>
                     <th>Ngày ban hành</th>
                     <th>Thuộc tiêu chí</th>
-                    <th>Đơn vị phụ trách</th>
                     <th>Loại minh chứng</th>
                     <th>File đính kèm</th>
                     <th>Trạng thái</th>
@@ -199,7 +181,6 @@ include __DIR__ . '/../includes/header.php';
                         <td><?= htmlspecialchars($item['year']) ?></td>
                         <td><?= htmlspecialchars($item['issued_date'] ? date('d/m/Y', strtotime($item['issued_date'])) : '') ?></td>
                         <td><?= htmlspecialchars($item['criteria']) ?></td>
-                        <td><?= htmlspecialchars($item['department']) ?></td>
                         <td><?= htmlspecialchars($item['evidence_type']) ?></td>
                         <td><span class="badge text-bg-light text-dark"><?= htmlspecialchars($item['type']) ?></span></td>
                         <td><?= readonly_status_select($item['status']) ?></td>
@@ -225,3 +206,4 @@ include __DIR__ . '/../includes/header.php';
     <?php endif; ?>
 </div>
 <?php include __DIR__ . '/../includes/footer.php'; ?>
+

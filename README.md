@@ -12,7 +12,7 @@
 - Quản lý minh chứng.
 - Quản lý tài khoản.
 - Thống kê phục vụ kiểm định.
-- Tra cứu minh chứng.
+- Tìm kiếm minh chứng.
 - Lịch sử tải minh chứng.
 
 ## Bước tiếp theo

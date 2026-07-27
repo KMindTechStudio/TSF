@@ -1432,6 +1432,7 @@ html[data-theme="dark"] .policy-grid i {
 .btn {
     border-radius: 8px;
     font-weight: 700;
+    white-space: nowrap;
 }
 
 .btn-primary {

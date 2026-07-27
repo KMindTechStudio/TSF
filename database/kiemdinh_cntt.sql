@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 22, 2026 at 06:09 AM
+-- Generation Time: Jul 27, 2026 at 11:19 AM
 -- Server version: 10.4.22-MariaDB
 -- PHP Version: 7.4.28
 
@@ -107,33 +107,6 @@ INSERT INTO `chuong_trinh_dao_tao` (`id`, `ma_chuong_trinh`, `ten_chuong_trinh`,
 -- --------------------------------------------------------
 
 --
--- Table structure for table `don_vi`
---
-
-CREATE TABLE `don_vi` (
-  `id` int(11) NOT NULL,
-  `ma_don_vi` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `ten_don_vi` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `trang_thai` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
-  `so_dien_thoai` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `email` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `don_vi`
---
-
-INSERT INTO `don_vi` (`id`, `ma_don_vi`, `ten_don_vi`, `trang_thai`, `so_dien_thoai`, `email`, `ngay_tao`) VALUES
-(1, 'KHOA_CNTT', 'Khoa Công nghệ thông tin', 'active', NULL, 'cntt@fbu.edu.vn', '2026-07-17 03:40:15'),
-(2, 'PDT', 'Phòng Đào tạo', 'inactive', NULL, 'daotao@fbu.edu.vn', '2026-07-17 03:40:15'),
-(3, 'PDBCL', 'Phòng Đảm bảo chất lượng', 'active', NULL, 'dbcl@fbu.edu.vn', '2026-07-17 03:40:15'),
-(4, 'PKT', 'Phòng Khảo thí', 'inactive', NULL, 'khaothi@fbu.edu.vn', '2026-07-17 03:40:15'),
-(5, 'BM_PM', 'Bộ môn Phần mềm', 'active', NULL, 'bomonpm@fbu.edu.vn', '2026-07-17 03:40:15');
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `download_logs`
 --
 
@@ -220,7 +193,6 @@ CREATE TABLE `minh_chung` (
   `mo_ta` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `nam_hoc` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `ngay_ban_hanh` date DEFAULT NULL,
-  `id_don_vi_phu_trach` int(11) DEFAULT NULL,
   `id_nguoi_phu_trach` int(11) DEFAULT NULL,
   `trang_thai_duyet` enum('approved','reviewing','need_update') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'reviewing',
   `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -232,31 +204,31 @@ CREATE TABLE `minh_chung` (
 -- Dumping data for table `minh_chung`
 --
 
-INSERT INTO `minh_chung` (`id`, `ma_minh_chung`, `tieu_de`, `mo_ta`, `nam_hoc`, `ngay_ban_hanh`, `id_don_vi_phu_trach`, `id_nguoi_phu_trach`, `trang_thai_duyet`, `ngay_tao`, `ngay_cap_nhat`, `loai_minh_chung`) VALUES
-(1, 'MC.01.01.01', 'Quyết định ban hành mục tiêu và chuẩn đầu ra ngành CNTT', 'Quyết định ban hành mục tiêu và chuẩn đầu ra của CTĐT ngành CNTT', '2025-2026', '2025-09-01', 1, 1, 'approved', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
-(2, 'MC.02.01.03', 'Bản mô tả chương trình đào tạo ngành CNTT', 'Bản mô tả chương trình đào tạo phục vụ kiểm định', '2025-2026', '2025-08-15', 2, 2, 'approved', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
-(3, 'MC.03.02.04', 'Đề cương chi tiết các học phần chuyên ngành', 'Tập hợp đề cương học phần chuyên ngành CNTT', '2024-2025', '2024-09-05', 5, 1, 'reviewing', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
-(4, 'MC.04.01.02', 'Kế hoạch đổi mới phương pháp dạy học', 'Kế hoạch cải tiến phương pháp giảng dạy trong CTĐT', '2025-2026', '2025-10-20', 1, 1, 'need_update', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
-(5, 'MC.05.03.05', 'Quy chế đánh giá học phần và ma trận điểm', 'Quy chế đánh giá, rubrics và ma trận điểm học phần', '2025-2026', '2025-11-10', 4, 2, 'approved', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
-(10, 'MC.01.01.02', 'Biên bản họp rà soát mục tiêu chương trình đào tạo CNTT', 'Biên bản họp hội đồng khoa về rà soát mục tiêu CTĐT ngành CNTT', '2025-2026', '2025-09-12', 1, 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(11, 'MC.01.02.01', 'Khảo sát nhu cầu các bên liên quan về chuẩn đầu ra CNTT', 'Tổng hợp khảo sát doanh nghiệp, cựu sinh viên và người học về chuẩn đầu ra', '2025-2026', '2025-10-03', 3, 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(12, 'MC.01.02.02', 'Ma trận đối sánh chuẩn đầu ra với mục tiêu CTĐT', 'Ma trận liên kết mục tiêu chương trình với chuẩn đầu ra ngành CNTT', '2025-2026', '2025-10-08', 1, 1, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(13, 'MC.02.01.04', 'Kế hoạch cập nhật bản mô tả chương trình đào tạo', 'Kế hoạch rà soát và cập nhật bản mô tả CTĐT theo chu kỳ kiểm định', '2025-2026', '2025-08-22', 2, 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(14, 'MC.02.01.05', 'Phụ lục cấu trúc chương trình đào tạo CNTT', 'Phụ lục khối kiến thức, số tín chỉ và phân bổ học phần theo học kỳ', '2025-2026', '2025-08-28', 2, 2, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(15, 'MC.02.01.06', 'Bảng đối sánh CTĐT với khung trình độ quốc gia', 'Bảng đối sánh chương trình đào tạo ngành CNTT với khung trình độ quốc gia Việt Nam', '2024-2025', '2025-01-14', 3, 1, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(16, 'MC.03.02.05', 'Danh mục đề cương học phần chuyên ngành CNTT', 'Danh mục đề cương học phần chuyên ngành phục vụ tự đánh giá CTĐT', '2025-2026', '2025-09-05', 5, 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(17, 'MC.03.02.06', 'Biên bản nghiệm thu đề cương học phần cập nhật', 'Biên bản nghiệm thu đề cương học phần sau khi cập nhật định hướng nghề nghiệp', '2025-2026', '2025-09-18', 5, 2, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(18, 'MC.03.02.07', 'Ma trận học phần và chuẩn đầu ra học phần', 'Ma trận liên kết học phần với chuẩn đầu ra học phần và chuẩn đầu ra chương trình', '2024-2025', '2024-11-20', 1, 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(19, 'MC.04.01.03', 'Kế hoạch đổi mới phương pháp giảng dạy học kỳ I', 'Kế hoạch áp dụng phương pháp dạy học tích cực trong các học phần CNTT', '2025-2026', '2025-09-25', 1, 1, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(20, 'MC.04.01.04', 'Báo cáo triển khai lớp học dự án ngành CNTT', 'Báo cáo minh chứng hoạt động dạy học theo dự án và đánh giá sản phẩm học tập', '2025-2026', '2025-12-02', 1, 2, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(21, 'MC.04.01.05', 'Danh sách học phần áp dụng blended learning', 'Danh sách các học phần triển khai blended learning và tài nguyên LMS liên quan', '2024-2025', '2025-03-11', 5, 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(22, 'MC.05.03.06', 'Quy định xây dựng ma trận đề thi học phần', 'Quy định về xây dựng ma trận đề thi, rubrics và ngân hàng câu hỏi', '2025-2026', '2025-11-18', 4, 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(23, 'MC.05.03.07', 'Bảng tổng hợp kết quả đánh giá học phần', 'Bảng tổng hợp điểm quá trình, điểm thi và phân tích kết quả học tập', '2025-2026', '2026-01-10', 4, 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(24, 'MC.05.03.08', 'Biên bản rà soát quy trình chấm thi và phúc khảo', 'Biên bản rà soát quy trình đánh giá, chấm thi và phúc khảo học phần', '2024-2025', '2025-04-18', 4, 1, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(25, 'MC.06.01.01', 'Kế hoạch thu thập minh chứng kiểm định CTĐT CNTT', 'Kế hoạch phân công thu thập, chuẩn hóa và cập nhật minh chứng theo tiêu chuẩn', '2025-2026', '2025-07-15', 3, 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(26, 'MC.06.01.02', 'Danh mục phân quyền khai thác kho minh chứng', 'Danh mục tài khoản, quyền truy cập và phạm vi khai thác dữ liệu minh chứng', '2025-2026', '2025-07-20', 3, 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(28, 'MC.07.01.01', 'Báo cáo tự đánh giá chương trình đào tạo ngành CNTT', 'Bản dự thảo báo cáo tự đánh giá CTĐT ngành CNTT phục vụ kiểm định chất lượng', '2025-2026', '2026-02-05', 3, 1, 'need_update', '2026-07-17 16:20:07', '2026-07-22 01:35:16', 'Minh chứng chính'),
-(29, 'MC.07.01.02', 'Phụ lục minh chứng phục vụ đoàn đánh giá ngoài', 'Phụ lục tổng hợp đường dẫn, mã hóa và trạng thái minh chứng phục vụ đánh giá ngoài', '2025-2026', '2026-02-12', 3, 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 01:35:09', 'Minh chứng chính');
+INSERT INTO `minh_chung` (`id`, `ma_minh_chung`, `tieu_de`, `mo_ta`, `nam_hoc`, `ngay_ban_hanh`, `id_nguoi_phu_trach`, `trang_thai_duyet`, `ngay_tao`, `ngay_cap_nhat`, `loai_minh_chung`) VALUES
+(1, 'MC.01.01.01', 'Quyết định ban hành mục tiêu và chuẩn đầu ra ngành CNTT', 'Quyết định ban hành mục tiêu và chuẩn đầu ra của CTĐT ngành CNTT', '2025-2026', '2025-09-01', 1, 'approved', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
+(2, 'MC.02.01.03', 'Bản mô tả chương trình đào tạo ngành CNTT', 'Bản mô tả chương trình đào tạo phục vụ kiểm định', '2025-2026', '2025-08-15', 2, 'approved', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
+(3, 'MC.03.02.04', 'Đề cương chi tiết các học phần chuyên ngành', 'Tập hợp đề cương học phần chuyên ngành CNTT', '2024-2025', '2024-09-05', 1, 'reviewing', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
+(4, 'MC.04.01.02', 'Kế hoạch đổi mới phương pháp dạy học', 'Kế hoạch cải tiến phương pháp giảng dạy trong CTĐT', '2025-2026', '2025-10-20', 1, 'need_update', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
+(5, 'MC.05.03.05', 'Quy chế đánh giá học phần và ma trận điểm', 'Quy chế đánh giá, rubrics và ma trận điểm học phần', '2025-2026', '2025-11-10', 2, 'approved', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
+(10, 'MC.01.01.02', 'Biên bản họp rà soát mục tiêu chương trình đào tạo CNTT', 'Biên bản họp hội đồng khoa về rà soát mục tiêu CTĐT ngành CNTT', '2025-2026', '2025-09-12', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(11, 'MC.01.02.01', 'Khảo sát nhu cầu các bên liên quan về chuẩn đầu ra CNTT', 'Tổng hợp khảo sát doanh nghiệp, cựu sinh viên và người học về chuẩn đầu ra', '2025-2026', '2025-10-03', 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(12, 'MC.01.02.02', 'Ma trận đối sánh chuẩn đầu ra với mục tiêu CTĐT', 'Ma trận liên kết mục tiêu chương trình với chuẩn đầu ra ngành CNTT', '2025-2026', '2025-10-08', 1, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(13, 'MC.02.01.04', 'Kế hoạch cập nhật bản mô tả chương trình đào tạo', 'Kế hoạch rà soát và cập nhật bản mô tả CTĐT theo chu kỳ kiểm định', '2025-2026', '2025-08-22', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(14, 'MC.02.01.05', 'Phụ lục cấu trúc chương trình đào tạo CNTT', 'Phụ lục khối kiến thức, số tín chỉ và phân bổ học phần theo học kỳ', '2025-2026', '2025-08-28', 2, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(15, 'MC.02.01.06', 'Bảng đối sánh CTĐT với khung trình độ quốc gia', 'Bảng đối sánh chương trình đào tạo ngành CNTT với khung trình độ quốc gia Việt Nam', '2024-2025', '2025-01-14', 1, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(16, 'MC.03.02.05', 'Danh mục đề cương học phần chuyên ngành CNTT', 'Danh mục đề cương học phần chuyên ngành phục vụ tự đánh giá CTĐT', '2025-2026', '2025-09-05', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(17, 'MC.03.02.06', 'Biên bản nghiệm thu đề cương học phần cập nhật', 'Biên bản nghiệm thu đề cương học phần sau khi cập nhật định hướng nghề nghiệp', '2025-2026', '2025-09-18', 2, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(18, 'MC.03.02.07', 'Ma trận học phần và chuẩn đầu ra học phần', 'Ma trận liên kết học phần với chuẩn đầu ra học phần và chuẩn đầu ra chương trình', '2024-2025', '2024-11-20', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(19, 'MC.04.01.03', 'Kế hoạch đổi mới phương pháp giảng dạy học kỳ I', 'Kế hoạch áp dụng phương pháp dạy học tích cực trong các học phần CNTT', '2025-2026', '2025-09-25', 1, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(20, 'MC.04.01.04', 'Báo cáo triển khai lớp học dự án ngành CNTT', 'Báo cáo minh chứng hoạt động dạy học theo dự án và đánh giá sản phẩm học tập', '2025-2026', '2025-12-02', 2, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(21, 'MC.04.01.05', 'Danh sách học phần áp dụng blended learning', 'Danh sách các học phần triển khai blended learning và tài nguyên LMS liên quan', '2024-2025', '2025-03-11', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(22, 'MC.05.03.06', 'Quy định xây dựng ma trận đề thi học phần', 'Quy định về xây dựng ma trận đề thi, rubrics và ngân hàng câu hỏi', '2025-2026', '2025-11-18', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(23, 'MC.05.03.07', 'Bảng tổng hợp kết quả đánh giá học phần', 'Bảng tổng hợp điểm quá trình, điểm thi và phân tích kết quả học tập', '2025-2026', '2026-01-10', 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(24, 'MC.05.03.08', 'Biên bản rà soát quy trình chấm thi và phúc khảo', 'Biên bản rà soát quy trình đánh giá, chấm thi và phúc khảo học phần', '2024-2025', '2025-04-18', 1, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(25, 'MC.06.01.01', 'Kế hoạch thu thập minh chứng kiểm định CTĐT CNTT', 'Kế hoạch phân công thu thập, chuẩn hóa và cập nhật minh chứng theo tiêu chuẩn', '2025-2026', '2025-07-15', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(26, 'MC.06.01.02', 'Danh mục phân quyền khai thác kho minh chứng', 'Danh mục tài khoản, quyền truy cập và phạm vi khai thác dữ liệu minh chứng', '2025-2026', '2025-07-20', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
+(28, 'MC.07.01.01', 'Báo cáo tự đánh giá chương trình đào tạo ngành CNTT', 'Bản dự thảo báo cáo tự đánh giá CTĐT ngành CNTT phục vụ kiểm định chất lượng', '2025-2026', '2026-02-05', 1, 'need_update', '2026-07-17 16:20:07', '2026-07-22 01:35:16', 'Minh chứng chính'),
+(29, 'MC.07.01.02', 'Phụ lục minh chứng phục vụ đoàn đánh giá ngoài', 'Phụ lục tổng hợp đường dẫn, mã hóa và trạng thái minh chứng phục vụ đánh giá ngoài', '2025-2026', '2026-02-12', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 01:35:09', 'Minh chứng chính');
 
 -- --------------------------------------------------------
 
@@ -308,7 +280,6 @@ CREATE TABLE `nguoi_dung` (
   `id` int(11) NOT NULL,
   `ma_nguoi_dung` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `id_vai_tro` int(11) NOT NULL,
-  `id_don_vi` int(11) DEFAULT NULL,
   `ho_ten` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `ten_dang_nhap` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -324,9 +295,9 @@ CREATE TABLE `nguoi_dung` (
 -- Dumping data for table `nguoi_dung`
 --
 
-INSERT INTO `nguoi_dung` (`id`, `ma_nguoi_dung`, `id_vai_tro`, `id_don_vi`, `ho_ten`, `ten_dang_nhap`, `email`, `duong_dan_anh_dai_dien`, `mat_khau_hash`, `trang_thai`, `dang_nhap_cuoi`, `ngay_tao`, `ngay_cap_nhat`) VALUES
-(1, 'ND001', 1, 5, 'Dev Nguyen', 'admin', 'admin@fbu.edu.vn', 'uploads/avatars/avatar_user_1_20260717062114.jpg', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'active', '2026-07-22 11:07:05', '2026-07-17 03:40:15', '2026-07-22 04:07:05'),
-(2, 'ND002', 2, 3, 'Tran Thu Ha', 'kiemdinhtt', 'ha.tt@fbu.edu.vn', 'uploads/avatars/avatar_user_2_20260722060656.jpg', '$2y$10$98IdFASFlTYGEIBVWcui4u52XXRv1x2h4jO/GAJ612wzPiGkMJtsK', 'active', '2026-07-22 11:06:22', '2026-07-17 03:40:15', '2026-07-22 04:06:56');
+INSERT INTO `nguoi_dung` (`id`, `ma_nguoi_dung`, `id_vai_tro`, `ho_ten`, `ten_dang_nhap`, `email`, `duong_dan_anh_dai_dien`, `mat_khau_hash`, `trang_thai`, `dang_nhap_cuoi`, `ngay_tao`, `ngay_cap_nhat`) VALUES
+(1, 'ND001', 1, 'Dev Nguyen', 'admin', 'admin@fbu.edu.vn', 'uploads/avatars/avatar_user_1_20260717062114.jpg', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'active', '2026-07-27 16:09:24', '2026-07-17 03:40:15', '2026-07-27 09:09:24'),
+(2, 'ND002', 2, 'Tran Thu Ha', 'kiemdinhtt', 'ha.tt@fbu.edu.vn', 'uploads/avatars/avatar_user_2_20260722060656.jpg', '$2y$10$98IdFASFlTYGEIBVWcui4u52XXRv1x2h4jO/GAJ612wzPiGkMJtsK', 'active', '2026-07-22 11:06:22', '2026-07-17 03:40:15', '2026-07-22 04:06:56');
 
 -- --------------------------------------------------------
 
@@ -353,7 +324,11 @@ INSERT INTO `remember_tokens` (`id`, `id_nguoi_dung`, `ma_token`, `het_han`, `ng
 (5, 1, 'f27a57993177966a72d22ad28147856ef02ac9152574b64f64186a7a8d22cc0e', '2026-07-28 18:08:29', '2026-07-21 16:08:29'),
 (12, 1, 'dd5c44eda87d17950711d2383c8634128c9d2e153ccb9ec8080f2b2676c26b3a', '2026-07-29 01:56:48', '2026-07-21 23:56:48'),
 (13, 1, '6fa4132769a86159d165e4311c262bcfa47d1f3fe8a9eed2dbacf2d3aec4b371', '2026-07-29 04:58:59', '2026-07-22 02:58:59'),
-(17, 1, 'eeaf7353b1c2dd8ea7229485b5938e3896236f599be391c30acfca9126074bf0', '2026-07-29 06:07:05', '2026-07-22 04:07:05');
+(17, 1, 'eeaf7353b1c2dd8ea7229485b5938e3896236f599be391c30acfca9126074bf0', '2026-07-29 06:07:05', '2026-07-22 04:07:05'),
+(18, 1, 'ba4c301052c8e7ce54898a652510374820273372a014a672905f1e778f4bb4ab', '2026-07-30 03:35:14', '2026-07-23 01:35:14'),
+(19, 1, '1bbd017a9a1c09b680dee95408c8a631aa37b4aa658b813cc888cd52dd6906c3', '2026-07-31 11:16:28', '2026-07-24 09:16:28'),
+(20, 1, 'ceb90208aeb6da2be85c00f1e731c8ebac4dfcc99f097340e85e9a710770e57c', '2026-08-03 09:29:13', '2026-07-27 07:29:13'),
+(21, 1, 'be071abdc31149717b5a9973cee004966e211fb6b25266a6fd5ca5eddd0fb337', '2026-08-03 11:09:24', '2026-07-27 09:09:24');
 
 -- --------------------------------------------------------
 
@@ -364,7 +339,6 @@ INSERT INTO `remember_tokens` (`id`, `id_nguoi_dung`, `ma_token`, `het_han`, `ng
 CREATE TABLE `tieu_chi` (
   `id` int(11) NOT NULL,
   `id_tieu_chuan` int(11) NOT NULL,
-  `id_don_vi` int(11) DEFAULT NULL,
   `ma_tieu_chi` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `ten_tieu_chi` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `noi_dung_mo_ta` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -378,13 +352,13 @@ CREATE TABLE `tieu_chi` (
 -- Dumping data for table `tieu_chi`
 --
 
-INSERT INTO `tieu_chi` (`id`, `id_tieu_chuan`, `id_don_vi`, `ma_tieu_chi`, `ten_tieu_chi`, `noi_dung_mo_ta`, `trang_thai`, `thu_tu_hien_thi`, `ngay_tao`, `ngay_cap_nhat`) VALUES
-(1, 1, 1, '1.1', 'Mục tiêu của CTĐT được xác định rõ ràng', 'Mục tiêu CTĐT phù hợp sứ mạng và nhu cầu xã hội', 'du_minh_chung', 1, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(2, 1, 1, '1.2', 'Chuẩn đầu ra phản ánh yêu cầu của các bên liên quan', 'Chuẩn đầu ra được xây dựng và rà soát định kỳ', 'du_minh_chung', 2, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(3, 2, NULL, '2.1', 'Bản mô tả CTĐT đầy đủ thông tin cần thiết nads', 'Bản mô tả nêu rõ mục tiêu, CĐR, cấu trúc và học phần', 'need_update', 1, '2026-07-17 03:40:15', '2026-07-22 01:18:35'),
-(4, 3, 5, '3.2', 'Nội dung học phần cập nhật theo định hướng nghề nghiệp', 'Đề cương học phần được cập nhật và phê duyệt', 'du_minh_chung', 2, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(5, 4, 1, '4.1', 'Hoạt động dạy học thúc đẩy năng lực tự học', 'Hoạt động dạy học có định hướng phát triển năng lực', 'thieu_minh_chung', 1, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(11, 1, NULL, '6.4', 'Tiêu chí', 'Tiêu chí', 'missing', 4, '2026-07-22 01:18:11', '2026-07-22 01:18:11');
+INSERT INTO `tieu_chi` (`id`, `id_tieu_chuan`, `ma_tieu_chi`, `ten_tieu_chi`, `noi_dung_mo_ta`, `trang_thai`, `thu_tu_hien_thi`, `ngay_tao`, `ngay_cap_nhat`) VALUES
+(1, 1, '1.1', 'Mục tiêu của CTĐT được xác định rõ ràng', 'Mục tiêu CTĐT phù hợp sứ mạng và nhu cầu xã hội', 'du_minh_chung', 1, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
+(2, 1, '1.2', 'Chuẩn đầu ra phản ánh yêu cầu của các bên liên quan', 'Chuẩn đầu ra được xây dựng và rà soát định kỳ', 'du_minh_chung', 2, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
+(3, 2, '2.1', 'Bản mô tả CTĐT đầy đủ thông tin cần thiết nads', 'Bản mô tả nêu rõ mục tiêu, CĐR, cấu trúc và học phần', 'need_update', 1, '2026-07-17 03:40:15', '2026-07-22 01:18:35'),
+(4, 3, '3.2', 'Nội dung học phần cập nhật theo định hướng nghề nghiệp', 'Đề cương học phần được cập nhật và phê duyệt', 'du_minh_chung', 2, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
+(5, 4, '4.1', 'Hoạt động dạy học thúc đẩy năng lực tự học', 'Hoạt động dạy học có định hướng phát triển năng lực', 'thieu_minh_chung', 1, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
+(11, 1, '6.4', 'Tiêu chí', 'Tiêu chí', 'missing', 4, '2026-07-22 01:18:11', '2026-07-22 01:18:11');
 
 -- --------------------------------------------------------
 
@@ -465,13 +439,6 @@ ALTER TABLE `chuong_trinh_dao_tao`
   ADD UNIQUE KEY `code` (`ma_chuong_trinh`);
 
 --
--- Indexes for table `don_vi`
---
-ALTER TABLE `don_vi`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `code` (`ma_don_vi`);
-
---
 -- Indexes for table `download_logs`
 --
 ALTER TABLE `download_logs`
@@ -493,7 +460,6 @@ ALTER TABLE `file_minh_chung`
 ALTER TABLE `minh_chung`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `code` (`ma_minh_chung`),
-  ADD KEY `fk_mc_don_vi` (`id_don_vi_phu_trach`),
   ADD KEY `fk_mc_nguoi_dung` (`id_nguoi_phu_trach`);
 
 --
@@ -510,8 +476,7 @@ ALTER TABLE `nguoi_dung`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`ten_dang_nhap`),
   ADD UNIQUE KEY `email` (`email`),
-  ADD KEY `fk_users_role` (`id_vai_tro`),
-  ADD KEY `fk_users_department` (`id_don_vi`);
+  ADD KEY `fk_users_role` (`id_vai_tro`);
 
 --
 -- Indexes for table `remember_tokens`
@@ -526,8 +491,7 @@ ALTER TABLE `remember_tokens`
 --
 ALTER TABLE `tieu_chi`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_criteria_code_standard` (`id_tieu_chuan`,`ma_tieu_chi`),
-  ADD KEY `fk_criteria_department` (`id_don_vi`);
+  ADD UNIQUE KEY `uq_criteria_code_standard` (`id_tieu_chuan`,`ma_tieu_chi`);
 
 --
 -- Indexes for table `tieu_chuan`
@@ -566,12 +530,6 @@ ALTER TABLE `chuong_trinh_dao_tao`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT for table `don_vi`
---
-ALTER TABLE `don_vi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
-
---
 -- AUTO_INCREMENT for table `download_logs`
 --
 ALTER TABLE `download_logs`
@@ -599,7 +557,7 @@ ALTER TABLE `nguoi_dung`
 -- AUTO_INCREMENT for table `remember_tokens`
 --
 ALTER TABLE `remember_tokens`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `tieu_chi`
@@ -653,7 +611,6 @@ ALTER TABLE `file_minh_chung`
 -- Constraints for table `minh_chung`
 --
 ALTER TABLE `minh_chung`
-  ADD CONSTRAINT `fk_mc_don_vi` FOREIGN KEY (`id_don_vi_phu_trach`) REFERENCES `don_vi` (`id`),
   ADD CONSTRAINT `fk_mc_nguoi_dung` FOREIGN KEY (`id_nguoi_phu_trach`) REFERENCES `nguoi_dung` (`id`);
 
 --
@@ -667,7 +624,6 @@ ALTER TABLE `minh_chung_tieu_chi`
 -- Constraints for table `nguoi_dung`
 --
 ALTER TABLE `nguoi_dung`
-  ADD CONSTRAINT `fk_users_department` FOREIGN KEY (`id_don_vi`) REFERENCES `don_vi` (`id`),
   ADD CONSTRAINT `fk_users_role` FOREIGN KEY (`id_vai_tro`) REFERENCES `vai_tro` (`id`);
 
 --
@@ -680,7 +636,6 @@ ALTER TABLE `remember_tokens`
 -- Constraints for table `tieu_chi`
 --
 ALTER TABLE `tieu_chi`
-  ADD CONSTRAINT `fk_criteria_department` FOREIGN KEY (`id_don_vi`) REFERENCES `don_vi` (`id`),
   ADD CONSTRAINT `fk_criteria_standard` FOREIGN KEY (`id_tieu_chuan`) REFERENCES `tieu_chuan` (`id`);
 
 --

@@ -192,7 +192,7 @@ CREATE TABLE download_logs (
 INSERT INTO roles (code, name, description) VALUES
 ('admin', 'Quản trị viên', 'Quản trị toàn bộ hệ thống'),
 ('staff', 'Cán bộ kiểm định', 'Cập nhật và rà soát hồ sơ minh chứng'),
-('viewer', 'Người dùng tra cứu', 'Tra cứu và tải minh chứng được phép');
+('viewer', 'Người dùng tìm kiếm', 'Tìm kiếm và tải minh chứng được phép');
 
 INSERT INTO departments (code, name, phone, email) VALUES
 ('KHOA_CNTT', 'Khoa Công nghệ thông tin', NULL, 'cntt@fbu.edu.vn'),

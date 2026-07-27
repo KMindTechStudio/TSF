@@ -37,7 +37,7 @@ $pageTitle = $pageTitle ?? $appName;
             <div class="topbar-actions">
                 <form class="search-box" action="<?= base_url('user/search.php') ?>" method="get">
                     <i class="bi bi-search"></i>
-                    <input type="search" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" placeholder="Tìm mã minh chứng, tiêu chí...">
+                    <input type="search" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" placeholder="Tìm kiếm mã minh chứng, tiêu chí...">
                 </form>
 
                 <div class="dropdown user-menu">
@@ -54,7 +54,7 @@ $pageTitle = $pageTitle ?? $appName;
                             <?= avatar_html($currentUser['avatar'] ?? null, $currentUser['name']) ?>
                             <span>
                                 <strong><?= htmlspecialchars($currentUser['name']) ?></strong>
-                                <small><?= htmlspecialchars($currentUser['department']) ?></small>
+                                <small><?= htmlspecialchars($roles[$currentUser['role']] ?? 'Người dùng') ?></small>
                             </span>
                         </div>
                         <a class="dropdown-item" href="<?= base_url('user/profile.php') ?>">

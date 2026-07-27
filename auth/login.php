@@ -155,7 +155,7 @@ $resetEmailValue = htmlspecialchars($_SESSION['password_reset']['email'] ?? ($_P
         <img class="login-logo" src="<?= base_url('assets/images/fbu-logo.png') ?>" alt="FBU">
         <span class="badge text-bg-light text-dark mb-3 align-self-start">Đề án thạc sĩ</span>
         <h1>Cơ sở dữ liệu minh chứng phục vụ kiểm định chất lượng CTĐT ngành CNTT</h1>
-        <p>Chuẩn hóa lưu trữ, tra cứu, thống kê và khai thác minh chứng cho Trường Đại học Tài chính - Ngân hàng Hà Nội.</p>
+        <p>Chuẩn hóa lưu trữ, tìm kiếm, thống kê và khai thác minh chứng cho Trường Đại học Tài chính - Ngân hàng Hà Nội.</p>
     </section>
     <section class="login-card-wrap">
         <form class="login-card" action="<?= base_url('auth/login.php') ?>" method="post">

@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <input class="form-control" name="ma_don_vi"
                                value="<?= htmlspecialchars($editingItem['ma_don_vi'] ?? '') ?>"
                                placeholder="VD: KHOA_CNTT" required>
-                        <div class="form-text">Không dấu cách, dùng để tra cứu nhanh.</div>
+                        <div class="form-text">Không dấu cách, dùng để tìm kiếm nhanh.</div>
                     </div>
 
                     <div class="mb-3">

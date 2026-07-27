@@ -1,8 +1,19 @@
 <?php
-define('DB_HOST', '127.0.0.1');
-define('DB_NAME', 'kiemdinh_cntt');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+$hostName = explode(':', $_SERVER['HTTP_HOST'] ?? 'localhost')[0];
+$isLocal = in_array($hostName, ['localhost', '127.0.0.1', '::1']) || (isset($_SERVER['SERVER_NAME']) && $_SERVER['SERVER_NAME'] === 'localhost');
+
+if ($isLocal) {
+    define('DB_HOST', '127.0.0.1');
+    define('DB_NAME', 'kiemdinh_cntt');
+    define('DB_USER', 'root');
+    define('DB_PASS', '');
+} else {
+    define('DB_HOST', 'sql311.infinityfree.com');
+    define('DB_NAME', 'if0_42436652_kiemdinh_cntt');
+    define('DB_USER', 'if0_42436652');
+    define('DB_PASS', 'zFmXAWtsSLk');
+}
+
 define('DB_CHARSET', 'utf8mb4');
 
 function db(): PDO

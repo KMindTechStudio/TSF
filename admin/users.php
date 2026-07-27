@@ -45,12 +45,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fullName     = trim($_POST['ho_ten'] ?? '');
             $username     = trim($_POST['ten_dang_nhap'] ?? '');
             $roleId       = (int) ($_POST['id_vai_tro'] ?? 0);
-            $departmentId = (int) ($_POST['id_don_vi'] ?? 0);
+            $departmentId = (int) ($_POST['id_don_vi'] ?? 0) ?: null;
             $status       = $_POST['trang_thai'] ?? 'active';
             $password     = $_POST['password'] ?? '';
 
-            if ($userCode === '' || $fullName === '' || $username === '' || $roleId <= 0 || $departmentId <= 0) {
-                throw new RuntimeException('Vui lòng nhập đầy đủ mã người dùng, họ tên, đơn vị, vai trò và tên đăng nhập.');
+            if ($userCode === '' || $fullName === '' || $username === '' || $roleId <= 0) {
+                throw new RuntimeException('Vui lòng nhập đầy đủ mã người dùng, họ tên, vai trò và tên đăng nhập.');
             }
 
             if (!in_array($status, ['active', 'locked'], true)) {
@@ -212,15 +212,13 @@ if ($searchKeyword !== '') {
     $users = array_filter($users, function ($user) use ($searchKeyword) {
         $matchCode = search_contains($user['code'], $searchKeyword);
         $matchName = search_contains($user['name'], $searchKeyword);
-        $matchDept = search_contains($user['department'], $searchKeyword);
         $matchRole = search_contains($user['role'], $searchKeyword);
         $matchUser = search_contains($user['username'], $searchKeyword);
-        return $matchCode || $matchName || $matchDept || $matchRole || $matchUser;
+        return $matchCode || $matchName || $matchRole || $matchUser;
     });
 }
 
-$roleRows    = $pdo->query('SELECT id, ma_vai_tro AS code, ten_vai_tro AS name FROM vai_tro ORDER BY id')->fetchAll();
-$departments = $pdo->query("SELECT id, ten_don_vi AS name FROM don_vi WHERE trang_thai = 'active' ORDER BY ten_don_vi")->fetchAll();
+$roleRows = $pdo->query('SELECT id, ma_vai_tro AS code, ten_vai_tro AS name FROM vai_tro ORDER BY id')->fetchAll();
 
 $isCreatingUser = isset($_GET['create']);
 $editId         = $isCreatingUser ? 0 : (int) ($_GET['edit'] ?? 0);
@@ -249,7 +247,7 @@ include __DIR__ . '/../includes/header.php';
             <form method="get" action="" class="mb-3" id="userSearchForm">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" id="userSearchInput" class="form-control" placeholder="Nhập mã người dùng, họ tên, đơn vị hoặc vai trò để tìm kiếm..." value="<?= htmlspecialchars($searchKeyword) ?>">
+                    <input type="text" name="search" id="userSearchInput" class="form-control" placeholder="Nhập mã người dùng, họ tên hoặc vai trò để tìm kiếm..." value="<?= htmlspecialchars($searchKeyword) ?>">
                     <?php if ($searchKeyword !== ''): ?>
                         <a href="<?= base_url('admin/users.php') ?>" class="btn btn-outline-secondary" title="Xóa tìm kiếm"><i class="bi bi-x-lg"></i></a>
                     <?php endif; ?>
@@ -263,7 +261,6 @@ include __DIR__ . '/../includes/header.php';
                         <th style="width: 60px;">Avatar</th>
                         <th>Mã người dùng</th>
                         <th>Họ tên</th>
-                        <th>Đơn vị</th>
                         <th>Vai trò</th>
                         <th>Tên đăng nhập</th>
                         <th>Trạng thái</th>
@@ -276,7 +273,6 @@ include __DIR__ . '/../includes/header.php';
                             <td><?= avatar_html($user['avatar'] ?? null, $user['name']) ?></td>
                             <td class="fw-bold"><?= htmlspecialchars($user['code']) ?></td>
                             <td class="fw-semibold"><?= htmlspecialchars($user['name']) ?></td>
-                            <td><?= htmlspecialchars($user['department']) ?></td>
                             <td><?= htmlspecialchars($user['role']) ?></td>
                             <td><?= htmlspecialchars($user['username']) ?></td>
                             <td>
@@ -304,7 +300,7 @@ include __DIR__ . '/../includes/header.php';
                         </tr>
                     <?php endforeach; ?>
                     <tr id="noDataRow" class="<?= !empty($users) ? 'd-none' : '' ?>">
-                        <td colspan="8" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
+                        <td colspan="7" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
                     </tr>
                     </tbody>
                 </table>
@@ -339,10 +335,9 @@ document.addEventListener('DOMContentLoaded', function () {
         rows.forEach(row => {
             const codeCell = row.cells[1]?.textContent || '';
             const nameCell = row.cells[2]?.textContent || '';
-            const deptCell = row.cells[3]?.textContent || '';
-            const roleCell = row.cells[4]?.textContent || '';
-            const userCell = row.cells[5]?.textContent || '';
-            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + deptCell + ' ' + roleCell + ' ' + userCell);
+            const roleCell = row.cells[3]?.textContent || '';
+            const userCell = row.cells[4]?.textContent || '';
+            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + roleCell + ' ' + userCell);
 
             if (query === '' || textToMatch.includes(query)) {
                 row.dataset.filteredOut = 'false';
@@ -390,17 +385,6 @@ document.addEventListener('DOMContentLoaded', function () {
                             <input class="form-control" name="ho_ten" value="<?= htmlspecialchars($editingUser['ho_ten'] ?? '') ?>" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Đơn vị</label>
-                            <select class="form-select" name="id_don_vi" required>
-                                <option value="">Chọn đơn vị</option>
-                                <?php foreach ($departments as $department): ?>
-                                    <option value="<?= $department['id'] ?>" <?= (int) ($editingUser['id_don_vi'] ?? 0) === (int) $department['id'] ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($department['name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
                             <label class="form-label">Vai trò</label>
                             <select class="form-select" name="id_vai_tro" required>
                                 <?php foreach ($roleRows as $role): ?>
@@ -441,3 +425,4 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 </div>
 <?php include __DIR__ . '/../includes/footer.php'; ?>
+

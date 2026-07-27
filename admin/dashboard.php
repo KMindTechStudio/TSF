@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includes/helpers.php';
 require_roles(['admin']);
 require_once __DIR__ . '/../includes/data.php';
@@ -8,7 +8,7 @@ include __DIR__ . '/../includes/header.php';
 ?>
 <div class="row g-3 mb-4">
     <div class="col-md-6 col-xl-3"><div class="metric-card metric-blue"><i class="bi bi-diagram-3"></i><span>Tiêu chuẩn</span><strong class="count-up" data-count-to="<?= count($standards) ?>">0</strong><small class="text-secondary">Bộ tiêu chuẩn đang áp dụng</small></div></div>
-    <div class="col-md-6 col-xl-3"><div class="metric-card metric-amber"><i class="bi bi-list-check"></i><span>Tiêu chí</span><strong class="count-up" data-count-to="<?= count($criteria) ?>">0</strong><small class="text-secondary">Đã phân công đơn vị phụ trách</small></div></div>
+    <div class="col-md-6 col-xl-3"><div class="metric-card metric-amber"><i class="bi bi-list-check"></i><span>Tiêu chí</span><strong class="count-up" data-count-to="<?= count($criteria) ?>">0</strong><small class="text-secondary">Tổng số tiêu chí đánh giá</small></div></div>
     <div class="col-md-6 col-xl-3"><div class="metric-card metric-red"><i class="bi bi-folder2-open"></i><span>Minh chứng</span><strong class="count-up" data-count-to="<?= count($evidences) ?>">0</strong><small class="text-secondary">Tệp đã được đưa vào hệ thống</small></div></div>
     <div class="col-md-6 col-xl-3"><div class="metric-card metric-green"><i class="bi bi-shield-check"></i><span>Tỷ lệ đáp ứng</span><strong><span class="count-up" data-count-to="72">0</span>%</strong><small class="text-secondary">Theo tiêu chí đủ minh chứng</small></div></div>
 </div>

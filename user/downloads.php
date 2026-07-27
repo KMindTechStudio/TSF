@@ -27,7 +27,7 @@ include __DIR__ . '/../includes/header.php';
 <div class="panel">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="h5 mb-0">Các lượt tải gần đây</h2>
-        <a class="btn btn-primary" href="<?= base_url('user/search.php') ?>"><i class="bi bi-search me-1"></i> Tra cứu thêm</a>
+        <a class="btn btn-primary" href="<?= base_url('user/search.php') ?>"><i class="bi bi-search me-1"></i> Tìm kiếm thêm</a>
     </div>
     <div class="table-responsive">
         <table class="table">

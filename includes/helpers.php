@@ -1,6 +1,13 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 
+if (!function_exists('str_contains')) {
+    function str_contains(string $haystack, string $needle): bool
+    {
+        return $needle === '' || mb_strpos($haystack, $needle) !== false;
+    }
+}
+
 function base_url(string $path = ''): string
 {
     $script = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));

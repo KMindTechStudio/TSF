@@ -345,7 +345,6 @@ $exportedBy = $currentUser['name'] ?? 'Quản trị viên';
             <tr>
                 <th style="width: 80px;">Mã</th>
                 <th>Nội dung tiêu chí</th>
-                <th style="width: 170px;">Đơn vị phụ trách</th>
                 <th style="width: 90px;">Minh chứng</th>
                 <th style="width: 135px;">Trạng thái</th>
             </tr>
@@ -355,7 +354,6 @@ $exportedBy = $currentUser['name'] ?? 'Quản trị viên';
                 <tr>
                     <td><strong><?= htmlspecialchars($item['code']) ?></strong></td>
                     <td><?= htmlspecialchars($item['name']) ?></td>
-                    <td><?= htmlspecialchars($item['owner']) ?></td>
                     <td><?= (int) $item['evidences'] ?></td>
                     <td>
                         <span class="status status-<?= htmlspecialchars(status_class($item['status'])) ?>">
@@ -366,7 +364,7 @@ $exportedBy = $currentUser['name'] ?? 'Quản trị viên';
             <?php endforeach; ?>
             <?php if (!$priorityCriteria): ?>
                 <tr>
-                    <td colspan="5">Không có tiêu chí cần ưu tiên xử lý.</td>
+                    <td colspan="4">Không có tiêu chí cần ưu tiên xử lý.</td>
                 </tr>
             <?php endif; ?>
             </tbody>

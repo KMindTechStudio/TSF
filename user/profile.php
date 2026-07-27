@@ -136,10 +136,6 @@ include __DIR__ . '/../includes/header.php';
                     <label class="form-label">Email</label>
                     <input class="form-control bg-light" value="<?= htmlspecialchars($profile['email']) ?>" readonly title="Chỉ Quản trị viên mới có quyền đổi email">
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Đơn vị</label>
-                    <input class="form-control bg-light" value="<?= htmlspecialchars($profile['department_name'] ?? 'Chưa phân đơn vị') ?>" readonly title="Chỉ Quản trị viên mới có quyền chuyển đơn vị">
-                </div>
                 <div class="mb-4">
                     <label class="form-label">Vai trò</label>
                     <input class="form-control bg-light" value="<?= htmlspecialchars($profile['role_name']) ?>" readonly>
