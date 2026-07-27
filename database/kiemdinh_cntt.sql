@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 27, 2026 at 11:19 AM
+-- Generation Time: Jul 27, 2026 at 11:34 AM
 -- Server version: 10.4.22-MariaDB
 -- PHP Version: 7.4.28
 
@@ -103,6 +103,33 @@ CREATE TABLE `chuong_trinh_dao_tao` (
 
 INSERT INTO `chuong_trinh_dao_tao` (`id`, `ma_chuong_trinh`, `ten_chuong_trinh`, `trinh_do_dao_tao`, `khoa_don_vi`, `chu_ky_kiem_dinh`, `mo_ta`, `trang_thai`, `ngay_tao`, `ngay_cap_nhat`) VALUES
 (1, '7480201', 'Công nghệ thông tin', 'Đại học chính quy', 'Khoa Cong nghe thong tin', 'Chu kỳ kiểm định 2026-2031', 'Chuong trinh dao tao nganh Cong nghe thong tin cua Truong Dai hoc Tai chinh - Ngan hang Ha Noi', 'active', '2026-07-17 03:40:15', '2026-07-22 00:48:23');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `don_vi`
+--
+
+CREATE TABLE `don_vi` (
+  `id` int(11) NOT NULL,
+  `ma_don_vi` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ten_don_vi` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `so_dien_thoai` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `trang_thai` enum('active','inactive') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
+  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `don_vi`
+--
+
+INSERT INTO `don_vi` (`id`, `ma_don_vi`, `ten_don_vi`, `so_dien_thoai`, `email`, `trang_thai`, `ngay_tao`) VALUES
+(1, 'KHOA_CNTT', 'Khoa Công nghệ thông tin', NULL, 'cntt@fbu.edu.vn', 'active', '2026-07-27 09:34:09'),
+(2, 'PDT', 'Phòng Đào tạo', NULL, 'daotao@fbu.edu.vn', 'active', '2026-07-27 09:34:09'),
+(3, 'PDBCL', 'Phòng Đảm bảo chất lượng', NULL, 'dbcl@fbu.edu.vn', 'active', '2026-07-27 09:34:09'),
+(4, 'PKT', 'Phòng Khảo thí', NULL, 'khaothi@fbu.edu.vn', 'active', '2026-07-27 09:34:09'),
+(5, 'BM_PM', 'Bộ môn Phần mềm', NULL, 'bomonpm@fbu.edu.vn', 'active', '2026-07-27 09:34:09');
 
 -- --------------------------------------------------------
 
@@ -296,7 +323,7 @@ CREATE TABLE `nguoi_dung` (
 --
 
 INSERT INTO `nguoi_dung` (`id`, `ma_nguoi_dung`, `id_vai_tro`, `ho_ten`, `ten_dang_nhap`, `email`, `duong_dan_anh_dai_dien`, `mat_khau_hash`, `trang_thai`, `dang_nhap_cuoi`, `ngay_tao`, `ngay_cap_nhat`) VALUES
-(1, 'ND001', 1, 'Dev Nguyen', 'admin', 'admin@fbu.edu.vn', 'uploads/avatars/avatar_user_1_20260717062114.jpg', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'active', '2026-07-27 16:09:24', '2026-07-17 03:40:15', '2026-07-27 09:09:24'),
+(1, 'ND001', 1, 'Dev Nguyen', 'admin', 'admin@fbu.edu.vn', 'uploads/avatars/avatar_user_1_20260717062114.jpg', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'active', '2026-07-27 16:34:06', '2026-07-17 03:40:15', '2026-07-27 09:34:06'),
 (2, 'ND002', 2, 'Tran Thu Ha', 'kiemdinhtt', 'ha.tt@fbu.edu.vn', 'uploads/avatars/avatar_user_2_20260722060656.jpg', '$2y$10$98IdFASFlTYGEIBVWcui4u52XXRv1x2h4jO/GAJ612wzPiGkMJtsK', 'active', '2026-07-22 11:06:22', '2026-07-17 03:40:15', '2026-07-22 04:06:56');
 
 -- --------------------------------------------------------
@@ -328,7 +355,8 @@ INSERT INTO `remember_tokens` (`id`, `id_nguoi_dung`, `ma_token`, `het_han`, `ng
 (18, 1, 'ba4c301052c8e7ce54898a652510374820273372a014a672905f1e778f4bb4ab', '2026-07-30 03:35:14', '2026-07-23 01:35:14'),
 (19, 1, '1bbd017a9a1c09b680dee95408c8a631aa37b4aa658b813cc888cd52dd6906c3', '2026-07-31 11:16:28', '2026-07-24 09:16:28'),
 (20, 1, 'ceb90208aeb6da2be85c00f1e731c8ebac4dfcc99f097340e85e9a710770e57c', '2026-08-03 09:29:13', '2026-07-27 07:29:13'),
-(21, 1, 'be071abdc31149717b5a9973cee004966e211fb6b25266a6fd5ca5eddd0fb337', '2026-08-03 11:09:24', '2026-07-27 09:09:24');
+(21, 1, 'be071abdc31149717b5a9973cee004966e211fb6b25266a6fd5ca5eddd0fb337', '2026-08-03 11:09:24', '2026-07-27 09:09:24'),
+(22, 1, '249048be54c47436504c8463c867164b240cf635eec0db738e10c8acfb7f0338', '2026-08-03 11:34:06', '2026-07-27 09:34:06');
 
 -- --------------------------------------------------------
 
@@ -439,6 +467,13 @@ ALTER TABLE `chuong_trinh_dao_tao`
   ADD UNIQUE KEY `code` (`ma_chuong_trinh`);
 
 --
+-- Indexes for table `don_vi`
+--
+ALTER TABLE `don_vi`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `ma_don_vi` (`ma_don_vi`);
+
+--
 -- Indexes for table `download_logs`
 --
 ALTER TABLE `download_logs`
@@ -530,6 +565,12 @@ ALTER TABLE `chuong_trinh_dao_tao`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `don_vi`
+--
+ALTER TABLE `don_vi`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
 -- AUTO_INCREMENT for table `download_logs`
 --
 ALTER TABLE `download_logs`
@@ -557,7 +598,7 @@ ALTER TABLE `nguoi_dung`
 -- AUTO_INCREMENT for table `remember_tokens`
 --
 ALTER TABLE `remember_tokens`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `tieu_chi`

@@ -25,6 +25,42 @@ function app_cookie_path(): string
     return $root === '/' ? '/' : $root . '/';
 }
 
+function ensure_don_vi_table(): void
+{
+    static $done = false;
+    if ($done) return;
+
+    try {
+        $pdo = db();
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS don_vi (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ma_don_vi VARCHAR(50) NOT NULL UNIQUE,
+                ten_don_vi VARCHAR(255) NOT NULL,
+                so_dien_thoai VARCHAR(30) NULL,
+                email VARCHAR(150) NULL,
+                trang_thai ENUM('active','inactive') NOT NULL DEFAULT 'active',
+                ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+
+        $count = (int) $pdo->query("SELECT COUNT(*) FROM don_vi")->fetchColumn();
+        if ($count === 0) {
+            $pdo->exec("
+                INSERT INTO don_vi (ma_don_vi, ten_don_vi, email) VALUES
+                ('KHOA_CNTT', 'Khoa Công nghệ thông tin', 'cntt@fbu.edu.vn'),
+                ('PDT', 'Phòng Đào tạo', 'daotao@fbu.edu.vn'),
+                ('PDBCL', 'Phòng Đảm bảo chất lượng', 'dbcl@fbu.edu.vn'),
+                ('PKT', 'Phòng Khảo thí', 'khaothi@fbu.edu.vn'),
+                ('BM_PM', 'Bộ môn Phần mềm', 'bomonpm@fbu.edu.vn');
+            ");
+        }
+    } catch (Throwable $e) {
+        // Silently handle exception if table fails to create
+    }
+    $done = true;
+}
+
 function ensure_remember_tokens_table(): void
 {
     static $created = false;

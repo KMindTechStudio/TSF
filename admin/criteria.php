@@ -111,7 +111,7 @@ if ($selectedStandard !== '' || $selectedStatus !== '' || $searchKeyword !== '')
             $st = mb_strtolower($selectedStatus);
             $itemSt = mb_strtolower($item['status']);
             $itemStRaw = mb_strtolower($item['status_raw'] ?? '');
-            if ($st !== $itemSt && !str_contains($itemSt, $st) && $st !== $itemStRaw) {
+            if ($st !== $itemSt && (mb_strpos($itemSt, $st) === false) && $st !== $itemStRaw) {
                 return false;
             }
         }
@@ -130,8 +130,18 @@ if ($selectedStandard !== '' || $selectedStatus !== '' || $searchKeyword !== '')
     });
 }
 
-$departments  = $pdo->query("SELECT id, ten_don_vi AS name FROM don_vi WHERE trang_thai = 'active' ORDER BY ten_don_vi")->fetchAll();
-$standardRows = $pdo->query('SELECT id, ma_tieu_chuan AS code, ten_tieu_chuan AS name FROM tieu_chuan ORDER BY thu_tu_hien_thi, id')->fetchAll();
+ensure_don_vi_table();
+try {
+    $departments = $pdo->query("SELECT id, ten_don_vi AS name FROM don_vi WHERE trang_thai = 'active' ORDER BY ten_don_vi")->fetchAll();
+} catch (Throwable $e) {
+    $departments = [];
+}
+
+try {
+    $standardRows = $pdo->query('SELECT id, ma_tieu_chuan AS code, ten_tieu_chuan AS name FROM tieu_chuan ORDER BY thu_tu_hien_thi, id')->fetchAll();
+} catch (Throwable $e) {
+    $standardRows = [];
+}
 
 $isCreatingCriterion = isset($_GET['create']);
 $editId              = $isCreatingCriterion ? 0 : (int) ($_GET['edit'] ?? 0);

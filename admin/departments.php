@@ -5,11 +5,14 @@ require_once __DIR__ . '/../config/database.php';
 
 $pdo = db();
 
+ensure_don_vi_table();
 // Auto-migrate: add trang_thai column if not exists
-$hasStatus = $pdo->query("SHOW COLUMNS FROM don_vi LIKE 'trang_thai'")->fetch();
-if (!$hasStatus) {
-    $pdo->exec("ALTER TABLE don_vi ADD COLUMN trang_thai ENUM('active','inactive') NOT NULL DEFAULT 'active'");
-}
+try {
+    $hasStatus = $pdo->query("SHOW COLUMNS FROM don_vi LIKE 'trang_thai'")->fetch();
+    if (!$hasStatus) {
+        $pdo->exec("ALTER TABLE don_vi ADD COLUMN trang_thai ENUM('active','inactive') NOT NULL DEFAULT 'active'");
+    }
+} catch (Throwable $e) {}
 
 $success = '';
 $error   = '';
