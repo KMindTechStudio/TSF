@@ -20,13 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'forgot_request') {
         $showResetModal = true;
         $resetStep = 'email';
-        $resetEmail = trim($_POST['reset_email'] ?? '');
+        $email = trim($_POST['reset_email'] ?? '');
 
-        if ($resetEmail === '' || !filter_var($resetEmail, FILTER_VALIDATE_EMAIL)) {
-            $resetError = 'Vui lòng nhập email hợp lệ.';
+        if ($email === '') {
+            $resetError = 'Vui lòng nhập địa chỉ email.';
         } else {
-            $stmt = db()->prepare('SELECT id, ho_ten AS full_name, email FROM nguoi_dung WHERE email = :email LIMIT 1');
-            $stmt->execute(['email' => $resetEmail]);
+            $stmt = db()->prepare('SELECT MaNguoiDung AS id, HoTen AS full_name, Email FROM NguoiDung WHERE LOWER(Email) = LOWER(:email) LIMIT 1');
+            $stmt->execute(['email' => $email]);
             $resetUser = $stmt->fetch();
 
             if (!$resetUser) {
@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($newPassword !== $confirmPassword) {
             $resetError = 'Mật khẩu xác nhận chưa trùng khớp.';
         } else {
-            $update = db()->prepare('UPDATE nguoi_dung SET mat_khau_hash = :password_hash, ngay_cap_nhat = NOW() WHERE id = :id');
+            $update = db()->prepare('UPDATE NguoiDung SET MatKhau = :password_hash WHERE MaNguoiDung = :id');
             $update->execute([
                 'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
                 'id' => (int) $resetState['user_id'],
@@ -106,10 +106,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = $_POST['password'] ?? '';
 
         $stmt = db()->prepare("
-            SELECT u.*, u.mat_khau_hash AS password_hash, u.trang_thai AS status, r.ma_vai_tro AS role_code
-            FROM nguoi_dung u
-            JOIN vai_tro r ON r.id = u.id_vai_tro
-            WHERE u.ten_dang_nhap = :username
+            SELECT MaNguoiDung AS id, MatKhau AS password_hash, TrangThai AS status, VaiTro AS role_code
+            FROM NguoiDung
+            WHERE TenDangNhap = :username
             LIMIT 1
         ");
         $stmt->execute(['username' => $username]);
@@ -117,14 +116,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$user || !password_verify($password, $user['password_hash'])) {
             $error = 'Thông tin đăng nhập không chính xác.';
-        } elseif ($user['status'] !== 'active') {
+        } elseif ((int) $user['status'] !== 1) {
             $error = 'Tài khoản đang bị khóa. Vui lòng liên hệ quản trị viên.';
         } else {
             $_SESSION['user_id'] = (int) $user['id'];
             $_SESSION['role'] = $user['role_code'];
             create_login_token((int) $user['id'], !empty($_POST['remember']));
 
-            $update = db()->prepare('UPDATE nguoi_dung SET dang_nhap_cuoi = NOW() WHERE id = :id');
+            $update = db()->prepare('UPDATE NguoiDung SET DangNhapCuoi = NOW() WHERE MaNguoiDung = :id');
             $update->execute(['id' => $user['id']]);
 
             $successRedirect = $user['role_code'] === 'admin'

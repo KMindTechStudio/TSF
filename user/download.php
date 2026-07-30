@@ -7,27 +7,25 @@ require_once __DIR__ . '/../includes/helpers.php';
 require_login();
 require_once __DIR__ . '/../config/database.php';
 
-$fileId = (int) ($_GET['id'] ?? 0);
-if ($fileId <= 0) {
+$evidenceId = (int) ($_GET['id'] ?? 0);
+if ($evidenceId <= 0) {
     header('Location: ' . base_url('user/search.php?download_error=invalid'));
     exit;
 }
 
 $stmt = db()->prepare("
     SELECT
-        ef.id,
-        ef.ten_goc AS original_name,
-        ef.duong_dan AS file_path,
-        e.ma_minh_chung AS evidence_code
-    FROM file_minh_chung ef
-    JOIN minh_chung e ON e.id = ef.id_minh_chung
-    WHERE ef.id = :id
+        MaMinhChung AS id,
+        TenMinhChung AS original_name,
+        TepTin AS file_path
+    FROM MinhChung
+    WHERE MaMinhChung = :id
     LIMIT 1
 ");
-$stmt->execute(['id' => $fileId]);
+$stmt->execute(['id' => $evidenceId]);
 $file = $stmt->fetch();
 
-if (!$file) {
+if (!$file || empty($file['file_path'])) {
     header('Location: ' . base_url('user/search.php?download_error=not_found'));
     exit;
 }
@@ -41,16 +39,16 @@ if (!$absolutePath || strpos($absolutePath, $projectRoot) !== 0 || !is_file($abs
     exit;
 }
 
-$log = db()->prepare('INSERT INTO download_logs (id_nguoi_dung, id_file_minh_chung, dia_chi_ip) VALUES (:user_id, :file_id, :ip_address)');
+$log = db()->prepare('INSERT INTO download_logs (MaNguoiDung, MaMinhChung, dia_chi_ip) VALUES (:user_id, :evidence_id, :ip_address)');
 $log->execute([
-    'user_id' => $_SESSION['user_id'] ?? null,
-    'file_id' => $fileId,
-    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
+    'user_id'     => $_SESSION['user_id'] ?? null,
+    'evidence_id' => $evidenceId,
+    'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? null,
 ]);
 
-log_activity('tai_ve', 'minh_chung', (int) $file['id'], $file['evidence_code'] . ' - ' . $file['original_name']);
+log_activity('tai_ve', 'minh_chung', $evidenceId, 'MC.' . str_pad($evidenceId, 2, '0', STR_PAD_LEFT));
 
-$downloadName = $file['original_name'] ?: basename($absolutePath);
+$downloadName = basename($absolutePath);
 $mimeType = mime_content_type($absolutePath) ?: 'application/octet-stream';
 
 header('Content-Description: File Transfer');

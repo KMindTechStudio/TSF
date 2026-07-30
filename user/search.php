@@ -48,7 +48,7 @@ $filteredEvidences = array_filter($evidences, function ($item) use ($searchCode,
         return false;
     }
 
-    if ($selectedType !== '' && strtoupper($item['type'] ?? '') !== strtoupper($selectedType)) {
+    if ($selectedType !== '' && search_contains($item['type_name'] ?? '', $selectedType) === false) {
         return false;
     }
 
@@ -57,7 +57,7 @@ $filteredEvidences = array_filter($evidences, function ($item) use ($searchCode,
 
 $filteredEvidences = array_values($filteredEvidences);
 $years = array_values(array_unique(array_filter(array_column($evidences, 'year'))));
-$types = array_values(array_unique(array_filter(array_column($evidences, 'type'))));
+$types = array_values(array_unique(array_filter(array_column($evidences, 'type_name'))));
 
 $pageTitle = page_title('Tìm kiếm minh chứng');
 $heading = 'Tìm kiếm và khai thác minh chứng';
@@ -159,42 +159,53 @@ include __DIR__ . '/../includes/header.php';
                     <th>Mã minh chứng</th>
                     <th>Tên minh chứng</th>
                     <th>Mô tả</th>
+                    <th>Tệp tin</th>
                     <th>Năm học</th>
-                    <th>Ngày ban hành</th>
-                    <th>Thuộc tiêu chí</th>
-                    <th>Loại minh chứng</th>
-                    <th>File đính kèm</th>
+                    <th>Ngày cập nhật</th>
                     <th>Trạng thái</th>
+                    <th>Mã loại</th>
+                    <th>Mã tiêu chí</th>
+                    <th>Mã người dùng</th>
                     <th class="text-end">Thao tác</th>
                 </tr>
                 </thead>
                 <tbody>
                 <?php foreach ($filteredEvidences as $item): ?>
                     <tr>
-                        <td class="fw-bold"><?= htmlspecialchars($item['code']) ?></td>
-                        <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($item['name']) ?>">
+                        <td class="fw-bold text-nowrap"><?= htmlspecialchars($item['code']) ?></td>
+                        <td class="fw-semibold" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($item['name']) ?>">
                             <?= htmlspecialchars($item['name']) ?>
                         </td>
-                        <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($item['description']) ?>">
-                            <?= htmlspecialchars($item['description']) ?>
+                        <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($item['description']) ?>">
+                            <?= htmlspecialchars($item['description'] ?: '-') ?>
                         </td>
-                        <td><?= htmlspecialchars($item['year']) ?></td>
-                        <td><?= htmlspecialchars($item['issued_date'] ? date('d/m/Y', strtotime($item['issued_date'])) : '') ?></td>
-                        <td><?= htmlspecialchars($item['criteria']) ?></td>
-                        <td><?= htmlspecialchars($item['evidence_type']) ?></td>
-                        <td><span class="badge text-bg-light text-dark"><?= htmlspecialchars($item['type']) ?></span></td>
-                        <td><?= readonly_status_select($item['status']) ?></td>
+                        <td>
+                            <?php if (!empty($item['file_path'])): ?>
+                                <code><?= htmlspecialchars(basename($item['file_path'])) ?></code>
+                            <?php else: ?>
+                                <span class="text-secondary small">Không có</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?= htmlspecialchars($item['year'] ?: '-') ?></td>
+                        <td class="text-nowrap"><?= htmlspecialchars($item['updated'] ?: '-') ?></td>
+                        <td>
+                            <?php if ((int) ($item['status_raw'] ?? 1) === 1): ?>
+                                <span class="badge bg-success">Đang áp dụng</span>
+                            <?php else: ?>
+                                <span class="badge bg-warning text-dark">Ngưng áp dụng</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><span class="badge bg-secondary"><?= htmlspecialchars($item['type_code'] ?? 'N/A') ?></span></td>
+                        <td><span class="badge bg-info text-dark"><?= htmlspecialchars($item['criteria_code'] ?? 'N/A') ?></span></td>
+                        <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($item['user_code'] ?? 'N/A') ?></span></td>
                         <td class="text-end action-cell">
                             <div class="action-buttons">
+                                <a class="btn btn-sm btn-outline-secondary" href="<?= base_url('admin/evidences.php?view=' . (int) $item['id']) ?>" title="Xem thông tin minh chứng"><i class="bi bi-eye"></i></a>
+                                <?php if (!empty($item['file_path'])): ?>
+                                    <a class="btn btn-sm btn-outline-success" href="<?= base_url('user/download.php?id=' . (int) $item['id']) ?>" title="Tải tài liệu về"><i class="bi bi-download"></i></a>
+                                <?php endif; ?>
                                 <?php if (current_role() === 'admin'): ?>
                                     <a class="btn btn-sm btn-outline-primary" href="<?= base_url('admin/evidences.php?edit=' . (int) $item['id']) ?>" title="Sửa minh chứng"><i class="bi bi-pencil"></i></a>
-                                <?php endif; ?>
-                                <?php if (!empty($item['file_id'])): ?>
-                                    <a class="btn btn-sm btn-outline-secondary" href="<?= base_url('user/view.php?id=' . (int) $item['file_id']) ?>" target="_blank" rel="noopener" title="Xem minh chứng"><i class="bi bi-eye"></i></a>
-                                    <a class="btn btn-sm btn-outline-success" href="<?= base_url('user/download.php?id=' . (int) $item['file_id']) ?>" title="Tải minh chứng"><i class="bi bi-download"></i></a>
-                                <?php else: ?>
-                                    <button class="btn btn-sm btn-outline-secondary" type="button" disabled title="Xem minh chứng"><i class="bi bi-eye"></i></button>
-                                    <button class="btn btn-sm btn-outline-secondary" type="button" disabled title="Tải minh chứng"><i class="bi bi-download"></i></button>
                                 <?php endif; ?>
                             </div>
                         </td>

@@ -12,82 +12,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         if ($action === 'save_criterion') {
-            $id           = (int) ($_POST['id'] ?? 0);
-            $standardId   = (int) ($_POST['id_tieu_chuan'] ?? 0);
-            $departmentId = (int) ($_POST['id_don_vi'] ?? 0);
-            $code         = trim($_POST['ma_tieu_chi'] ?? '');
-            $name         = trim($_POST['ten_tieu_chi'] ?? '');
-            $description  = trim($_POST['noi_dung_mo_ta'] ?? '');
-            $status       = $_POST['trang_thai'] ?? 'missing';
+            $id          = (int) ($_POST['id'] ?? 0);
+            $standardId  = (int) ($_POST['ma_tieu_chuan'] ?? 0);
+            $name        = trim($_POST['ten_tieu_chi'] ?? '');
+            $content     = trim($_POST['noi_dung'] ?? '');
+            $order       = (int) ($_POST['thu_tu'] ?? 0);
+            $status      = (int) ($_POST['trang_thai'] ?? 1);
 
-            if ($standardId <= 0 || $code === '' || $name === '') {
-                throw new RuntimeException('Vui lòng nhập đầy đủ tiêu chuẩn, mã và nội dung tiêu chí.');
-            }
-
-            $check = $pdo->prepare('SELECT id FROM tieu_chi WHERE (ma_tieu_chi = :code OR ten_tieu_chi = :name) AND id <> :id LIMIT 1');
-            $check->execute(['code' => $code, 'name' => $name, 'id' => $id]);
-            if ($check->fetch()) {
-                throw new RuntimeException('Mã hoặc nội dung tiêu chí đã tồn tại trong hệ thống.');
+            if ($standardId <= 0 || $name === '') {
+                throw new RuntimeException('Vui lòng chọn tiêu chuẩn và nhập tên tiêu chí.');
             }
 
             if ($id > 0) {
-                $stmt = $pdo->prepare('UPDATE tieu_chi SET id_tieu_chuan = :standard_id, id_don_vi = :department_id, ma_tieu_chi = :code, ten_tieu_chi = :name, noi_dung_mo_ta = :description, trang_thai = :status WHERE id = :id');
+                $stmt = $pdo->prepare('UPDATE TieuChi SET MaTieuChuan = :standard_id, TenTieuChi = :name, NoiDung = :content, ThuTu = :thu_tu, TrangThai = :status WHERE MaTieuChi = :id');
                 $stmt->execute([
-                    'standard_id'   => $standardId,
-                    'department_id' => $departmentId ?: null,
-                    'code'          => $code,
-                    'name'          => $name,
-                    'description'   => $description,
-                    'status'        => $status,
-                    'id'            => $id,
+                    'standard_id' => $standardId,
+                    'name'        => $name,
+                    'content'     => $content,
+                    'thu_tu'      => $order,
+                    'status'      => $status,
+                    'id'          => $id,
                 ]);
-                log_activity('cap_nhat', 'tieu_chi', $id, $code . ' - ' . $name);
+                log_activity('cap_nhat', 'tieu_chi', $id, 'TC' . str_pad($standardId, 2, '0', STR_PAD_LEFT) . '.' . $order . ' - ' . $name);
                 $success = 'Cập nhật tiêu chí thành công.';
             } else {
-                $order = (int) $pdo->query('SELECT COALESCE(MAX(thu_tu_hien_thi), 0) + 1 FROM tieu_chi')->fetchColumn();
-                $stmt  = $pdo->prepare('INSERT INTO tieu_chi (id_tieu_chuan, id_don_vi, ma_tieu_chi, ten_tieu_chi, noi_dung_mo_ta, trang_thai, thu_tu_hien_thi) VALUES (:standard_id, :department_id, :code, :name, :description, :status, :display_order)');
+                if ($order <= 0) {
+                    $order = (int) $pdo->query('SELECT COALESCE(MAX(ThuTu), 0) + 1 FROM TieuChi WHERE MaTieuChuan = ' . $standardId)->fetchColumn();
+                }
+                $stmt = $pdo->prepare('INSERT INTO TieuChi (MaTieuChuan, TenTieuChi, NoiDung, ThuTu, TrangThai) VALUES (:standard_id, :name, :content, :thu_tu, :status)');
                 $stmt->execute([
-                    'standard_id'   => $standardId,
-                    'department_id' => $departmentId ?: null,
-                    'code'          => $code,
-                    'name'          => $name,
-                    'description'   => $description,
-                    'status'        => $status,
-                    'display_order' => $order,
+                    'standard_id' => $standardId,
+                    'name'        => $name,
+                    'content'     => $content,
+                    'thu_tu'      => $order,
+                    'status'      => $status,
                 ]);
                 $newId = (int) $pdo->lastInsertId();
-                log_activity('them_moi', 'tieu_chi', $newId, $code . ' - ' . $name);
+                log_activity('them_moi', 'tieu_chi', $newId, 'TC' . str_pad($standardId, 2, '0', STR_PAD_LEFT) . '.' . $order . ' - ' . $name);
                 $success = 'Thêm tiêu chí thành công.';
             }
         }
 
         if ($action === 'delete_criterion') {
-            $id   = (int) ($_POST['id'] ?? 0);
-            $stmtName = $pdo->prepare('SELECT ma_tieu_chi FROM tieu_chi WHERE id = :id');
-            $stmtName->execute(['id' => $id]);
-            $critCode = $stmtName->fetchColumn() ?: ('#' . $id);
+            $id = (int) ($_POST['id'] ?? 0);
 
-            $stmt = $pdo->prepare('DELETE FROM tieu_chi WHERE id = :id');
+            $stmt = $pdo->prepare('DELETE FROM TieuChi WHERE MaTieuChi = :id');
             $stmt->execute(['id' => $id]);
-            log_activity('xoa', 'tieu_chi', $id, $critCode);
+            log_activity('xoa', 'tieu_chi', $id, '#' . $id);
             $success = 'Xóa tiêu chí thành công.';
-        }
-
-        if ($action === 'update_criterion_status') {
-            $id            = (int) ($_POST['id'] ?? 0);
-            $status        = $_POST['trang_thai'] ?? '';
-            $statusOptions = ['complete', 'need_update', 'missing', 'du_minh_chung', 'can_bo_sung', 'thieu_minh_chung'];
-
-            if ($id <= 0 || !in_array($status, $statusOptions, true)) {
-                throw new RuntimeException('Trạng thái tiêu chí không hợp lệ.');
-            }
-
-            $stmt = $pdo->prepare('UPDATE tieu_chi SET trang_thai = :status WHERE id = :id');
-            $stmt->execute([
-                'status' => $status,
-                'id'     => $id,
-            ]);
-            $success = 'Cập nhật trạng thái tiêu chí thành công.';
         }
     } catch (Throwable $exception) {
         $error = 'Không thể thực hiện thao tác: ' . $exception->getMessage();
@@ -98,22 +70,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 require_once __DIR__ . '/../includes/data.php';
 
 $selectedStandard = trim($_GET['standard'] ?? '');
-$selectedStatus   = trim($_GET['status'] ?? '');
 $searchKeyword    = trim($_GET['search'] ?? $_GET['q'] ?? $_GET['keyword'] ?? '');
 
-if ($selectedStandard !== '' || $selectedStatus !== '' || $searchKeyword !== '') {
-    $criteria = array_filter($criteria, function ($item) use ($selectedStandard, $selectedStatus, $searchKeyword) {
+if ($selectedStandard !== '' || $searchKeyword !== '') {
+    $criteria = array_filter($criteria, function ($item) use ($selectedStandard, $searchKeyword) {
         if ($selectedStandard !== '' && $item['standard'] !== $selectedStandard) {
             return false;
-        }
-
-        if ($selectedStatus !== '') {
-            $st = mb_strtolower($selectedStatus);
-            $itemSt = mb_strtolower($item['status']);
-            $itemStRaw = mb_strtolower($item['status_raw'] ?? '');
-            if ($st !== $itemSt && (mb_strpos($itemSt, $st) === false) && $st !== $itemStRaw) {
-                return false;
-            }
         }
 
         if ($searchKeyword !== '') {
@@ -130,15 +92,8 @@ if ($selectedStandard !== '' || $selectedStatus !== '' || $searchKeyword !== '')
     });
 }
 
-ensure_don_vi_table();
 try {
-    $departments = $pdo->query("SELECT id, ten_don_vi AS name FROM don_vi WHERE trang_thai = 'active' ORDER BY ten_don_vi")->fetchAll();
-} catch (Throwable $e) {
-    $departments = [];
-}
-
-try {
-    $standardRows = $pdo->query('SELECT id, ma_tieu_chuan AS code, ten_tieu_chuan AS name FROM tieu_chuan ORDER BY thu_tu_hien_thi, id')->fetchAll();
+    $standardRows = $pdo->query('SELECT MaTieuChuan AS id, TenTieuChuan AS name FROM TieuChuan ORDER BY ThuTu, MaTieuChuan')->fetchAll();
 } catch (Throwable $e) {
     $standardRows = [];
 }
@@ -147,7 +102,7 @@ $isCreatingCriterion = isset($_GET['create']);
 $editId              = $isCreatingCriterion ? 0 : (int) ($_GET['edit'] ?? 0);
 $editingCriterion    = null;
 if ($editId > 0) {
-    $stmt = $pdo->prepare('SELECT * FROM tieu_chi WHERE id = :id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT * FROM TieuChi WHERE MaTieuChi = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
     $editingCriterion = $stmt->fetch();
 }
@@ -162,31 +117,22 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="panel mb-4">
     <form class="row g-3 align-items-end" method="get" action="" id="criteriaFilterForm">
-        <div class="col-md-3">
+        <div class="col-md-4">
             <label class="form-label">Tiêu chuẩn</label>
             <select class="form-select" name="standard" id="filterStandard">
                 <option value="">Tất cả tiêu chuẩn</option>
                 <?php foreach ($standards as $standard): ?>
                     <option value="<?= htmlspecialchars($standard['code']) ?>" <?= ($selectedStandard === $standard['code']) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($standard['code']) ?>
+                        <?= htmlspecialchars($standard['code'] . ' - ' . $standard['name']) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="col-md-3">
-            <label class="form-label">Trạng thái</label>
-            <select class="form-select" name="status" id="filterStatus">
-                <option value="">Tất cả trạng thái</option>
-                <option value="Đủ minh chứng" <?= ($selectedStatus === 'Đủ minh chứng' || $selectedStatus === 'complete' || $selectedStatus === 'du_minh_chung') ? 'selected' : '' ?>>Đủ minh chứng</option>
-                <option value="Cần bổ sung" <?= ($selectedStatus === 'Cần bổ sung' || $selectedStatus === 'need_update' || $selectedStatus === 'can_bo_sung') ? 'selected' : '' ?>>Cần bổ sung</option>
-                <option value="Thiếu minh chứng" <?= ($selectedStatus === 'Thiếu minh chứng' || $selectedStatus === 'missing' || $selectedStatus === 'thieu_minh_chung') ? 'selected' : '' ?>>Thiếu minh chứng</option>
-            </select>
-        </div>
-        <div class="col-md-4">
+        <div class="col-md-5">
             <label class="form-label">Từ khóa</label>
-            <input class="form-control" name="search" id="criterionSearchInput" placeholder="Nhập mã tiêu chí, tên, thuộc tiêu chuẩn hoặc mô tả..." value="<?= htmlspecialchars($searchKeyword) ?>">
+            <input class="form-control" name="search" id="criterionSearchInput" placeholder="Nhập tên tiêu chí hoặc mô tả nội dung..." value="<?= htmlspecialchars($searchKeyword) ?>">
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
             <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search me-1"></i> Tìm kiếm</button>
         </div>
     </form>
@@ -205,8 +151,9 @@ include __DIR__ . '/../includes/header.php';
                         <tr>
                             <th>Mã tiêu chí</th>
                             <th>Tên tiêu chí</th>
-                            <th>Thuộc tiêu chuẩn</th>
-                            <th>Nội dung mô tả</th>
+                            <th>Nội dung</th>
+                            <th>Thứ tự</th>
+                            <th>Mã tiêu chuẩn</th>
                             <th>Trạng thái</th>
                             <th class="text-end">Thao tác</th>
                         </tr>
@@ -215,19 +162,20 @@ include __DIR__ . '/../includes/header.php';
                     <?php foreach ($criteria as $item): ?>
                         <tr>
                             <td class="fw-bold text-nowrap"><?= htmlspecialchars($item['code']) ?></td>
-                            <td><?= htmlspecialchars($item['name']) ?></td>
-                            <td class="text-nowrap"><?= htmlspecialchars($item['standard']) ?></td>
-                            <td style="max-width: 350px;">
+                            <td class="fw-semibold"><?= htmlspecialchars($item['name']) ?></td>
+                            <td style="max-width: 280px;">
                                 <div class="text-truncate" title="<?= htmlspecialchars($item['description'] ?? '') ?>">
                                     <?= htmlspecialchars($item['description'] !== '' ? $item['description'] : '-') ?>
                                 </div>
                             </td>
+                            <td><?= $item['order'] ?></td>
+                            <td><span class="badge bg-secondary"><?= htmlspecialchars($item['standard_code']) ?></span></td>
                             <td>
-                                <form method="post" class="status-update-form">
-                                    <input type="hidden" name="action" value="update_criterion_status">
-                                    <input type="hidden" name="id" value="<?= $item['id'] ?>">
-                                    <?= status_select($item['status_raw'] ?? 'missing', ['complete' => 'Đủ minh chứng', 'need_update' => 'Cần bổ sung', 'missing' => 'Thiếu minh chứng'], 'trang_thai', false, '', 'Cập nhật trạng thái tiêu chí') ?>
-                                </form>
+                                <?php if (($item['status_raw'] ?? '') === 'active' || $item['status'] === 'Đang hoạt động'): ?>
+                                    <span class="badge bg-success">Đang hoạt động</span>
+                                <?php else: ?>
+                                    <span class="badge bg-warning text-dark">Ngưng áp dụng</span>
+                                <?php endif; ?>
                             </td>
                             <td class="text-end action-cell">
                                 <div class="action-buttons">
@@ -242,7 +190,7 @@ include __DIR__ . '/../includes/header.php';
                         </tr>
                     <?php endforeach; ?>
                     <tr id="noDataRow" class="<?= !empty($criteria) ? 'd-none' : '' ?>">
-                        <td colspan="6" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
+                        <td colspan="7" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
                     </tr>
                     </tbody>
                 </table>
@@ -255,7 +203,6 @@ include __DIR__ . '/../includes/header.php';
 document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('criterionSearchInput');
     const filterStandard = document.getElementById('filterStandard');
-    const filterStatus = document.getElementById('filterStatus');
     const tableBody = document.getElementById('criteriaTableBody');
     const noDataRow = document.getElementById('noDataRow');
     if (!tableBody) return;
@@ -274,26 +221,22 @@ document.addEventListener('DOMContentLoaded', function () {
     function filterTable() {
         const query = normalizeText(searchInput ? searchInput.value : '');
         const selectedStd = normalizeText(filterStandard ? filterStandard.value : '');
-        const selectedSt = normalizeText(filterStatus ? filterStatus.value : '');
         const rows = tableBody.querySelectorAll('tr:not(#noDataRow)');
         let visibleCount = 0;
 
         rows.forEach(row => {
             const codeCell = row.cells[0]?.textContent || '';
             const nameCell = row.cells[1]?.textContent || '';
-            const stdCell  = row.cells[2]?.textContent || '';
-            const descCell = row.cells[3]?.textContent || '';
-            const statusCell = row.cells[4]?.textContent || '';
+            const descCell = row.cells[2]?.textContent || '';
+            const stdCell  = row.cells[4]?.textContent || '';
 
-            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + stdCell + ' ' + descCell);
+            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + descCell + ' ' + stdCell);
             const stdText = normalizeText(stdCell);
-            const statusText = normalizeText(statusCell);
 
             const matchesQuery = query === '' || textToMatch.includes(query);
             const matchesStd   = selectedStd === '' || stdText.includes(selectedStd);
-            const matchesStatus= selectedSt === '' || statusText.includes(selectedSt);
 
-            if (matchesQuery && matchesStd && matchesStatus) {
+            if (matchesQuery && matchesStd) {
                 row.dataset.filteredOut = 'false';
                 visibleCount++;
             } else {
@@ -316,7 +259,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (searchInput) searchInput.addEventListener('input', filterTable);
     if (filterStandard) filterStandard.addEventListener('change', filterTable);
-    if (filterStatus) filterStatus.addEventListener('change', filterTable);
 });
 </script>
 
@@ -330,14 +272,50 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="modal-body">
             <form method="post">
                 <input type="hidden" name="action" value="save_criterion">
-                <input type="hidden" name="id" value="<?= (int) ($editingCriterion['id'] ?? 0) ?>">
-                <div class="mb-3"><label class="form-label">Mã tiêu chí</label><input class="form-control" name="ma_tieu_chi" value="<?= htmlspecialchars($editingCriterion['ma_tieu_chi'] ?? '') ?>" placeholder="VD: 6.1" required></div>
-                <div class="mb-3"><label class="form-label">Tên tiêu chí</label><textarea class="form-control" name="ten_tieu_chi" rows="3" placeholder="Nhập tên/nội dung tiêu chí" required><?= htmlspecialchars($editingCriterion['ten_tieu_chi'] ?? '') ?></textarea></div>
-                <div class="mb-3"><label class="form-label">Thuộc tiêu chuẩn</label><select class="form-select" name="id_tieu_chuan" required><?php foreach ($standardRows as $standard): ?><option value="<?= $standard['id'] ?>" <?= (int) ($editingCriterion['id_tieu_chuan'] ?? 0) === (int) $standard['id'] ? 'selected' : '' ?>><?= htmlspecialchars($standard['code'] . ' - ' . $standard['name']) ?></option><?php endforeach; ?></select></div>
-                <div class="mb-3"><label class="form-label">Nội dung mô tả</label><textarea class="form-control" name="noi_dung_mo_ta" rows="3" placeholder="Nhập nội dung mô tả tiêu chí"><?= htmlspecialchars($editingCriterion['noi_dung_mo_ta'] ?? '') ?></textarea></div>
-                <div class="mb-3"><label class="form-label">Trạng thái</label><select class="form-select" name="trang_thai"><?php foreach (['complete' => 'Đủ minh chứng', 'need_update' => 'Cần bổ sung', 'missing' => 'Thiếu minh chứng'] as $value => $label): ?><option value="<?= $value ?>" <?= ($editingCriterion['trang_thai'] ?? 'missing') === $value ? 'selected' : '' ?>><?= $label ?></option><?php endforeach; ?></select></div>
+                <input type="hidden" name="id" value="<?= (int) ($editingCriterion['MaTieuChi'] ?? 0) ?>">
+                
+                <div class="mb-3">
+                    <label class="form-label">Tên tiêu chí <span class="text-danger">*</span></label>
+                    <textarea class="form-control" name="ten_tieu_chi" rows="2" placeholder="Nhập tên tiêu chí" required><?= htmlspecialchars($editingCriterion['TenTieuChi'] ?? '') ?></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Nội dung</label>
+                    <textarea class="form-control" name="noi_dung" rows="3" placeholder="Nhập nội dung mô tả tiêu chí"><?= htmlspecialchars($editingCriterion['NoiDung'] ?? '') ?></textarea>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Thứ tự</label>
+                        <input class="form-control" type="number" name="thu_tu" value="<?= (int) ($editingCriterion['ThuTu'] ?? 0) ?>" placeholder="VD: 1">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Thuộc tiêu chuẩn <span class="text-danger">*</span></label>
+                        <select class="form-select" name="ma_tieu_chuan" required>
+                            <?php foreach ($standardRows as $standard): ?>
+                                <option value="<?= $standard['id'] ?>" <?= (int) ($editingCriterion['MaTieuChuan'] ?? 0) === (int) $standard['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars('TC' . str_pad($standard['id'], 2, '0', STR_PAD_LEFT) . ' - ' . $standard['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Trạng thái</label>
+                    <select class="form-select" name="trang_thai">
+                        <option value="1" <?= (int) ($editingCriterion['TrangThai'] ?? 1) === 1 ? 'selected' : '' ?>>Đang hoạt động</option>
+                        <option value="0" <?= (int) ($editingCriterion['TrangThai'] ?? 1) === 0 ? 'selected' : '' ?>>Ngưng áp dụng</option>
+                    </select>
+                </div>
+
                 <div class="d-flex gap-2 justify-content-end">
-                    <?php if ($editingCriterion): ?><a class="btn btn-outline-secondary" href="<?= base_url('admin/criteria.php') ?>">Hủy sửa</a><?php else: ?><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Hủy</button><?php endif; ?>
+                    <?php if ($editingCriterion): ?>
+                        <a class="btn btn-outline-secondary" href="<?= base_url('admin/criteria.php') ?>">Hủy sửa</a>
+                    <?php else: ?>
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Hủy</button>
+                    <?php endif; ?>
                     <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Lưu tiêu chí</button>
                 </div>
             </form>

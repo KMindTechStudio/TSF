@@ -4,7 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../includes/helpers.php';
-require_roles(['admin']);
+require_roles(['admin', 'user']);
 require_once __DIR__ . '/../config/database.php';
 
 $pdo = db();
@@ -12,173 +12,30 @@ $success = '';
 $error = '';
 $maxUploadMb = 100;
 $maxUploadBytes = $maxUploadMb * 1024 * 1024;
-$allowedExtensions = ['zip', 'pdf', 'docx', 'xlsx', 'jpg', 'jpeg', 'png'];
-$maxSizeLimitsMb = [
-    'zip'  => 100,
-    'pdf'  => 50,
-    'docx' => 20,
-    'xlsx' => 20,
-    'jpg'  => 10,
-    'jpeg' => 10,
-    'png'  => 10,
-];
-$approvalOptions = [
-    'approved' => 'Đã duyệt',
-    'reviewing' => 'Chờ rà soát',
-    'need_update' => 'Cần bổ sung',
-];
 
-function ensure_evidence_file_version_column(PDO $pdo): void
-{
-    static $checked = false;
-
-    if ($checked) {
-        return;
-    }
-
-    $column = $pdo->query("SHOW COLUMNS FROM file_minh_chung LIKE 'so_phien_ban'")->fetch();
-    if (!$column) {
-        $pdo->exec('ALTER TABLE file_minh_chung ADD COLUMN so_phien_ban INT NOT NULL DEFAULT 1');
-    }
-
-    $checked = true;
-}
-
-function validate_academic_year(string $year): bool
-{
-    if (!preg_match('/^(\d{4})-(\d{4})$/', $year, $matches)) {
-        return false;
-    }
-    $startYear = (int) $matches[1];
-    $endYear = (int) $matches[2];
-    return $endYear === ($startYear + 1);
-}
-
-function store_evidence_file(PDO $pdo, int $evidenceId, string $code, array $file, int $userId, array $allowedExtensions, ?int $requestedVersion = null): int
-{
-    global $maxSizeLimitsMb, $maxUploadMb;
-    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $maxMb = $maxSizeLimitsMb[$extension] ?? $maxUploadMb;
-    $maxBytes = $maxMb * 1024 * 1024;
-
-    if (!in_array($extension, $allowedExtensions, true)) {
-        throw new RuntimeException('Định dạng file chưa được hỗ trợ. Chỉ nhận ZIP, PDF, DOCX, XLSX, JPG, PNG.');
-    }
-    if ((int) $file['size'] > $maxBytes) {
-        throw new RuntimeException('Dung lượng tệp .' . strtoupper($extension) . ' vượt quá giới hạn tối đa (' . $maxMb . 'MB).');
-    }
-
-    ensure_evidence_file_version_column($pdo);
-
-    if ($requestedVersion !== null && $requestedVersion > 0) {
-        $versionNo = $requestedVersion;
-    } else {
-        $versionStmt = $pdo->prepare('SELECT COALESCE(MAX(so_phien_ban), 0) + 1 FROM file_minh_chung WHERE id_minh_chung = :evidence_id');
-        $versionStmt->execute(['evidence_id' => $evidenceId]);
-        $versionNo = (int) $versionStmt->fetchColumn();
-    }
-
-    $uploadDir = realpath(__DIR__ . '/../uploads/evidences');
-    if ($uploadDir === false) {
-        $uploadDir = __DIR__ . '/../uploads/evidences';
-        mkdir($uploadDir, 0777, true);
-    }
-
-    $safeCode = preg_replace('/[^A-Za-z0-9_\\-]/', '_', $code);
-    $storedName = $safeCode . '_v' . $versionNo . '_' . date('YmdHis') . '.' . $extension;
-    $targetPath = rtrim($uploadDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $storedName;
-
-    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-        throw new RuntimeException('Không thể lưu file upload vào thư mục hệ thống.');
-    }
-
-    $relativePath = 'uploads/evidences/' . $storedName;
-    $fileStmt = $pdo->prepare("
-        INSERT INTO file_minh_chung (id_minh_chung, ten_goc, ten_luu_tru, duong_dan, loai_file, kich_thuoc, so_phien_ban, nguoi_tai_len)
-        VALUES (:evidence_id, :original_name, :stored_name, :file_path, :file_type, :file_size, :version_no, :uploaded_by)
-    ");
-    $fileStmt->execute([
-        'evidence_id' => $evidenceId,
-        'original_name' => $file['name'],
-        'stored_name' => $storedName,
-        'file_path' => $relativePath,
-        'file_type' => strtoupper($extension),
-        'file_size' => (int) $file['size'],
-        'version_no' => $versionNo,
-        'uploaded_by' => $userId,
-    ]);
-
-    return $versionNo;
-}
-
-ensure_evidence_file_version_column($pdo);
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_evidence_status') {
-    $evidenceId = (int) ($_POST['id'] ?? 0);
-    $status = $_POST['approval_status'] ?? '';
-    $userId = $_SESSION['user_id'] ?? 1;
-
-    try {
-        if ($evidenceId <= 0 || !array_key_exists($status, $approvalOptions)) {
-            throw new RuntimeException('Trạng thái minh chứng không hợp lệ.');
-        }
-
-        $stmt = $pdo->prepare('UPDATE minh_chung SET trang_thai_duyet = :status, ngay_cap_nhat = NOW() WHERE id = :id');
-        $stmt->execute([
-            'status' => $status,
-            'id' => $evidenceId,
-        ]);
-
-        $logStmt = $pdo->prepare("
-            INSERT INTO audit_logs (id_nguoi_dung, hanh_dong, phan_he, ten_ban_ghi, id_ban_ghi, gia_tri_moi, dia_chi_ip)
-            VALUES (:user_id, 'cap_nhat_trang_thai', 'minh_chung', :record_name, :record_id, JSON_OBJECT('trang_thai_duyet', :status), :ip_address)
-        ");
-        $logStmt->execute([
-            'user_id'     => $userId,
-            'record_name' => 'Minh chứng #' . $evidenceId,
-            'record_id'   => $evidenceId,
-            'status'      => $status,
-            'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
-        ]);
-
-        $success = 'Cập nhật trạng thái minh chứng thành công.';
-    } catch (Throwable $exception) {
-        $error = 'Không thể cập nhật trạng thái: ' . $exception->getMessage();
-    }
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_evidence') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (current_role() !== 'admin') {
+        $error = 'Tài khoản người dùng chỉ có quyền Xem và Tải minh chứng xuống.';
+    } elseif (($_POST['action'] ?? '') === 'delete_evidence') {
     $evidenceId = (int) ($_POST['id'] ?? 0);
 
     try {
         $pdo->beginTransaction();
 
-        $fileStmt = $pdo->prepare('SELECT id, duong_dan AS file_path FROM file_minh_chung WHERE id_minh_chung = :id');
-        $fileStmt->execute(['id' => $evidenceId]);
-        $files = $fileStmt->fetchAll();
-        $fileIds = array_column($files, 'id');
+        $stmt = $pdo->prepare('SELECT TepTin FROM MinhChung WHERE MaMinhChung = :id');
+        $stmt->execute(['id' => $evidenceId]);
+        $filePath = $stmt->fetchColumn();
 
-        if ($fileIds) {
-            $placeholders = implode(',', array_fill(0, count($fileIds), '?'));
-            $pdo->prepare("DELETE FROM download_logs WHERE id_file_minh_chung IN ($placeholders)")->execute($fileIds);
-        }
+        $pdo->prepare('DELETE FROM download_logs WHERE MaMinhChung = :id')->execute(['id' => $evidenceId]);
+        $pdo->prepare('DELETE FROM MinhChung WHERE MaMinhChung = :id')->execute(['id' => $evidenceId]);
 
-        $evStmt = $pdo->prepare('SELECT ma_minh_chung FROM minh_chung WHERE id = :id');
-        $evStmt->execute(['id' => $evidenceId]);
-        $evCode = $evStmt->fetchColumn() ?: ('#' . $evidenceId);
-
-        $pdo->prepare('DELETE FROM minh_chung_tieu_chi WHERE id_minh_chung = :id')->execute(['id' => $evidenceId]);
-        $pdo->prepare('DELETE FROM file_minh_chung WHERE id_minh_chung = :id')->execute(['id' => $evidenceId]);
-        $pdo->prepare('DELETE FROM audit_logs WHERE phan_he = :module AND id_ban_ghi = :id')->execute(['module' => 'minh_chung', 'id' => $evidenceId]);
-        $pdo->prepare('DELETE FROM minh_chung WHERE id = :id')->execute(['id' => $evidenceId]);
-
-        log_activity('xoa', 'minh_chung', $evidenceId, $evCode);
+        log_activity('xoa', 'minh_chung', $evidenceId, 'MC' . str_pad($evidenceId, 2, '0', STR_PAD_LEFT));
 
         $pdo->commit();
 
-        foreach ($files as $fileRow) {
-            $fullPath = realpath(__DIR__ . '/../' . $fileRow['file_path']);
-            if ($fullPath && strpos($fullPath, realpath(__DIR__ . '/../uploads/evidences')) === 0 && is_file($fullPath)) {
+        if ($filePath) {
+            $fullPath = realpath(__DIR__ . '/../' . $filePath);
+            if ($fullPath && is_file($fullPath)) {
                 @unlink($fullPath);
             }
         }
@@ -190,220 +47,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
         }
         $error = 'Không thể xóa minh chứng: ' . $exception->getMessage();
     }
-}
+    } elseif (($_POST['action'] ?? '') === 'save_evidence') {
+    $evidenceId   = (int) ($_POST['id'] ?? 0);
+    $title        = trim($_POST['ten_minh_chung'] ?? '');
+    $description  = trim($_POST['mo_ta'] ?? '');
+    $academicYear = trim($_POST['nam_hoc'] ?? '');
+    $typeId       = (int) ($_POST['ma_loai'] ?? 0) ?: null;
+    $criteriaId   = (int) ($_POST['ma_tieu_chi'] ?? 0);
+    $userId       = (int) ($_POST['ma_nguoi_dung'] ?? 0) ?: ($_SESSION['user_id'] ?? 1);
+    $status       = (int) ($_POST['trang_thai'] ?? 1);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_evidence') {
-    $evidenceId = (int) ($_POST['id'] ?? 0);
-    $code = trim($_POST['code'] ?? '');
-    $title = trim($_POST['title'] ?? '');
-    $description = trim($_POST['description'] ?? '');
-    $academicYear = trim($_POST['academic_year'] ?? '');
-    $issuedDate = trim($_POST['issued_date'] ?? '');
-    $evidenceType = trim($_POST['evidence_type'] ?? 'Minh chứng chính');
-    $departmentId = (int) ($_POST['department_id'] ?? 0) ?: null;
-    $criteriaIds = array_map('intval', $_POST['criteria_ids'] ?? []);
-    $versionNo = (int) ($_POST['version_no'] ?? 0);
-    $userId = $_SESSION['user_id'] ?? 1;
     $file = $_FILES['evidence_file'] ?? null;
-    $extension = $file && !empty($file['name']) ? strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) : '';
 
-    $extMaxMb = $extension ? ($maxSizeLimitsMb[$extension] ?? $maxUploadMb) : $maxUploadMb;
-    $extMaxBytes = $extMaxMb * 1024 * 1024;
-
-    if ($evidenceId <= 0 || $code === '' || $title === '' || $academicYear === '' || empty($criteriaIds)) {
-        $error = 'Vui lòng nhập đầy đủ mã, tên, năm học và tiêu chí.';
-    } elseif (!validate_academic_year($academicYear)) {
-        $error = 'Năm học phải đúng định dạng YYYY-YYYY (Ví dụ: 2025-2026, 2026-2027).';
-    } elseif ($versionNo <= 0) {
-        $error = 'Vui lòng nhập phiên bản minh chứng hợp lệ.';
-    } elseif ($file && $file['error'] !== UPLOAD_ERR_NO_FILE && $file['error'] !== UPLOAD_ERR_OK) {
-        $error = 'Upload file không thành công. Vui lòng thử lại.';
-    } elseif ($file && $file['error'] === UPLOAD_ERR_OK && !in_array($extension, $allowedExtensions, true)) {
-        $error = 'Định dạng file chưa được hỗ trợ. Chỉ nhận ZIP, PDF, DOCX, XLSX, JPG, PNG.';
-    } elseif ($file && $file['error'] === UPLOAD_ERR_OK && (int) $file['size'] > $extMaxBytes) {
-        $error = 'Tệp .' . strtoupper($extension) . ' vượt quá dung lượng tối đa cho phép (' . $extMaxMb . 'MB).';
+    if ($title === '' || $criteriaId <= 0) {
+        $error = 'Vui lòng nhập tên minh chứng và chọn mã tiêu chí.';
+    } elseif ($file && $file['error'] === UPLOAD_ERR_OK && (int) $file['size'] > $maxUploadBytes) {
+        $error = 'Dung lượng tệp tin tải lên vượt quá giới hạn tối đa cho phép (' . $maxUploadMb . 'MB).';
     } else {
         try {
             $pdo->beginTransaction();
 
-            $check = $pdo->prepare('SELECT id FROM minh_chung WHERE LOWER(ma_minh_chung) = LOWER(:code) AND id <> :id LIMIT 1');
-            $check->execute(['code' => $code, 'id' => $evidenceId]);
-            if ($check->fetch()) {
-                throw new RuntimeException('Mã minh chứng "' . $code . '" đã tồn tại trong hệ thống. Vui lòng nhập mã khác.');
-            }
-
-            $stmt = $pdo->prepare("
-                UPDATE minh_chung
-                SET ma_minh_chung = :code,
-                    tieu_de = :title,
-                    mo_ta = :description,
-                    nam_hoc = :academic_year,
-                    ngay_ban_hanh = :issued_date,
-                    loai_minh_chung = :evidence_type,
-                    id_don_vi_phu_trach = :department_id,
-                    id_nguoi_phu_trach = :user_id
-                WHERE id = :id
-            ");
-            $stmt->execute([
-                'code' => $code,
-                'title' => $title,
-                'description' => $description,
-                'academic_year' => $academicYear,
-                'issued_date' => $issuedDate !== '' ? $issuedDate : null,
-                'evidence_type' => $evidenceType !== '' ? $evidenceType : 'Minh chứng chính',
-                'department_id' => $departmentId,
-                'user_id' => $userId,
-                'id' => $evidenceId,
-            ]);
-
-            $pdo->prepare('DELETE FROM minh_chung_tieu_chi WHERE id_minh_chung = :id')->execute(['id' => $evidenceId]);
-            $linkStmt = $pdo->prepare('INSERT INTO minh_chung_tieu_chi (id_minh_chung, id_tieu_chi) VALUES (:evidence_id, :criteria_id)');
-            foreach (array_unique($criteriaIds) as $criteriaId) {
-                $linkStmt->execute([
-                    'evidence_id' => $evidenceId,
-                    'criteria_id' => $criteriaId,
-                ]);
-            }
-
-            $newVersion = null;
+            $relativePath = null;
             if ($file && $file['error'] === UPLOAD_ERR_OK) {
-                $newVersion = store_evidence_file($pdo, $evidenceId, $code, $file, $userId, $allowedExtensions, $versionNo);
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $uploadDir = __DIR__ . '/../uploads/evidences';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                $storedName = 'MC_' . date('YmdHis') . '_' . random_int(100, 999) . '.' . $ext;
+                $targetPath = $uploadDir . '/' . $storedName;
+                if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                    $relativePath = 'uploads/evidences/' . $storedName;
+                }
+            }
+
+            if ($evidenceId > 0) {
+                if ($relativePath) {
+                    $stmt = $pdo->prepare('UPDATE MinhChung SET TenMinhChung = :title, MoTa = :desc, TepTin = :file, NamHoc = :year, TrangThai = :status, MaLoai = :type_id, MaTieuChi = :criteria_id, MaNguoiDung = :user_id WHERE MaMinhChung = :id');
+                    $stmt->execute([
+                        'title'       => $title,
+                        'desc'        => $description,
+                        'file'        => $relativePath,
+                        'year'        => $academicYear,
+                        'status'      => $status,
+                        'type_id'     => $typeId,
+                        'criteria_id' => $criteriaId,
+                        'user_id'     => $userId,
+                        'id'          => $evidenceId,
+                    ]);
+                } else {
+                    $stmt = $pdo->prepare('UPDATE MinhChung SET TenMinhChung = :title, MoTa = :desc, NamHoc = :year, TrangThai = :status, MaLoai = :type_id, MaTieuChi = :criteria_id, MaNguoiDung = :user_id WHERE MaMinhChung = :id');
+                    $stmt->execute([
+                        'title'       => $title,
+                        'desc'        => $description,
+                        'year'        => $academicYear,
+                        'status'      => $status,
+                        'type_id'     => $typeId,
+                        'criteria_id' => $criteriaId,
+                        'user_id'     => $userId,
+                        'id'          => $evidenceId,
+                    ]);
+                }
+                log_activity('cap_nhat', 'minh_chung', $evidenceId, $title);
+                $success = 'Cập nhật minh chứng thành công.';
             } else {
-                $latestFileStmt = $pdo->prepare('
-                    UPDATE file_minh_chung
-                    SET so_phien_ban = :version_no
-                    WHERE id = (
-                        SELECT latest_id FROM (
-                            SELECT id AS latest_id
-                            FROM file_minh_chung
-                            WHERE id_minh_chung = :evidence_id
-                            ORDER BY so_phien_ban DESC, ngay_tai_len DESC, id DESC
-                            LIMIT 1
-                        ) latest_file
-                    )
-                ');
-                $latestFileStmt->execute([
-                    'version_no' => $versionNo,
-                    'evidence_id' => $evidenceId,
-                ]);
-            }
-
-            $pdo->commit();
-            log_activity('cap_nhat', 'minh_chung', $evidenceId, $code . ' - ' . $title);
-            $success = $newVersion
-                ? 'Cập nhật minh chứng thành công. Tệp mới đã được lưu là phiên bản v' . $newVersion . '.'
-                : 'Cập nhật minh chứng thành công.';
-        } catch (Throwable $exception) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-            $error = $exception->getMessage();
-        }
-    }
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'create_evidence') {
-    $code = trim($_POST['code'] ?? '');
-    $title = trim($_POST['title'] ?? '');
-    $description = trim($_POST['description'] ?? '');
-    $academicYear = trim($_POST['academic_year'] ?? '');
-    $issuedDate = trim($_POST['issued_date'] ?? '');
-    $evidenceType = trim($_POST['evidence_type'] ?? 'Minh chứng chính');
-    $departmentId = (int) ($_POST['department_id'] ?? 0) ?: null;
-    $criteriaIds = array_map('intval', $_POST['criteria_ids'] ?? []);
-    $versionNo = (int) ($_POST['version_no'] ?? 1);
-    $userId = $_SESSION['user_id'] ?? 1;
-
-    $file = $_FILES['evidence_file'] ?? null;
-    $extension = $file && !empty($file['name']) ? strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) : '';
-
-    $extMaxMb = $extension ? ($maxSizeLimitsMb[$extension] ?? $maxUploadMb) : $maxUploadMb;
-    $extMaxBytes = $extMaxMb * 1024 * 1024;
-
-    if ($code === '' || $title === '' || $academicYear === '' || empty($criteriaIds)) {
-        $error = 'Vui lòng nhập đầy đủ mã, tên, năm học và tiêu chí.';
-    } elseif (!validate_academic_year($academicYear)) {
-        $error = 'Năm học phải đúng định dạng YYYY-YYYY (Ví dụ: 2025-2026, 2026-2027).';
-    } elseif ($versionNo <= 0) {
-        $error = 'Vui lòng nhập phiên bản minh chứng hợp lệ.';
-    } elseif (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
-        $error = 'Vui lòng chọn file minh chứng để upload.';
-    } elseif ($file['error'] !== UPLOAD_ERR_OK) {
-        $error = 'Upload file không thành công. Vui lòng thử lại.';
-    } elseif (!in_array($extension, $allowedExtensions, true)) {
-        $error = 'Định dạng file chưa được hỗ trợ. Chỉ nhận ZIP, PDF, DOCX, XLSX, JPG, PNG.';
-    } elseif ((int) $file['size'] > $extMaxBytes) {
-        $error = 'Tệp .' . strtoupper($extension) . ' vượt quá dung lượng tối đa cho phép (' . $extMaxMb . 'MB).';
-    } else {
-        try {
-            $pdo->beginTransaction();
-
-            $check = $pdo->prepare('SELECT id FROM minh_chung WHERE LOWER(ma_minh_chung) = LOWER(:code) LIMIT 1');
-            $check->execute(['code' => $code]);
-            if ($check->fetch()) {
-                throw new RuntimeException('Mã minh chứng "' . $code . '" đã tồn tại trong hệ thống. Vui lòng nhập mã khác.');
-            }
-
-            $stmt = $pdo->prepare("
-                INSERT INTO minh_chung (
-                    ma_minh_chung,
-                    tieu_de,
-                    mo_ta,
-                    nam_hoc,
-                    ngay_ban_hanh,
-                    loai_minh_chung,
-                    id_don_vi_phu_trach,
-                    id_nguoi_phu_trach,
-                    trang_thai_duyet
-                ) VALUES (
-                    :code,
-                    :title,
-                    :description,
-                    :academic_year,
-                    :issued_date,
-                    :evidence_type,
-                    :department_id,
-                    :user_id,
-                    'reviewing'
-                )
-            ");
-            $stmt->execute([
-                'code' => $code,
-                'title' => $title,
-                'description' => $description,
-                'academic_year' => $academicYear,
-                'issued_date' => $issuedDate !== '' ? $issuedDate : null,
-                'evidence_type' => $evidenceType !== '' ? $evidenceType : 'Minh chứng chính',
-                'department_id' => $departmentId,
-                'user_id' => $userId,
-            ]);
-
-            $evidenceId = (int) $pdo->lastInsertId();
-
-            store_evidence_file($pdo, $evidenceId, $code, $file, $userId, $allowedExtensions, $versionNo);
-
-            $linkStmt = $pdo->prepare('INSERT INTO minh_chung_tieu_chi (id_minh_chung, id_tieu_chi) VALUES (:evidence_id, :criteria_id)');
-            foreach (array_unique($criteriaIds) as $criteriaId) {
-                $linkStmt->execute([
-                    'evidence_id' => $evidenceId,
+                $stmt = $pdo->prepare('INSERT INTO MinhChung (TenMinhChung, MoTa, TepTin, NamHoc, TrangThai, MaLoai, MaTieuChi, MaNguoiDung) VALUES (:title, :desc, :file, :year, :status, :type_id, :criteria_id, :user_id)');
+                $stmt->execute([
+                    'title'       => $title,
+                    'desc'        => $description,
+                    'file'        => $relativePath,
+                    'year'        => $academicYear,
+                    'status'      => $status,
+                    'type_id'     => $typeId,
                     'criteria_id' => $criteriaId,
+                    'user_id'     => $userId,
                 ]);
+                $newId = (int) $pdo->lastInsertId();
+                log_activity('them_moi', 'minh_chung', $newId, $title);
+                $success = 'Thêm mới minh chứng thành công.';
             }
 
-            $logStmt = $pdo->prepare("
-                INSERT INTO audit_logs (id_nguoi_dung, hanh_dong, phan_he, ten_ban_ghi, id_ban_ghi, gia_tri_moi, dia_chi_ip)
-                VALUES (:user_id, 'them_moi', 'minh_chung', :record_name, :record_id, JSON_OBJECT('ma_minh_chung', :code), :ip_address)
-            ");
-            $logStmt->execute([
-                'user_id'     => $userId,
-                'record_name' => $code . ' - ' . $title,
-                'record_id'   => $evidenceId,
-                'code'        => $code,
-                'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
-            ]);
-
             $pdo->commit();
-            $success = 'Upload và lưu minh chứng thành công.';
         } catch (Throwable $exception) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -412,6 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
         }
     }
 }
+}
+
 if ($success) {
     unset($_GET['create'], $_GET['edit']);
 }
@@ -420,245 +146,137 @@ require_once __DIR__ . '/../includes/data.php';
 
 $isCreatingEvidence = isset($_GET['create']);
 $editId = $isCreatingEvidence ? 0 : (int) ($_GET['edit'] ?? 0);
+$viewId = (int) ($_GET['view'] ?? 0);
+
 $editingEvidence = null;
-$editingCriteriaIds = [];
-$editingLatestFile = null;
-$editingVersionNo = 1;
 if ($editId > 0) {
-    $stmt = $pdo->prepare('SELECT *, ma_minh_chung AS code, tieu_de AS title, mo_ta AS description, nam_hoc AS academic_year, ngay_ban_hanh AS issued_date, loai_minh_chung AS evidence_type, id_don_vi_phu_trach AS issuing_department_id, id_nguoi_phu_trach AS responsible_user_id, trang_thai_duyet AS approval_status FROM minh_chung WHERE id = :id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT * FROM MinhChung WHERE MaMinhChung = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
     $editingEvidence = $stmt->fetch();
-
-    $stmt = $pdo->prepare('SELECT id_tieu_chi AS criteria_id FROM minh_chung_tieu_chi WHERE id_minh_chung = :id');
-    $stmt->execute(['id' => $editId]);
-    $editingCriteriaIds = array_map('intval', array_column($stmt->fetchAll(), 'criteria_id'));
-
-    $stmt = $pdo->prepare('
-        SELECT id, ten_goc AS original_name, loai_file AS file_type, kich_thuoc AS file_size, so_phien_ban AS version_no, ngay_tai_len AS uploaded_at
-        FROM file_minh_chung
-        WHERE id_minh_chung = :id
-        ORDER BY so_phien_ban DESC, ngay_tai_len DESC, id DESC
-        LIMIT 1
-    ');
-    $stmt->execute(['id' => $editId]);
-    $editingLatestFile = $stmt->fetch();
-    $editingVersionNo = (int) ($editingLatestFile['version_no'] ?? 1);
 }
 
-$searchKeyword = trim($_GET['q'] ?? '');
-$selectedYear = trim($_GET['year'] ?? '');
-$selectedStandard = trim($_GET['standard'] ?? '');
-$selectedStatus = trim($_GET['status'] ?? '');
+$viewingEvidence = null;
+if ($viewId > 0) {
+    $stmt = $pdo->prepare('SELECT * FROM MinhChung WHERE MaMinhChung = :id LIMIT 1');
+    $stmt->execute(['id' => $viewId]);
+    $viewingEvidence = $stmt->fetch();
+}
 
-$evidenceYears = array_values(array_unique(array_filter(array_column($evidences, 'year'))));
-sort($evidenceYears);
-$evidenceStatuses = array_values(array_unique(array_filter(array_column($evidences, 'status'))));
+$searchKeyword = trim($_GET['search'] ?? $_GET['q'] ?? '');
+if ($searchKeyword !== '') {
+    $evidences = array_filter($evidences, function ($item) use ($searchKeyword) {
+        $haystack = implode(' ', [
+            $item['code'] ?? '',
+            $item['name'] ?? '',
+            $item['description'] ?? '',
+            $item['file_path'] ?? '',
+            $item['year'] ?? '',
+            $item['type_code'] ?? '',
+            $item['criteria_code'] ?? '',
+            $item['user_code'] ?? '',
+            $item['user_name'] ?? '',
+        ]);
 
-$filteredEvidences = array_values(array_filter($evidences, function ($item) use ($searchKeyword, $selectedYear, $selectedStandard, $selectedStatus) {
-    $haystack = implode(' ', [
-        $item['code'] ?? '',
-        $item['name'] ?? '',
-        $item['criteria'] ?? '',
-        $item['standards'] ?? '',
-        $item['year'] ?? '',
-        $item['type'] ?? '',
-        $item['status'] ?? '',
-    ]);
+        return search_contains($haystack, $searchKeyword);
+    });
+}
 
-    if ($searchKeyword !== '' && !search_contains($haystack, $searchKeyword)) {
-        return false;
-    }
-
-    if ($selectedYear !== '' && ($item['year'] ?? '') !== $selectedYear) {
-        return false;
-    }
-
-    if ($selectedStandard !== '' && !search_contains($item['standards'] ?? '', $selectedStandard)) {
-        return false;
-    }
-
-    if ($selectedStatus !== '' && ($item['status'] ?? '') !== $selectedStatus) {
-        return false;
-    }
-
-    return true;
-}));
 $pageTitle = page_title('Quản lý minh chứng');
-$heading = 'Quản lý hồ sơ minh chứng';
+$heading   = 'Quản lý hồ sơ minh chứng';
 include __DIR__ . '/../includes/header.php';
 ?>
 <?php if (($editingEvidence || $isCreatingEvidence) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'evidenceFormModal';</script><?php endif; ?>
+<?php if ($viewingEvidence): ?><script>document.body.dataset.autoOpenModal = 'evidenceViewModal';</script><?php endif; ?>
 <div class="panel mb-4">
     <form class="row g-3 align-items-end" method="get">
-        <div class="col-xl-4 col-lg-4 col-md-4">
-            <label class="form-label">Mã/Tên minh chứng</label>
-            <input class="form-control" name="q" value="<?= htmlspecialchars($searchKeyword) ?>" placeholder="VD: MC.01.01.01">
+        <div class="col-md-9">
+            <label class="form-label">Từ khóa tìm kiếm</label>
+            <input class="form-control" name="q" value="<?= htmlspecialchars($searchKeyword) ?>" placeholder="Nhập mã, tên minh chứng, mô tả, tệp tin, năm học...">
         </div>
-        <div class="col-xl-2 col-lg-2 col-md-4">
-            <label class="form-label">Năm học</label>
-            <select class="form-select" name="year">
-                <option value="">Tất cả</option>
-                <?php foreach ($evidenceYears as $year): ?>
-                    <option value="<?= htmlspecialchars($year) ?>" <?= $selectedYear === $year ? 'selected' : '' ?>><?= htmlspecialchars($year) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="col-xl-2 col-lg-2 col-md-4">
-            <label class="form-label">Tiêu chuẩn</label>
-            <select class="form-select" name="standard">
-                <option value="">Tất cả</option>
-                <?php foreach ($standards as $standard): ?>
-                    <option value="<?= htmlspecialchars($standard['code']) ?>" <?= $selectedStandard === $standard['code'] ? 'selected' : '' ?>><?= htmlspecialchars($standard['code']) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="col-xl-2 col-lg-2 col-md-4">
-            <label class="form-label">Trạng thái</label>
-            <select class="form-select" name="status">
-                <option value="">Tất cả</option>
-                <?php foreach ($evidenceStatuses as $status): ?>
-                    <option value="<?= htmlspecialchars($status) ?>" <?= $selectedStatus === $status ? 'selected' : '' ?>><?= htmlspecialchars($status) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="col-xl-2 col-lg-2 col-md-4">
+        <div class="col-md-3">
             <button class="btn btn-primary w-100 text-nowrap" type="submit"><i class="bi bi-search me-1"></i> Tìm kiếm</button>
         </div>
     </form>
 </div>
 
-<?php if ($success): ?>
-    <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
-<?php endif; ?>
-
-<?php if ($error): ?>
-    <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-<?php endif; ?>
+<?php if ($success): ?><div class="alert alert-success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
+<?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
 <div class="row g-4 evidences-layout">
     <div class="col-12">
         <div class="panel evidences-list-panel">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 class="h5 mb-0">Danh mục minh chứng</h2>
-                <a class="btn btn-primary" href="<?= base_url('admin/evidences.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm mới</a>
+                <?php if (current_role() === 'admin'): ?>
+                    <a class="btn btn-primary" href="<?= base_url('admin/evidences.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm mới</a>
+                <?php endif; ?>
             </div>
-            <div class="text-secondary mb-3"><?= count($filteredEvidences) ?> minh chứng phù hợp</div>
             <div class="table-responsive">
-                <table class="table" data-page-size="10" data-row-height="62" data-column-filters>
+                <table class="table" data-page-size="10">
                     <thead>
                     <tr>
-                        <th>
-                            <span class="column-filter-head">
-                                <span>Mã minh chứng</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc mã"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="0" placeholder="Lọc mã"></span>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="column-filter-head">
-                                <span>Tên minh chứng</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc tên"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="1" placeholder="Lọc tên"></span>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="column-filter-head">
-                                <span>Mô tả</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc mô tả"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="2" placeholder="Lọc mô tả"></span>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="column-filter-head">
-                                <span>Năm học</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc năm học"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="3" placeholder="Lọc năm"></span>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="column-filter-head">
-                                <span>Ngày ban hành</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc ngày ban hành"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="4" placeholder="Lọc ngày"></span>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="column-filter-head">
-                                <span>Thuộc tiêu chí</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc tiêu chí"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="5" placeholder="Lọc tiêu chí"></span>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="column-filter-head">
-                                <span>Loại minh chứng</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc loại minh chứng"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="6" placeholder="Lọc loại"></span>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="column-filter-head">
-                                <span>File đính kèm</span>
-                                <button class="column-filter-toggle" type="button" data-column-filter-toggle title="Lọc file"><i class="bi bi-funnel"></i></button>
-                                <span class="column-filter-menu"><input class="form-control form-control-sm" data-column-filter="7" placeholder="Lọc file"></span>
-                            </span>
-                        </th>
+                        <th>Mã minh chứng</th>
+                        <th>Tên minh chứng</th>
+                        <th>Mô tả</th>
+                        <th>Tệp tin</th>
+                        <th>Năm học</th>
+                        <th>Ngày cập nhật</th>
                         <th>Trạng thái</th>
+                        <th>Mã loại</th>
+                        <th>Mã tiêu chí</th>
+                        <th>Mã người dùng</th>
                         <th class="text-end">Thao tác</th>
                     </tr>
                     </thead>
-                    <tbody>
-                    <?php foreach ($filteredEvidences as $item): ?>
+                    <tbody id="evidencesTableBody">
+                    <?php foreach ($evidences as $item): ?>
                         <tr>
-                            <td class="fw-bold"><?= htmlspecialchars($item['code']) ?></td>
-                            <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($item['name']) ?>">
-                                <?= htmlspecialchars($item['name']) ?>
+                            <td class="fw-bold text-nowrap"><?= htmlspecialchars($item['code']) ?></td>
+                            <td class="fw-semibold"><?= htmlspecialchars($item['name']) ?></td>
+                            <td style="max-width: 200px;">
+                                <div class="text-truncate" title="<?= htmlspecialchars($item['description']) ?>">
+                                    <?= htmlspecialchars($item['description'] ?: '-') ?>
+                                </div>
                             </td>
-                            <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($item['description']) ?>">
-                                <?= htmlspecialchars($item['description']) ?>
-                            </td>
-                            <td><?= htmlspecialchars($item['year']) ?></td>
-                            <td><?= htmlspecialchars($item['issued_date'] ? date('d/m/Y', strtotime($item['issued_date'])) : '') ?></td>
-                            <td><?= htmlspecialchars($item['criteria']) ?></td>
-                            <td><?= htmlspecialchars($item['evidence_type']) ?></td>
-                            <td><span class="badge text-bg-light text-dark"><?= htmlspecialchars($item['type']) ?></span></td>
                             <td>
-                                <form method="post" class="status-update-form">
-                                    <input type="hidden" name="action" value="update_evidence_status">
-                                    <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
-                                    <select class="form-select form-select-sm status-select status-select-<?= htmlspecialchars($item['status_raw'] ?? 'reviewing') ?>" name="approval_status" onchange="this.form.submit()" aria-label="Cập nhật trạng thái minh chứng">
-                                        <?php foreach ($approvalOptions as $value => $label): ?>
-                                            <option value="<?= htmlspecialchars($value) ?>" <?= ($item['status_raw'] ?? '') === $value ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($label) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </form>
+                                <?php if (!empty($item['file_path'])): ?>
+                                    <code><?= htmlspecialchars(basename($item['file_path'])) ?></code>
+                                <?php else: ?>
+                                    <span class="text-secondary small">Không có</span>
+                                <?php endif; ?>
                             </td>
+                            <td><?= htmlspecialchars($item['year'] ?: '-') ?></td>
+                            <td class="text-nowrap"><?= htmlspecialchars($item['updated']) ?></td>
+                            <td>
+                                <?php if ((int) $item['status_raw'] === 1): ?>
+                                    <span class="badge bg-success">Đang hoạt động</span>
+                                <?php else: ?>
+                                    <span class="badge bg-warning text-dark">Ngưng áp dụng</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><span class="badge bg-secondary"><?= htmlspecialchars($item['type_code']) ?></span></td>
+                            <td><span class="badge bg-info text-dark"><?= htmlspecialchars($item['criteria_code']) ?></span></td>
+                            <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($item['user_code']) ?></span></td>
                             <td class="text-end action-cell">
                                 <div class="action-buttons">
-                                    <?php if (!empty($item['file_id'])): ?>
-                                        <a class="btn btn-sm btn-outline-secondary" href="<?= base_url('user/view.php?id=' . (int) $item['file_id']) ?>" target="_blank" rel="noopener" title="Xem minh chứng"><i class="bi bi-eye"></i></a>
-                                    <?php else: ?>
-                                        <button class="btn btn-sm btn-outline-secondary" type="button" disabled><i class="bi bi-eye"></i></button>
+                                    <a class="btn btn-sm btn-outline-secondary" href="?view=<?= $item['id'] ?>" title="Xem thông tin minh chứng"><i class="bi bi-eye"></i></a>
+                                    <?php if (!empty($item['file_path'])): ?>
+                                        <a class="btn btn-sm btn-outline-success" href="<?= base_url('user/download.php?id=' . $item['id']) ?>" title="Tải tài liệu về"><i class="bi bi-download"></i></a>
                                     <?php endif; ?>
-                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $item['id'] ?>"><i class="bi bi-pencil"></i></a>
-                                    <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa minh chứng này?">
-                                        <input type="hidden" name="action" value="delete_evidence">
-                                        <input type="hidden" name="id" value="<?= $item['id'] ?>">
-                                        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
-                                    </form>
+                                    <?php if (current_role() === 'admin'): ?>
+                                        <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $item['id'] ?>" title="Sửa"><i class="bi bi-pencil"></i></a>
+                                        <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa minh chứng này?">
+                                            <input type="hidden" name="action" value="delete_evidence">
+                                            <input type="hidden" name="id" value="<?= $item['id'] ?>">
+                                            <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                    <tr class="column-filter-empty-row" hidden>
-                        <td colspan="10" class="text-center text-secondary">Không tìm thấy minh chứng phù hợp với bộ lọc.</td>
-                    </tr>
-                    <?php if (!$filteredEvidences): ?>
-                        <tr>
-                            <td colspan="10" class="text-center text-secondary">Không tìm thấy minh chứng phù hợp.</td>
-                        </tr>
+                    <?php if (!$evidences): ?>
+                        <tr><td colspan="11" class="text-center text-secondary py-4">Không tìm thấy minh chứng phù hợp.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
@@ -668,7 +286,7 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="modal fade management-form-modal" id="evidenceFormModal" tabindex="-1" aria-labelledby="evidenceFormModalLabel" aria-hidden="true" <?= ($editingEvidence || $isCreatingEvidence) ? 'data-auto-open-modal' : '' ?>>
-    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title h5" id="evidenceFormModalLabel"><?= $editingEvidence ? 'Sửa minh chứng' : 'Thêm mới minh chứng' ?></h2>
@@ -676,72 +294,77 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="modal-body">
             <form method="post" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="<?= $editingEvidence ? 'update_evidence' : 'create_evidence' ?>">
-                <input type="hidden" name="id" value="<?= (int) ($editingEvidence['id'] ?? 0) ?>">
+                <input type="hidden" name="action" value="save_evidence">
+                <input type="hidden" name="id" value="<?= (int) ($editingEvidence['MaMinhChung'] ?? 0) ?>">
 
                 <div class="mb-3">
-                    <label class="form-label">Mã minh chứng</label>
-                    <input class="form-control" name="code" value="<?= htmlspecialchars($editingEvidence['code'] ?? '') ?>" placeholder="MC.06.01.01" required>
+                    <label class="form-label">Tên minh chứng <span class="text-danger">*</span></label>
+                    <textarea class="form-control" name="ten_minh_chung" rows="2" placeholder="Nhập tên minh chứng" required><?= htmlspecialchars($editingEvidence['TenMinhChung'] ?? '') ?></textarea>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Tên minh chứng</label>
-                    <textarea class="form-control" name="title" rows="3" required><?= htmlspecialchars($editingEvidence['title'] ?? '') ?></textarea>
-                </div>
+
                 <div class="mb-3">
                     <label class="form-label">Mô tả</label>
-                    <textarea class="form-control" name="description" rows="2"><?= htmlspecialchars($editingEvidence['description'] ?? '') ?></textarea>
+                    <textarea class="form-control" name="mo_ta" rows="2" placeholder="Nhập mô tả minh chứng"><?= htmlspecialchars($editingEvidence['MoTa'] ?? '') ?></textarea>
                 </div>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Năm học <span class="text-danger">*</span></label>
-                        <input class="form-control" name="academic_year" value="<?= htmlspecialchars($editingEvidence['academic_year'] ?? '') ?>" placeholder="Ví dụ: 2025-2026" pattern="\d{4}-\d{4}" title="Định dạng: YYYY-YYYY (ví dụ: 2025-2026)" required>
-                        <div class="form-text">Định dạng chuẩn: YYYY-YYYY (VD: 2025-2026)</div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Ngày ban hành</label>
-                        <input class="form-control" name="issued_date" value="<?= htmlspecialchars($editingEvidence['issued_date'] ?? '') ?>" type="date">
-                    </div>
-                </div>
+
                 <div class="mb-3">
-                    <label class="form-label">Thuộc tiêu chí</label>
-                    <input class="form-control form-control-sm mb-2" type="search" data-criteria-search placeholder="Nhập mã hoặc tên tiêu chí">
-                    <select class="form-select" name="criteria_ids[]" multiple size="5" required data-criteria-select>
-                        <?php foreach ($criteria as $item): ?>
-                            <option value="<?= $item['id'] ?>" <?= in_array((int) $item['id'], $editingCriteriaIds, true) ? 'selected' : '' ?>><?= htmlspecialchars($item['code'] . ' - ' . $item['name']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <div class="form-text">Giữ Ctrl để chọn nhiều tiêu chí.</div>
+                    <label class="form-label">Tệp tin đính kèm (Tối đa 100MB)</label>
+                    <input class="form-control" type="file" name="evidence_file">
+                    <?php if (!empty($editingEvidence['TepTin'])): ?>
+                        <div class="form-text mt-1 text-truncate">
+                            Tệp tin hiện tại: <code><?= htmlspecialchars($editingEvidence['TepTin']) ?></code>
+                        </div>
+                    <?php endif; ?>
                 </div>
+
                 <div class="row g-3 mb-3">
-                    <div class="col-md-12">
-                        <label class="form-label">Loại minh chứng</label>
-                        <select class="form-select" name="evidence_type">
-                            <?php $currentEvType = $editingEvidence['evidence_type'] ?? 'Minh chứng chính'; ?>
-                            <option value="Minh chứng chính" <?= $currentEvType === 'Minh chứng chính' ? 'selected' : '' ?>>Minh chứng chính</option>
-                            <option value="Minh chứng bổ sung" <?= $currentEvType === 'Minh chứng bổ sung' ? 'selected' : '' ?>>Minh chứng bổ sung</option>
-                            <option value="Minh chứng tham khảo" <?= $currentEvType === 'Minh chứng tham khảo' ? 'selected' : '' ?>>Minh chứng tham khảo</option>
+                    <div class="col-md-6">
+                        <label class="form-label">Năm học</label>
+                        <input class="form-control" name="nam_hoc" value="<?= htmlspecialchars($editingEvidence['NamHoc'] ?? '') ?>" placeholder="Ví dụ: 2025-2026">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Trạng thái</label>
+                        <select class="form-select" name="trang_thai">
+                            <option value="1" <?= (int) ($editingEvidence['TrangThai'] ?? 1) === 1 ? 'selected' : '' ?>>Đang hoạt động</option>
+                            <option value="0" <?= (int) ($editingEvidence['TrangThai'] ?? 1) === 0 ? 'selected' : '' ?>>Ngưng áp dụng</option>
                         </select>
                     </div>
                 </div>
+
                 <div class="row g-3 mb-3">
-                    <div class="col-md-8">
-                        <label class="form-label">File đính kèm</label>
-                        <input class="form-control" id="evidenceFile" name="evidence_file" type="file" accept=".zip,.pdf,.docx,.xlsx,.jpg,.jpeg,.png" <?= $editingEvidence ? '' : 'required' ?> title="Chỉ hỗ trợ ZIP, PDF, DOCX, XLSX, JPG, PNG">
-                        <?php if ($editingLatestFile): ?>
-                            <div class="small text-secondary mt-2">
-                                Phiên bản hiện tại: v<?= (int) $editingLatestFile['version_no'] ?> · <?= htmlspecialchars($editingLatestFile['original_name']) ?> · <?= htmlspecialchars($editingLatestFile['file_type']) ?>
-                            </div>
-                        <?php endif; ?>
-                        <div class="form-text mt-1">
-                            <?= $editingEvidence ? 'Chọn tệp mới nếu cần cập nhật phiên bản minh chứng. <br>' : '' ?>
-                            <strong>Giới hạn dung lượng:</strong> ZIP (100MB) | PDF (50MB) | DOCX / XLSX (20MB) | JPG / PNG (10MB)
-                        </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Mã loại minh chứng</label>
+                        <select class="form-select" name="ma_loai">
+                            <option value="">-- Chọn mã loại --</option>
+                            <?php foreach ($evidenceTypes as $type): ?>
+                                <option value="<?= $type['id'] ?>" <?= (int) ($editingEvidence['MaLoai'] ?? 0) === (int) $type['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars('LMC' . str_pad($type['id'], 2, '0', STR_PAD_LEFT) . ' - ' . $type['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Phiên bản</label>
-                        <input class="form-control" name="version_no" value="<?= (int) ($editingEvidence ? $editingVersionNo : 1) ?>" type="number" min="1" step="1" required>
+                        <label class="form-label">Mã tiêu chí <span class="text-danger">*</span></label>
+                        <select class="form-select" name="ma_tieu_chi" required>
+                            <?php foreach ($criteria as $item): ?>
+                                <option value="<?= $item['id'] ?>" <?= (int) ($editingEvidence['MaTieuChi'] ?? 0) === (int) $item['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($item['code'] . ' - ' . $item['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Mã người dùng</label>
+                        <select class="form-select" name="ma_nguoi_dung">
+                            <?php foreach ($users as $u): ?>
+                                <option value="<?= $u['id'] ?>" <?= (int) ($editingEvidence['MaNguoiDung'] ?? $_SESSION['user_id'] ?? 1) === (int) $u['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($u['code'] . ' - ' . $u['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                 </div>
+
                 <div class="d-flex gap-2 justify-content-end">
                     <?php if ($editingEvidence): ?><a class="btn btn-outline-secondary" href="<?= base_url('admin/evidences.php') ?>">Hủy sửa</a><?php else: ?><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Hủy</button><?php endif; ?>
                     <button class="btn btn-primary" type="submit">
@@ -753,5 +376,78 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </div>
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+<div class="modal fade management-form-modal" id="evidenceViewModal" tabindex="-1" aria-labelledby="evidenceViewModalLabel" aria-hidden="true" <?= $viewingEvidence ? 'data-auto-open-modal' : '' ?>>
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="evidenceViewModalLabel">
+                    <i class="bi bi-file-earmark-text text-primary me-1"></i> Thông tin minh chứng: <code>MC<?= str_pad((int)($viewingEvidence['MaMinhChung'] ?? 0), 2, '0', STR_PAD_LEFT) ?></code>
+                </h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Mã minh chứng</label>
+                    <input class="form-control bg-light" value="<?= htmlspecialchars('MC' . str_pad((int)($viewingEvidence['MaMinhChung'] ?? 0), 2, '0', STR_PAD_LEFT)) ?>" readonly>
+                </div>
 
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Tên minh chứng</label>
+                    <textarea class="form-control bg-light" rows="2" readonly><?= htmlspecialchars($viewingEvidence['TenMinhChung'] ?? '') ?></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Mô tả</label>
+                    <textarea class="form-control bg-light" rows="2" readonly><?= htmlspecialchars($viewingEvidence['MoTa'] ?? 'Chưa có mô tả') ?></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Tệp tin</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <input class="form-control bg-light" value="<?= htmlspecialchars(basename($viewingEvidence['TepTin'] ?? 'Không có tệp')) ?>" readonly>
+                        <?php if (!empty($viewingEvidence['TepTin'])): ?>
+                            <a class="btn btn-outline-success text-nowrap" href="<?= base_url('user/download.php?id=' . (int) $viewingEvidence['MaMinhChung']) ?>" title="Tải tệp tin về">
+                                <i class="bi bi-download me-1"></i> Tải về
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Năm học</label>
+                        <input class="form-control bg-light" value="<?= htmlspecialchars($viewingEvidence['NamHoc'] ?? '-') ?>" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Ngày cập nhật</label>
+                        <input class="form-control bg-light" value="<?= htmlspecialchars($viewingEvidence['NgayCapNhat'] ? date('d/m/Y H:i', strtotime($viewingEvidence['NgayCapNhat'])) : '-') ?>" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Trạng thái</label>
+                        <input class="form-control bg-light fw-semibold <?= (int)($viewingEvidence['TrangThai'] ?? 1) === 1 ? 'text-success' : 'text-warning' ?>" value="<?= (int)($viewingEvidence['TrangThai'] ?? 1) === 1 ? 'Đang hoạt động' : 'Ngưng áp dụng' ?>" readonly>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Mã loại minh chứng</label>
+                        <input class="form-control bg-light" value="<?= htmlspecialchars($viewingEvidence['MaLoai'] ? ('LMC' . str_pad($viewingEvidence['MaLoai'], 2, '0', STR_PAD_LEFT)) : 'N/A') ?>" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Mã tiêu chí</label>
+                        <input class="form-control bg-light" value="<?= htmlspecialchars($viewingEvidence['MaTieuChi'] ? ('TC' . str_pad($viewingEvidence['MaTieuChi'], 2, '0', STR_PAD_LEFT)) : 'N/A') ?>" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Mã người dùng</label>
+                        <input class="form-control bg-light" value="<?= htmlspecialchars($viewingEvidence['MaNguoiDung'] ? ('ND' . str_pad($viewingEvidence['MaNguoiDung'], 3, '0', STR_PAD_LEFT)) : 'N/A') ?>" readonly>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end mt-4">
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

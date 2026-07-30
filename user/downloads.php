@@ -6,15 +6,13 @@ require_once __DIR__ . '/../includes/data.php';
 $stmt = db()->query("
     SELECT
         DATE_FORMAT(dl.ngay_tai, '%d/%m/%Y %H:%i') AS downloaded_time,
-        e.ma_minh_chung AS code,
-        e.tieu_de AS title,
-        COALESCE(u.ho_ten, 'Khách') AS downloader,
-        ef.loai_file AS file_type,
-        ef.id AS file_id
+        e.MaMinhChung AS code,
+        e.TenMinhChung AS title,
+        COALESCE(u.HoTen, 'Hệ thống') AS downloader,
+        e.TepTin AS file_path
     FROM download_logs dl
-    JOIN file_minh_chung ef ON ef.id = dl.id_file_minh_chung
-    JOIN minh_chung e ON e.id = ef.id_minh_chung
-    LEFT JOIN nguoi_dung u ON u.id = dl.id_nguoi_dung
+    JOIN MinhChung e ON e.MaMinhChung = dl.MaMinhChung
+    LEFT JOIN NguoiDung u ON u.MaNguoiDung = dl.MaNguoiDung
     ORDER BY dl.ngay_tai DESC, dl.id DESC
     LIMIT 30
 ");

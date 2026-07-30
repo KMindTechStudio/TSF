@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 27, 2026 at 11:34 AM
+-- Generation Time: Jul 30, 2026 at 05:02 PM
 -- Server version: 10.4.22-MariaDB
 -- PHP Version: 7.4.28
 
@@ -29,7 +29,7 @@ SET time_zone = "+00:00";
 
 CREATE TABLE `audit_logs` (
   `id` bigint(20) NOT NULL,
-  `id_nguoi_dung` int(11) DEFAULT NULL,
+  `MaNguoiDung` int(11) DEFAULT NULL,
   `hanh_dong` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `phan_he` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `ten_ban_ghi` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -44,92 +44,31 @@ CREATE TABLE `audit_logs` (
 -- Dumping data for table `audit_logs`
 --
 
-INSERT INTO `audit_logs` (`id`, `id_nguoi_dung`, `hanh_dong`, `phan_he`, `ten_ban_ghi`, `id_ban_ghi`, `gia_tri_cu`, `gia_tri_moi`, `dia_chi_ip`, `ngay_tao`) VALUES
-(1, 1, 'them_moi', 'minh_chung', NULL, 1, NULL, '{\"code\": \"MC.01.01.01\"}', '127.0.0.1', '2026-07-17 03:40:15'),
-(2, 2, 'ra_soat', 'tieu_chi', NULL, 5, NULL, '{\"status\": \"missing\"}', '127.0.0.1', '2026-07-17 03:40:15'),
-(3, 1, 'them_moi', 'nguoi_dung', NULL, 3, NULL, '{\"username\": \"viewer01\"}', '127.0.0.1', '2026-07-17 03:40:15'),
-(8, 1, 'cap_nhat_trang_thai', 'minh_chung', NULL, 1, NULL, '{\"approval_status\": \"need_update\"}', '::1', '2026-07-17 09:46:38'),
-(9, 1, 'cap_nhat_trang_thai', 'minh_chung', NULL, 1, NULL, '{\"approval_status\": \"approved\"}', '::1', '2026-07-17 09:46:38'),
-(10, 1, 'cap_nhat_trang_thai', 'minh_chung', NULL, 1, NULL, '{\"approval_status\": \"reviewing\"}', '::1', '2026-07-17 13:09:05'),
-(11, 1, 'cap_nhat_trang_thai', 'minh_chung', NULL, 1, NULL, '{\"approval_status\": \"approved\"}', '::1', '2026-07-17 13:09:07');
+INSERT INTO `audit_logs` (`id`, `MaNguoiDung`, `hanh_dong`, `phan_he`, `ten_ban_ghi`, `id_ban_ghi`, `gia_tri_cu`, `gia_tri_moi`, `dia_chi_ip`, `ngay_tao`) VALUES
+(1, 2, 'xem', 'minh_chung', 'MC.01', 1, NULL, NULL, '::1', '2026-07-30 14:56:27');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `bo_tieu_chuan`
+-- Table structure for table `botieuchuan`
 --
 
-CREATE TABLE `bo_tieu_chuan` (
-  `id` int(11) NOT NULL,
-  `id_chuong_trinh_dao_tao` int(11) NOT NULL,
-  `ten_bo_tieu_chuan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `nam_ban_hanh` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `don_vi_ban_hanh` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `mo_ta` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `trang_thai` enum('active','inactive') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp(),
-  `ngay_cap_nhat` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+CREATE TABLE `botieuchuan` (
+  `MaBoTieuChuan` int(11) NOT NULL,
+  `TenBoTieuChuan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `CoQuanBanHanh` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `NamBanHanh` int(11) DEFAULT NULL,
+  `MoTa` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `TrangThai` tinyint(1) NOT NULL DEFAULT 1,
+  `NgayTao` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `bo_tieu_chuan`
+-- Dumping data for table `botieuchuan`
 --
 
-INSERT INTO `bo_tieu_chuan` (`id`, `id_chuong_trinh_dao_tao`, `ten_bo_tieu_chuan`, `nam_ban_hanh`, `don_vi_ban_hanh`, `mo_ta`, `trang_thai`, `ngay_tao`, `ngay_cap_nhat`) VALUES
-(1, 1, 'Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo', '2025', 'Bộ Giáo dục và Đào tạo', 'Bộ tiêu chuẩn dùng cho cơ sở dữ liệu minh chứng phục vụ kiểm định CTĐT', 'active', '2026-07-17 03:40:15', '2026-07-22 00:48:23');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `chuong_trinh_dao_tao`
---
-
-CREATE TABLE `chuong_trinh_dao_tao` (
-  `id` int(11) NOT NULL,
-  `ma_chuong_trinh` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `ten_chuong_trinh` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `trinh_do_dao_tao` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `khoa_don_vi` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `chu_ky_kiem_dinh` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `mo_ta` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `trang_thai` enum('active','inactive') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp(),
-  `ngay_cap_nhat` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `chuong_trinh_dao_tao`
---
-
-INSERT INTO `chuong_trinh_dao_tao` (`id`, `ma_chuong_trinh`, `ten_chuong_trinh`, `trinh_do_dao_tao`, `khoa_don_vi`, `chu_ky_kiem_dinh`, `mo_ta`, `trang_thai`, `ngay_tao`, `ngay_cap_nhat`) VALUES
-(1, '7480201', 'Công nghệ thông tin', 'Đại học chính quy', 'Khoa Cong nghe thong tin', 'Chu kỳ kiểm định 2026-2031', 'Chuong trinh dao tao nganh Cong nghe thong tin cua Truong Dai hoc Tai chinh - Ngan hang Ha Noi', 'active', '2026-07-17 03:40:15', '2026-07-22 00:48:23');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `don_vi`
---
-
-CREATE TABLE `don_vi` (
-  `id` int(11) NOT NULL,
-  `ma_don_vi` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `ten_don_vi` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `so_dien_thoai` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `email` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `trang_thai` enum('active','inactive') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `don_vi`
---
-
-INSERT INTO `don_vi` (`id`, `ma_don_vi`, `ten_don_vi`, `so_dien_thoai`, `email`, `trang_thai`, `ngay_tao`) VALUES
-(1, 'KHOA_CNTT', 'Khoa Công nghệ thông tin', NULL, 'cntt@fbu.edu.vn', 'active', '2026-07-27 09:34:09'),
-(2, 'PDT', 'Phòng Đào tạo', NULL, 'daotao@fbu.edu.vn', 'active', '2026-07-27 09:34:09'),
-(3, 'PDBCL', 'Phòng Đảm bảo chất lượng', NULL, 'dbcl@fbu.edu.vn', 'active', '2026-07-27 09:34:09'),
-(4, 'PKT', 'Phòng Khảo thí', NULL, 'khaothi@fbu.edu.vn', 'active', '2026-07-27 09:34:09'),
-(5, 'BM_PM', 'Bộ môn Phần mềm', NULL, 'bomonpm@fbu.edu.vn', 'active', '2026-07-27 09:34:09');
+INSERT INTO `botieuchuan` (`MaBoTieuChuan`, `TenBoTieuChuan`, `CoQuanBanHanh`, `NamBanHanh`, `MoTa`, `TrangThai`, `NgayTao`) VALUES
+(1, 'Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo', 'Bộ Giáo dục và Đào tạo', 2025, 'Bộ tiêu chuẩn dùng cho cơ sở dữ liệu minh chứng phục vụ kiểm định CTĐT', 1, '2026-07-30 14:39:02');
 
 -- --------------------------------------------------------
 
@@ -139,192 +78,93 @@ INSERT INTO `don_vi` (`id`, `ma_don_vi`, `ten_don_vi`, `so_dien_thoai`, `email`,
 
 CREATE TABLE `download_logs` (
   `id` bigint(20) NOT NULL,
-  `id_nguoi_dung` int(11) DEFAULT NULL,
-  `id_file_minh_chung` int(11) NOT NULL,
+  `MaNguoiDung` int(11) DEFAULT NULL,
+  `MaMinhChung` int(11) NOT NULL,
   `ngay_tai` timestamp NOT NULL DEFAULT current_timestamp(),
   `dia_chi_ip` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------
+
 --
--- Dumping data for table `download_logs`
+-- Table structure for table `loaiminhchung`
 --
 
-INSERT INTO `download_logs` (`id`, `id_nguoi_dung`, `id_file_minh_chung`, `ngay_tai`, `dia_chi_ip`) VALUES
-(1, 1, 1, '2026-07-17 03:40:15', '127.0.0.1'),
-(2, 2, 2, '2026-07-17 03:40:15', '127.0.0.1'),
-(3, 1, 5, '2026-07-17 03:40:15', '127.0.0.1'),
-(4, NULL, 1, '2026-07-17 05:08:23', '::1'),
-(5, 2, 5, '2026-07-17 09:24:01', '::1'),
-(6, 2, 5, '2026-07-17 09:33:16', '::1');
+CREATE TABLE `loaiminhchung` (
+  `MaLoai` int(11) NOT NULL,
+  `TenLoai` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `MoTa` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `NgayTao` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `loaiminhchung`
+--
+
+INSERT INTO `loaiminhchung` (`MaLoai`, `TenLoai`, `MoTa`, `NgayTao`) VALUES
+(1, 'Minh chứng chính', 'Các văn bản, quyết định chính thức', '2026-07-30 14:39:03'),
+(2, 'Minh chứng bổ sung', 'Các hồ sơ, phụ lục đính kèm bổ sung', '2026-07-30 14:39:03'),
+(3, 'Minh chứng khảo sát', 'Phiếu thu thập ý kiến các bên liên quan', '2026-07-30 14:39:03');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `file_minh_chung`
+-- Table structure for table `minhchung`
 --
 
-CREATE TABLE `file_minh_chung` (
-  `id` int(11) NOT NULL,
-  `id_minh_chung` int(11) NOT NULL,
-  `ten_goc` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `ten_luu_tru` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `duong_dan` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `loai_file` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `kich_thuoc` bigint(20) NOT NULL DEFAULT 0,
-  `so_phien_ban` int(11) NOT NULL DEFAULT 1,
-  `nguoi_tai_len` int(11) DEFAULT NULL,
-  `ngay_tai_len` timestamp NOT NULL DEFAULT current_timestamp(),
-  `version_no` int(11) NOT NULL DEFAULT 1
+CREATE TABLE `minhchung` (
+  `MaMinhChung` int(11) NOT NULL,
+  `TenMinhChung` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `MoTa` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `TepTin` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `NamHoc` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `NgayCapNhat` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `TrangThai` tinyint(1) NOT NULL DEFAULT 1,
+  `MaLoai` int(11) DEFAULT NULL,
+  `MaTieuChi` int(11) NOT NULL,
+  `MaNguoiDung` int(11) DEFAULT NULL,
+  `NgayTao` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `file_minh_chung`
+-- Dumping data for table `minhchung`
 --
 
-INSERT INTO `file_minh_chung` (`id`, `id_minh_chung`, `ten_goc`, `ten_luu_tru`, `duong_dan`, `loai_file`, `kich_thuoc`, `so_phien_ban`, `nguoi_tai_len`, `ngay_tai_len`, `version_no`) VALUES
-(1, 1, 'quyet-dinh-cdr-cntt.pdf', 'MC_01_01_01.pdf', 'uploads/evidences/MC_01_01_01.pdf', 'PDF', 1250000, 1, 1, '2026-07-17 03:40:15', 1),
-(2, 2, 'ban-mo-ta-ctdt-cntt.docx', 'MC_02_01_03.docx', 'uploads/evidences/MC_02_01_03.docx', 'DOCX', 840000, 1, 2, '2026-07-17 03:40:15', 1),
-(3, 3, 'de-cuong-hoc-phan.zip', 'MC_03_02_04.zip', 'uploads/evidences/MC_03_02_04.zip', 'ZIP', 6400000, 1, 1, '2026-07-17 03:40:15', 1),
-(4, 4, 'ke-hoach-doi-moi-day-hoc.pdf', 'MC_04_01_02.pdf', 'uploads/evidences/MC_04_01_02.pdf', 'PDF', 930000, 1, 1, '2026-07-17 03:40:15', 1),
-(5, 5, 'quy-che-danh-gia.xlsx', 'MC_05_03_05.xlsx', 'uploads/evidences/MC_05_03_05.xlsx', 'XLSX', 420000, 1, 2, '2026-07-17 03:40:15', 1),
-(10, 10, 'mc_01_01_02.pdf', 'MC_01_01_02.pdf', 'uploads/evidences/MC_01_01_02.pdf', 'PDF', 720000, 1, 1, '2026-07-17 16:20:07', 1),
-(11, 11, 'mc_01_02_01.xlsx', 'MC_01_02_01.xlsx', 'uploads/evidences/MC_01_02_01.xlsx', 'XLSX', 680000, 1, 1, '2026-07-17 16:20:07', 1),
-(12, 12, 'mc_01_02_02.docx', 'MC_01_02_02.docx', 'uploads/evidences/MC_01_02_02.docx', 'DOCX', 540000, 1, 1, '2026-07-17 16:20:07', 1),
-(13, 13, 'mc_02_01_04.pdf', 'MC_02_01_04.pdf', 'uploads/evidences/MC_02_01_04.pdf', 'PDF', 850000, 1, 1, '2026-07-17 16:20:07', 1),
-(14, 14, 'mc_02_01_05.docx', 'MC_02_01_05.docx', 'uploads/evidences/MC_02_01_05.docx', 'DOCX', 760000, 1, 1, '2026-07-17 16:20:07', 1),
-(15, 15, 'mc_02_01_06.xlsx', 'MC_02_01_06.xlsx', 'uploads/evidences/MC_02_01_06.xlsx', 'XLSX', 620000, 1, 1, '2026-07-17 16:20:07', 1),
-(16, 16, 'mc_03_02_05.zip', 'MC_03_02_05.zip', 'uploads/evidences/MC_03_02_05.zip', 'ZIP', 2400000, 1, 1, '2026-07-17 16:20:07', 1),
-(17, 17, 'mc_03_02_06.pdf', 'MC_03_02_06.pdf', 'uploads/evidences/MC_03_02_06.pdf', 'PDF', 930000, 1, 1, '2026-07-17 16:20:07', 1),
-(18, 18, 'mc_03_02_07.xlsx', 'MC_03_02_07.xlsx', 'uploads/evidences/MC_03_02_07.xlsx', 'XLSX', 570000, 1, 1, '2026-07-17 16:20:07', 1),
-(19, 19, 'mc_04_01_03.pdf', 'MC_04_01_03.pdf', 'uploads/evidences/MC_04_01_03.pdf', 'PDF', 810000, 1, 1, '2026-07-17 16:20:07', 1),
-(20, 20, 'mc_04_01_04.docx', 'MC_04_01_04.docx', 'uploads/evidences/MC_04_01_04.docx', 'DOCX', 690000, 1, 1, '2026-07-17 16:20:07', 1),
-(21, 21, 'mc_04_01_05.xlsx', 'MC_04_01_05.xlsx', 'uploads/evidences/MC_04_01_05.xlsx', 'XLSX', 480000, 1, 1, '2026-07-17 16:20:07', 1),
-(22, 22, 'mc_05_03_06.pdf', 'MC_05_03_06.pdf', 'uploads/evidences/MC_05_03_06.pdf', 'PDF', 740000, 1, 1, '2026-07-17 16:20:07', 1),
-(23, 23, 'mc_05_03_07.xlsx', 'MC_05_03_07.xlsx', 'uploads/evidences/MC_05_03_07.xlsx', 'XLSX', 910000, 1, 1, '2026-07-17 16:20:07', 1),
-(24, 24, 'mc_05_03_08.docx', 'MC_05_03_08.docx', 'uploads/evidences/MC_05_03_08.docx', 'DOCX', 610000, 1, 1, '2026-07-17 16:20:07', 1),
-(25, 25, 'mc_06_01_01.pdf', 'MC_06_01_01.pdf', 'uploads/evidences/MC_06_01_01.pdf', 'PDF', 520000, 1, 1, '2026-07-17 16:20:07', 1),
-(26, 26, 'mc_06_01_02.xlsx', 'MC_06_01_02.xlsx', 'uploads/evidences/MC_06_01_02.xlsx', 'XLSX', 450000, 1, 1, '2026-07-17 16:20:07', 1),
-(28, 28, 'mc_07_01_01.docx', 'MC_07_01_01.docx', 'uploads/evidences/MC_07_01_01.docx', 'DOCX', 1200000, 1, 1, '2026-07-17 16:20:07', 1),
-(29, 29, 'mc_07_01_02.zip', 'MC_07_01_02.zip', 'uploads/evidences/MC_07_01_02.zip', 'ZIP', 3100000, 1, 1, '2026-07-17 16:20:07', 1);
+INSERT INTO `minhchung` (`MaMinhChung`, `TenMinhChung`, `MoTa`, `TepTin`, `NamHoc`, `NgayCapNhat`, `TrangThai`, `MaLoai`, `MaTieuChi`, `MaNguoiDung`, `NgayTao`) VALUES
+(1, 'Quyết định ban hành mục tiêu và chuẩn đầu ra ngành CNTT', 'Quyết định ban hành mục tiêu và chuẩn đầu ra của CTĐT ngành CNTT', 'uploads/evidences/MC_01_01_01.pdf', '2025-2026', '2026-07-30 21:39:03', 1, 1, 1, 1, '2026-07-30 14:39:03'),
+(2, 'Bản mô tả chương trình đào tạo ngành CNTT', 'Bản mô tả chương trình đào tạo phục vụ kiểm định', 'uploads/evidences/MC_02_01_03.docx', '2025-2026', '2026-07-30 21:39:03', 1, 1, 3, 2, '2026-07-30 14:39:03'),
+(3, 'Đề cương chi tiết các học phần chuyên ngành', 'Tập hợp đề cương học phần chuyên ngành CNTT', 'uploads/evidences/MC_03_02_04.zip', '2024-2025', '2026-07-30 21:39:03', 1, 2, 4, 1, '2026-07-30 14:39:03'),
+(4, 'Kế hoạch đổi mới phương pháp dạy học', 'Kế hoạch cải tiến phương pháp giảng dạy trong CTĐT', 'uploads/evidences/MC_04_01_02.pdf', '2025-2026', '2026-07-30 21:39:03', 1, 1, 5, 1, '2026-07-30 14:39:03'),
+(5, 'Quy chế đánh giá học phần và ma trận điểm', 'Quy chế đánh giá, rubrics và ma trận điểm học phần', 'uploads/evidences/MC_05_03_05.xlsx', '2025-2026', '2026-07-30 21:39:03', 1, 1, 6, 2, '2026-07-30 14:39:03');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `minh_chung`
+-- Table structure for table `nguoidung`
 --
 
-CREATE TABLE `minh_chung` (
-  `id` int(11) NOT NULL,
-  `ma_minh_chung` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `tieu_de` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `mo_ta` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `nam_hoc` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `ngay_ban_hanh` date DEFAULT NULL,
-  `id_nguoi_phu_trach` int(11) DEFAULT NULL,
-  `trang_thai_duyet` enum('approved','reviewing','need_update') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'reviewing',
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp(),
-  `ngay_cap_nhat` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `loai_minh_chung` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT 'Minh chung chinh'
+CREATE TABLE `nguoidung` (
+  `MaNguoiDung` int(11) NOT NULL,
+  `HoTen` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `DonViCongTac` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `Email` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `SDT` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `TenDangNhap` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `MatKhau` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `VaiTro` enum('admin','user') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'user',
+  `TrangThai` tinyint(1) NOT NULL DEFAULT 1,
+  `DuongDanAnhDaiDien` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `DangNhapCuoi` datetime DEFAULT NULL,
+  `NgayTao` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `minh_chung`
+-- Dumping data for table `nguoidung`
 --
 
-INSERT INTO `minh_chung` (`id`, `ma_minh_chung`, `tieu_de`, `mo_ta`, `nam_hoc`, `ngay_ban_hanh`, `id_nguoi_phu_trach`, `trang_thai_duyet`, `ngay_tao`, `ngay_cap_nhat`, `loai_minh_chung`) VALUES
-(1, 'MC.01.01.01', 'Quyết định ban hành mục tiêu và chuẩn đầu ra ngành CNTT', 'Quyết định ban hành mục tiêu và chuẩn đầu ra của CTĐT ngành CNTT', '2025-2026', '2025-09-01', 1, 'approved', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
-(2, 'MC.02.01.03', 'Bản mô tả chương trình đào tạo ngành CNTT', 'Bản mô tả chương trình đào tạo phục vụ kiểm định', '2025-2026', '2025-08-15', 2, 'approved', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
-(3, 'MC.03.02.04', 'Đề cương chi tiết các học phần chuyên ngành', 'Tập hợp đề cương học phần chuyên ngành CNTT', '2024-2025', '2024-09-05', 1, 'reviewing', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
-(4, 'MC.04.01.02', 'Kế hoạch đổi mới phương pháp dạy học', 'Kế hoạch cải tiến phương pháp giảng dạy trong CTĐT', '2025-2026', '2025-10-20', 1, 'need_update', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
-(5, 'MC.05.03.05', 'Quy chế đánh giá học phần và ma trận điểm', 'Quy chế đánh giá, rubrics và ma trận điểm học phần', '2025-2026', '2025-11-10', 2, 'approved', '2026-07-17 03:40:15', '2026-07-22 00:48:23', 'Minh chứng chính'),
-(10, 'MC.01.01.02', 'Biên bản họp rà soát mục tiêu chương trình đào tạo CNTT', 'Biên bản họp hội đồng khoa về rà soát mục tiêu CTĐT ngành CNTT', '2025-2026', '2025-09-12', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(11, 'MC.01.02.01', 'Khảo sát nhu cầu các bên liên quan về chuẩn đầu ra CNTT', 'Tổng hợp khảo sát doanh nghiệp, cựu sinh viên và người học về chuẩn đầu ra', '2025-2026', '2025-10-03', 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(12, 'MC.01.02.02', 'Ma trận đối sánh chuẩn đầu ra với mục tiêu CTĐT', 'Ma trận liên kết mục tiêu chương trình với chuẩn đầu ra ngành CNTT', '2025-2026', '2025-10-08', 1, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(13, 'MC.02.01.04', 'Kế hoạch cập nhật bản mô tả chương trình đào tạo', 'Kế hoạch rà soát và cập nhật bản mô tả CTĐT theo chu kỳ kiểm định', '2025-2026', '2025-08-22', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(14, 'MC.02.01.05', 'Phụ lục cấu trúc chương trình đào tạo CNTT', 'Phụ lục khối kiến thức, số tín chỉ và phân bổ học phần theo học kỳ', '2025-2026', '2025-08-28', 2, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(15, 'MC.02.01.06', 'Bảng đối sánh CTĐT với khung trình độ quốc gia', 'Bảng đối sánh chương trình đào tạo ngành CNTT với khung trình độ quốc gia Việt Nam', '2024-2025', '2025-01-14', 1, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(16, 'MC.03.02.05', 'Danh mục đề cương học phần chuyên ngành CNTT', 'Danh mục đề cương học phần chuyên ngành phục vụ tự đánh giá CTĐT', '2025-2026', '2025-09-05', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(17, 'MC.03.02.06', 'Biên bản nghiệm thu đề cương học phần cập nhật', 'Biên bản nghiệm thu đề cương học phần sau khi cập nhật định hướng nghề nghiệp', '2025-2026', '2025-09-18', 2, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(18, 'MC.03.02.07', 'Ma trận học phần và chuẩn đầu ra học phần', 'Ma trận liên kết học phần với chuẩn đầu ra học phần và chuẩn đầu ra chương trình', '2024-2025', '2024-11-20', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(19, 'MC.04.01.03', 'Kế hoạch đổi mới phương pháp giảng dạy học kỳ I', 'Kế hoạch áp dụng phương pháp dạy học tích cực trong các học phần CNTT', '2025-2026', '2025-09-25', 1, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(20, 'MC.04.01.04', 'Báo cáo triển khai lớp học dự án ngành CNTT', 'Báo cáo minh chứng hoạt động dạy học theo dự án và đánh giá sản phẩm học tập', '2025-2026', '2025-12-02', 2, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(21, 'MC.04.01.05', 'Danh sách học phần áp dụng blended learning', 'Danh sách các học phần triển khai blended learning và tài nguyên LMS liên quan', '2024-2025', '2025-03-11', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(22, 'MC.05.03.06', 'Quy định xây dựng ma trận đề thi học phần', 'Quy định về xây dựng ma trận đề thi, rubrics và ngân hàng câu hỏi', '2025-2026', '2025-11-18', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(23, 'MC.05.03.07', 'Bảng tổng hợp kết quả đánh giá học phần', 'Bảng tổng hợp điểm quá trình, điểm thi và phân tích kết quả học tập', '2025-2026', '2026-01-10', 2, 'reviewing', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(24, 'MC.05.03.08', 'Biên bản rà soát quy trình chấm thi và phúc khảo', 'Biên bản rà soát quy trình đánh giá, chấm thi và phúc khảo học phần', '2024-2025', '2025-04-18', 1, 'need_update', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(25, 'MC.06.01.01', 'Kế hoạch thu thập minh chứng kiểm định CTĐT CNTT', 'Kế hoạch phân công thu thập, chuẩn hóa và cập nhật minh chứng theo tiêu chuẩn', '2025-2026', '2025-07-15', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(26, 'MC.06.01.02', 'Danh mục phân quyền khai thác kho minh chứng', 'Danh mục tài khoản, quyền truy cập và phạm vi khai thác dữ liệu minh chứng', '2025-2026', '2025-07-20', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 00:48:23', 'Minh chung chinh'),
-(28, 'MC.07.01.01', 'Báo cáo tự đánh giá chương trình đào tạo ngành CNTT', 'Bản dự thảo báo cáo tự đánh giá CTĐT ngành CNTT phục vụ kiểm định chất lượng', '2025-2026', '2026-02-05', 1, 'need_update', '2026-07-17 16:20:07', '2026-07-22 01:35:16', 'Minh chứng chính'),
-(29, 'MC.07.01.02', 'Phụ lục minh chứng phục vụ đoàn đánh giá ngoài', 'Phụ lục tổng hợp đường dẫn, mã hóa và trạng thái minh chứng phục vụ đánh giá ngoài', '2025-2026', '2026-02-12', 1, 'approved', '2026-07-17 16:20:07', '2026-07-22 01:35:09', 'Minh chứng chính');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `minh_chung_tieu_chi`
---
-
-CREATE TABLE `minh_chung_tieu_chi` (
-  `id_minh_chung` int(11) NOT NULL,
-  `id_tieu_chi` int(11) NOT NULL,
-  `ghi_chu` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `minh_chung_tieu_chi`
---
-
-INSERT INTO `minh_chung_tieu_chi` (`id_minh_chung`, `id_tieu_chi`, `ghi_chu`, `ngay_tao`) VALUES
-(1, 1, NULL, '2026-07-17 09:43:27'),
-(1, 2, NULL, '2026-07-17 09:43:27'),
-(2, 3, 'Ban mo ta CTDT', '2026-07-17 03:40:15'),
-(3, 4, 'De cuong chi tiet', '2026-07-17 03:40:15'),
-(4, 5, 'Can bo sung phu luc trien khai', '2026-07-17 03:40:15'),
-(10, 1, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(11, 2, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(12, 2, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(13, 3, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(14, 3, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(15, 3, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(16, 4, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(17, 4, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(18, 4, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(19, 5, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(20, 5, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(21, 5, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(25, 1, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(26, 2, 'Minh ch?ng b? sung', '2026-07-17 16:20:07'),
-(28, 1, NULL, '2026-07-22 01:35:16'),
-(29, 2, NULL, '2026-07-22 01:35:09');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `nguoi_dung`
---
-
-CREATE TABLE `nguoi_dung` (
-  `id` int(11) NOT NULL,
-  `ma_nguoi_dung` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `id_vai_tro` int(11) NOT NULL,
-  `ho_ten` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `ten_dang_nhap` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `email` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `duong_dan_anh_dai_dien` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `mat_khau_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `trang_thai` enum('active','locked') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
-  `dang_nhap_cuoi` datetime DEFAULT NULL,
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp(),
-  `ngay_cap_nhat` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `nguoi_dung`
---
-
-INSERT INTO `nguoi_dung` (`id`, `ma_nguoi_dung`, `id_vai_tro`, `ho_ten`, `ten_dang_nhap`, `email`, `duong_dan_anh_dai_dien`, `mat_khau_hash`, `trang_thai`, `dang_nhap_cuoi`, `ngay_tao`, `ngay_cap_nhat`) VALUES
-(1, 'ND001', 1, 'Dev Nguyen', 'admin', 'admin@fbu.edu.vn', 'uploads/avatars/avatar_user_1_20260717062114.jpg', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'active', '2026-07-27 16:34:06', '2026-07-17 03:40:15', '2026-07-27 09:34:06'),
-(2, 'ND002', 2, 'Tran Thu Ha', 'kiemdinhtt', 'ha.tt@fbu.edu.vn', 'uploads/avatars/avatar_user_2_20260722060656.jpg', '$2y$10$98IdFASFlTYGEIBVWcui4u52XXRv1x2h4jO/GAJ612wzPiGkMJtsK', 'active', '2026-07-22 11:06:22', '2026-07-17 03:40:15', '2026-07-22 04:06:56');
+INSERT INTO `nguoidung` (`MaNguoiDung`, `HoTen`, `DonViCongTac`, `Email`, `SDT`, `TenDangNhap`, `MatKhau`, `VaiTro`, `TrangThai`, `DuongDanAnhDaiDien`, `DangNhapCuoi`, `NgayTao`) VALUES
+(1, 'Quản trị viên', 'Khoa Công nghệ thông tin', 'admin@fbu.edu.vn', '0912345678', 'admin', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'admin', 1, NULL, '2026-07-30 22:00:34', '2026-07-30 14:39:02'),
+(2, 'Nguyễn Văn A', 'Phòng Đảm bảo chất lượng', 'user01@fbu.edu.vn', '0987654321', 'user01', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1, NULL, '2026-07-30 21:48:25', '2026-07-30 14:39:02');
 
 -- --------------------------------------------------------
 
@@ -334,7 +174,7 @@ INSERT INTO `nguoi_dung` (`id`, `ma_nguoi_dung`, `id_vai_tro`, `ho_ten`, `ten_da
 
 CREATE TABLE `remember_tokens` (
   `id` bigint(20) NOT NULL,
-  `id_nguoi_dung` int(11) NOT NULL,
+  `MaNguoiDung` int(11) NOT NULL,
   `ma_token` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `het_han` datetime NOT NULL,
   `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp()
@@ -344,102 +184,63 @@ CREATE TABLE `remember_tokens` (
 -- Dumping data for table `remember_tokens`
 --
 
-INSERT INTO `remember_tokens` (`id`, `id_nguoi_dung`, `ma_token`, `het_han`, `ngay_tao`) VALUES
-(2, 1, 'b1e3f2f82b1cf4b21f9499b9278326086553705d7c43630896ff16ea4fc16c16', '2026-07-24 18:43:58', '2026-07-17 16:43:58'),
-(3, 1, 'f4420bdab150989ee29834cd7b0839e1476b6a7f13191a133816632e114029c4', '2026-07-24 18:44:15', '2026-07-17 16:44:15'),
-(4, 1, 'b124adb663deb1eb2daba8cf7188dbc7c3bfed49ce2b8c57a392e55c71e09457', '2026-07-25 08:48:03', '2026-07-18 06:48:03'),
-(5, 1, 'f27a57993177966a72d22ad28147856ef02ac9152574b64f64186a7a8d22cc0e', '2026-07-28 18:08:29', '2026-07-21 16:08:29'),
-(12, 1, 'dd5c44eda87d17950711d2383c8634128c9d2e153ccb9ec8080f2b2676c26b3a', '2026-07-29 01:56:48', '2026-07-21 23:56:48'),
-(13, 1, '6fa4132769a86159d165e4311c262bcfa47d1f3fe8a9eed2dbacf2d3aec4b371', '2026-07-29 04:58:59', '2026-07-22 02:58:59'),
-(17, 1, 'eeaf7353b1c2dd8ea7229485b5938e3896236f599be391c30acfca9126074bf0', '2026-07-29 06:07:05', '2026-07-22 04:07:05'),
-(18, 1, 'ba4c301052c8e7ce54898a652510374820273372a014a672905f1e778f4bb4ab', '2026-07-30 03:35:14', '2026-07-23 01:35:14'),
-(19, 1, '1bbd017a9a1c09b680dee95408c8a631aa37b4aa658b813cc888cd52dd6906c3', '2026-07-31 11:16:28', '2026-07-24 09:16:28'),
-(20, 1, 'ceb90208aeb6da2be85c00f1e731c8ebac4dfcc99f097340e85e9a710770e57c', '2026-08-03 09:29:13', '2026-07-27 07:29:13'),
-(21, 1, 'be071abdc31149717b5a9973cee004966e211fb6b25266a6fd5ca5eddd0fb337', '2026-08-03 11:09:24', '2026-07-27 09:09:24'),
-(22, 1, '249048be54c47436504c8463c867164b240cf635eec0db738e10c8acfb7f0338', '2026-08-03 11:34:06', '2026-07-27 09:34:06');
+INSERT INTO `remember_tokens` (`id`, `MaNguoiDung`, `ma_token`, `het_han`, `ngay_tao`) VALUES
+(2, 1, '038f20bd8b36e1eb5e68ddd0c944d321b0002759252946ef6b0f55477749f794', '2026-08-06 17:00:34', '2026-07-30 15:00:34');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `tieu_chi`
+-- Table structure for table `tieuchi`
 --
 
-CREATE TABLE `tieu_chi` (
-  `id` int(11) NOT NULL,
-  `id_tieu_chuan` int(11) NOT NULL,
-  `ma_tieu_chi` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `ten_tieu_chi` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `noi_dung_mo_ta` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `trang_thai` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'thieu_minh_chung',
-  `thu_tu_hien_thi` int(11) NOT NULL DEFAULT 0,
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp(),
-  `ngay_cap_nhat` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+CREATE TABLE `tieuchi` (
+  `MaTieuChi` int(11) NOT NULL,
+  `TenTieuChi` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `NoiDung` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ThuTu` int(11) NOT NULL DEFAULT 0,
+  `MaTieuChuan` int(11) NOT NULL,
+  `TrangThai` tinyint(1) NOT NULL DEFAULT 1,
+  `NgayTao` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `tieu_chi`
+-- Dumping data for table `tieuchi`
 --
 
-INSERT INTO `tieu_chi` (`id`, `id_tieu_chuan`, `ma_tieu_chi`, `ten_tieu_chi`, `noi_dung_mo_ta`, `trang_thai`, `thu_tu_hien_thi`, `ngay_tao`, `ngay_cap_nhat`) VALUES
-(1, 1, '1.1', 'Mục tiêu của CTĐT được xác định rõ ràng', 'Mục tiêu CTĐT phù hợp sứ mạng và nhu cầu xã hội', 'du_minh_chung', 1, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(2, 1, '1.2', 'Chuẩn đầu ra phản ánh yêu cầu của các bên liên quan', 'Chuẩn đầu ra được xây dựng và rà soát định kỳ', 'du_minh_chung', 2, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(3, 2, '2.1', 'Bản mô tả CTĐT đầy đủ thông tin cần thiết nads', 'Bản mô tả nêu rõ mục tiêu, CĐR, cấu trúc và học phần', 'need_update', 1, '2026-07-17 03:40:15', '2026-07-22 01:18:35'),
-(4, 3, '3.2', 'Nội dung học phần cập nhật theo định hướng nghề nghiệp', 'Đề cương học phần được cập nhật và phê duyệt', 'du_minh_chung', 2, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(5, 4, '4.1', 'Hoạt động dạy học thúc đẩy năng lực tự học', 'Hoạt động dạy học có định hướng phát triển năng lực', 'thieu_minh_chung', 1, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(11, 1, '6.4', 'Tiêu chí', 'Tiêu chí', 'missing', 4, '2026-07-22 01:18:11', '2026-07-22 01:18:11');
+INSERT INTO `tieuchi` (`MaTieuChi`, `TenTieuChi`, `NoiDung`, `ThuTu`, `MaTieuChuan`, `TrangThai`, `NgayTao`) VALUES
+(1, 'Mục tiêu của CTĐT được xác định rõ ràng', 'Mục tiêu CTĐT phù hợp sứ mạng và nhu cầu xã hội', 1, 1, 1, '2026-07-30 14:39:03'),
+(2, 'Chuẩn đầu ra phản ánh yêu cầu của các bên liên quan', 'Chuẩn đầu ra được xây dựng và rà soát định kỳ', 2, 1, 1, '2026-07-30 14:39:03'),
+(3, 'Bản mô tả CTĐT đầy đủ thông tin cần thiết', 'Bản mô tả nêu rõ mục tiêu, CĐR, cấu trúc và học phần', 1, 2, 1, '2026-07-30 14:39:03'),
+(4, 'Nội dung học phần cập nhật theo định hướng nghề nghiệp', 'Đề cương học phần được cập nhật và phê duyệt', 2, 3, 1, '2026-07-30 14:39:03'),
+(5, 'Hoạt động dạy học thúc đẩy năng lực tự học', 'Hoạt động dạy học có định hướng phát triển năng lực', 1, 4, 1, '2026-07-30 14:39:03'),
+(6, 'Quy trình đánh giá kết quả học tập được công bố', 'Quy trình và ma trận đánh giá được công khai', 3, 5, 1, '2026-07-30 14:39:03');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `tieu_chuan`
+-- Table structure for table `tieuchuan`
 --
 
-CREATE TABLE `tieu_chuan` (
-  `id` int(11) NOT NULL,
-  `id_bo_tieu_chuan` int(11) NOT NULL,
-  `ma_tieu_chuan` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `ten_tieu_chuan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `mo_ta` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `thu_tu_hien_thi` int(11) NOT NULL DEFAULT 0,
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp(),
-  `ngay_cap_nhat` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+CREATE TABLE `tieuchuan` (
+  `MaTieuChuan` int(11) NOT NULL,
+  `TenTieuChuan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `MoTa` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ThuTu` int(11) NOT NULL DEFAULT 0,
+  `MaBoTieuChuan` int(11) NOT NULL,
+  `TrangThai` tinyint(1) NOT NULL DEFAULT 1,
+  `NgayTao` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `tieu_chuan`
+-- Dumping data for table `tieuchuan`
 --
 
-INSERT INTO `tieu_chuan` (`id`, `id_bo_tieu_chuan`, `ma_tieu_chuan`, `ten_tieu_chuan`, `mo_ta`, `thu_tu_hien_thi`, `ngay_tao`, `ngay_cap_nhat`) VALUES
-(1, 1, 'TC01', 'Mục tiêu và chuẩn đầu ra của chương trình đào tạo', 'Quản lý minh chứng liên quan mục tiêu và chuẩn đầu ra', 1, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(2, 1, 'TC02', 'Bản mô tả chương trình đào tạo', 'Quản lý bản mô tả chương trình đào tạo', 2, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(3, 1, 'TC03', 'Cấu trúc và nội dung chương trình dạy học', 'Quản lý cấu trúc và nội dung chương trình dạy học', 3, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(4, 1, 'TC04', 'Phương pháp tiếp cận trong dạy và học', 'Quản lý minh chứng về phương pháp dạy học', 4, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(5, 1, 'TC05', 'Đánh giá kết quả học tập của người học', 'Quản lý minh chứng về đánh giá kết quả học tập', 5, '2026-07-17 03:40:15', '2026-07-22 00:48:23'),
-(11, 1, 'TC06', 'Thử nghiệm', 'Mô tả thử nghiệm', 6, '2026-07-22 00:54:04', '2026-07-22 00:54:04'),
-(15, 1, 'TC07', 'Thử nghiệm 2', 'Thử nghiệm 2', 7, '2026-07-22 01:00:02', '2026-07-22 01:00:02'),
-(16, 1, 'TC08', 'Thử nghiệm', 'Thử nghiệm', 8, '2026-07-22 01:12:23', '2026-07-22 01:12:23');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `vai_tro`
---
-
-CREATE TABLE `vai_tro` (
-  `id` int(11) NOT NULL,
-  `ma_vai_tro` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `ten_vai_tro` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `mo_ta` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `vai_tro`
---
-
-INSERT INTO `vai_tro` (`id`, `ma_vai_tro`, `ten_vai_tro`, `mo_ta`, `ngay_tao`) VALUES
-(1, 'admin', 'Quản trị viên', 'Quản trị toàn bộ hệ thống', '2026-07-17 03:40:15'),
-(2, 'user', 'Người dùng', 'Tài khoản người dùng khai thác dữ liệu', '2026-07-17 03:40:15');
+INSERT INTO `tieuchuan` (`MaTieuChuan`, `TenTieuChuan`, `MoTa`, `ThuTu`, `MaBoTieuChuan`, `TrangThai`, `NgayTao`) VALUES
+(1, 'Mục tiêu và chuẩn đầu ra của chương trình đào tạo', 'Quản lý minh chứng liên quan mục tiêu và chuẩn đầu ra', 1, 1, 1, '2026-07-30 14:39:02'),
+(2, 'Bản mô tả chương trình đào tạo', 'Quản lý bản mô tả chương trình đào tạo', 2, 1, 1, '2026-07-30 14:39:02'),
+(3, 'Cấu trúc và nội dung chương trình dạy học', 'Quản lý cấu trúc và nội dung chương trình dạy học', 3, 1, 1, '2026-07-30 14:39:02'),
+(4, 'Phương pháp tiếp cận trong dạy và học', 'Quản lý minh chứng về phương pháp dạy học', 4, 1, 1, '2026-07-30 14:39:02'),
+(5, 'Đánh giá kết quả học tập của người học', 'Quản lý minh chứng về đánh giá kết quả học tập', 5, 1, 1, '2026-07-30 14:39:02');
 
 --
 -- Indexes for dumped tables
@@ -450,97 +251,66 @@ INSERT INTO `vai_tro` (`id`, `ma_vai_tro`, `ten_vai_tro`, `mo_ta`, `ngay_tao`) V
 --
 ALTER TABLE `audit_logs`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_log_nguoi_dung` (`id_nguoi_dung`);
+  ADD KEY `fk_audit_logs_nguoi_dung` (`MaNguoiDung`);
 
 --
--- Indexes for table `bo_tieu_chuan`
+-- Indexes for table `botieuchuan`
 --
-ALTER TABLE `bo_tieu_chuan`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_standard_sets_program` (`id_chuong_trinh_dao_tao`);
-
---
--- Indexes for table `chuong_trinh_dao_tao`
---
-ALTER TABLE `chuong_trinh_dao_tao`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `code` (`ma_chuong_trinh`);
-
---
--- Indexes for table `don_vi`
---
-ALTER TABLE `don_vi`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `ma_don_vi` (`ma_don_vi`);
+ALTER TABLE `botieuchuan`
+  ADD PRIMARY KEY (`MaBoTieuChuan`);
 
 --
 -- Indexes for table `download_logs`
 --
 ALTER TABLE `download_logs`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_tai_nguoi_dung` (`id_nguoi_dung`),
-  ADD KEY `fk_tai_file` (`id_file_minh_chung`);
+  ADD KEY `fk_download_logs_nguoi_dung` (`MaNguoiDung`),
+  ADD KEY `fk_download_logs_minh_chung` (`MaMinhChung`);
 
 --
--- Indexes for table `file_minh_chung`
+-- Indexes for table `loaiminhchung`
 --
-ALTER TABLE `file_minh_chung`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_file_minh_chung` (`id_minh_chung`),
-  ADD KEY `fk_file_nguoi_tai` (`nguoi_tai_len`);
+ALTER TABLE `loaiminhchung`
+  ADD PRIMARY KEY (`MaLoai`);
 
 --
--- Indexes for table `minh_chung`
+-- Indexes for table `minhchung`
 --
-ALTER TABLE `minh_chung`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `code` (`ma_minh_chung`),
-  ADD KEY `fk_mc_nguoi_dung` (`id_nguoi_phu_trach`);
+ALTER TABLE `minhchung`
+  ADD PRIMARY KEY (`MaMinhChung`),
+  ADD KEY `fk_minh_chung_loai` (`MaLoai`),
+  ADD KEY `fk_minh_chung_tieu_chi` (`MaTieuChi`),
+  ADD KEY `fk_minh_chung_nguoi_dung` (`MaNguoiDung`);
 
 --
--- Indexes for table `minh_chung_tieu_chi`
+-- Indexes for table `nguoidung`
 --
-ALTER TABLE `minh_chung_tieu_chi`
-  ADD PRIMARY KEY (`id_minh_chung`,`id_tieu_chi`),
-  ADD KEY `fk_mc_tc_tieu_chi` (`id_tieu_chi`);
-
---
--- Indexes for table `nguoi_dung`
---
-ALTER TABLE `nguoi_dung`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `username` (`ten_dang_nhap`),
-  ADD UNIQUE KEY `email` (`email`),
-  ADD KEY `fk_users_role` (`id_vai_tro`);
+ALTER TABLE `nguoidung`
+  ADD PRIMARY KEY (`MaNguoiDung`),
+  ADD UNIQUE KEY `Email` (`Email`),
+  ADD UNIQUE KEY `TenDangNhap` (`TenDangNhap`);
 
 --
 -- Indexes for table `remember_tokens`
 --
 ALTER TABLE `remember_tokens`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_ma_token` (`ma_token`),
-  ADD KEY `fk_token_nguoi_dung` (`id_nguoi_dung`);
+  ADD UNIQUE KEY `ma_token` (`ma_token`),
+  ADD KEY `fk_remember_tokens_nguoi_dung` (`MaNguoiDung`);
 
 --
--- Indexes for table `tieu_chi`
+-- Indexes for table `tieuchi`
 --
-ALTER TABLE `tieu_chi`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_criteria_code_standard` (`id_tieu_chuan`,`ma_tieu_chi`);
+ALTER TABLE `tieuchi`
+  ADD PRIMARY KEY (`MaTieuChi`),
+  ADD KEY `fk_tieu_chi_chuan` (`MaTieuChuan`);
 
 --
--- Indexes for table `tieu_chuan`
+-- Indexes for table `tieuchuan`
 --
-ALTER TABLE `tieu_chuan`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_standard_code_set` (`id_bo_tieu_chuan`,`ma_tieu_chuan`);
-
---
--- Indexes for table `vai_tro`
---
-ALTER TABLE `vai_tro`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `code` (`ma_vai_tro`);
+ALTER TABLE `tieuchuan`
+  ADD PRIMARY KEY (`MaTieuChuan`),
+  ADD KEY `fk_tieu_chuan_bo` (`MaBoTieuChuan`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -550,73 +320,55 @@ ALTER TABLE `vai_tro`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT for table `bo_tieu_chuan`
+-- AUTO_INCREMENT for table `botieuchuan`
 --
-ALTER TABLE `bo_tieu_chuan`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT for table `chuong_trinh_dao_tao`
---
-ALTER TABLE `chuong_trinh_dao_tao`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT for table `don_vi`
---
-ALTER TABLE `don_vi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+ALTER TABLE `botieuchuan`
+  MODIFY `MaBoTieuChuan` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `download_logs`
 --
 ALTER TABLE `download_logs`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `file_minh_chung`
+-- AUTO_INCREMENT for table `loaiminhchung`
 --
-ALTER TABLE `file_minh_chung`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+ALTER TABLE `loaiminhchung`
+  MODIFY `MaLoai` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `minh_chung`
+-- AUTO_INCREMENT for table `minhchung`
 --
-ALTER TABLE `minh_chung`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+ALTER TABLE `minhchung`
+  MODIFY `MaMinhChung` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT for table `nguoi_dung`
+-- AUTO_INCREMENT for table `nguoidung`
 --
-ALTER TABLE `nguoi_dung`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+ALTER TABLE `nguoidung`
+  MODIFY `MaNguoiDung` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `remember_tokens`
 --
 ALTER TABLE `remember_tokens`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT for table `tieu_chi`
+-- AUTO_INCREMENT for table `tieuchi`
 --
-ALTER TABLE `tieu_chi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+ALTER TABLE `tieuchi`
+  MODIFY `MaTieuChi` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
--- AUTO_INCREMENT for table `tieu_chuan`
+-- AUTO_INCREMENT for table `tieuchuan`
 --
-ALTER TABLE `tieu_chuan`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
-
---
--- AUTO_INCREMENT for table `vai_tro`
---
-ALTER TABLE `vai_tro`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+ALTER TABLE `tieuchuan`
+  MODIFY `MaTieuChuan` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- Constraints for dumped tables
@@ -626,64 +378,40 @@ ALTER TABLE `vai_tro`
 -- Constraints for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  ADD CONSTRAINT `fk_log_nguoi_dung` FOREIGN KEY (`id_nguoi_dung`) REFERENCES `nguoi_dung` (`id`);
-
---
--- Constraints for table `bo_tieu_chuan`
---
-ALTER TABLE `bo_tieu_chuan`
-  ADD CONSTRAINT `fk_standard_sets_program` FOREIGN KEY (`id_chuong_trinh_dao_tao`) REFERENCES `chuong_trinh_dao_tao` (`id`);
+  ADD CONSTRAINT `fk_audit_logs_nguoi_dung` FOREIGN KEY (`MaNguoiDung`) REFERENCES `nguoidung` (`MaNguoiDung`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `download_logs`
 --
 ALTER TABLE `download_logs`
-  ADD CONSTRAINT `fk_tai_file` FOREIGN KEY (`id_file_minh_chung`) REFERENCES `file_minh_chung` (`id`),
-  ADD CONSTRAINT `fk_tai_nguoi_dung` FOREIGN KEY (`id_nguoi_dung`) REFERENCES `nguoi_dung` (`id`);
+  ADD CONSTRAINT `fk_download_logs_minh_chung` FOREIGN KEY (`MaMinhChung`) REFERENCES `minhchung` (`MaMinhChung`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_download_logs_nguoi_dung` FOREIGN KEY (`MaNguoiDung`) REFERENCES `nguoidung` (`MaNguoiDung`) ON DELETE SET NULL;
 
 --
--- Constraints for table `file_minh_chung`
+-- Constraints for table `minhchung`
 --
-ALTER TABLE `file_minh_chung`
-  ADD CONSTRAINT `fk_file_minh_chung` FOREIGN KEY (`id_minh_chung`) REFERENCES `minh_chung` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_file_nguoi_tai` FOREIGN KEY (`nguoi_tai_len`) REFERENCES `nguoi_dung` (`id`);
-
---
--- Constraints for table `minh_chung`
---
-ALTER TABLE `minh_chung`
-  ADD CONSTRAINT `fk_mc_nguoi_dung` FOREIGN KEY (`id_nguoi_phu_trach`) REFERENCES `nguoi_dung` (`id`);
-
---
--- Constraints for table `minh_chung_tieu_chi`
---
-ALTER TABLE `minh_chung_tieu_chi`
-  ADD CONSTRAINT `fk_mc_tc_minh_chung` FOREIGN KEY (`id_minh_chung`) REFERENCES `minh_chung` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_mc_tc_tieu_chi` FOREIGN KEY (`id_tieu_chi`) REFERENCES `tieu_chi` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `nguoi_dung`
---
-ALTER TABLE `nguoi_dung`
-  ADD CONSTRAINT `fk_users_role` FOREIGN KEY (`id_vai_tro`) REFERENCES `vai_tro` (`id`);
+ALTER TABLE `minhchung`
+  ADD CONSTRAINT `fk_minh_chung_loai` FOREIGN KEY (`MaLoai`) REFERENCES `loaiminhchung` (`MaLoai`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_minh_chung_nguoi_dung` FOREIGN KEY (`MaNguoiDung`) REFERENCES `nguoidung` (`MaNguoiDung`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_minh_chung_tieu_chi` FOREIGN KEY (`MaTieuChi`) REFERENCES `tieuchi` (`MaTieuChi`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `remember_tokens`
 --
 ALTER TABLE `remember_tokens`
-  ADD CONSTRAINT `fk_token_nguoi_dung` FOREIGN KEY (`id_nguoi_dung`) REFERENCES `nguoi_dung` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_remember_tokens_nguoi_dung` FOREIGN KEY (`MaNguoiDung`) REFERENCES `nguoidung` (`MaNguoiDung`) ON DELETE CASCADE;
 
 --
--- Constraints for table `tieu_chi`
+-- Constraints for table `tieuchi`
 --
-ALTER TABLE `tieu_chi`
-  ADD CONSTRAINT `fk_criteria_standard` FOREIGN KEY (`id_tieu_chuan`) REFERENCES `tieu_chuan` (`id`);
+ALTER TABLE `tieuchi`
+  ADD CONSTRAINT `fk_tieu_chi_chuan` FOREIGN KEY (`MaTieuChuan`) REFERENCES `tieuchuan` (`MaTieuChuan`) ON DELETE CASCADE;
 
 --
--- Constraints for table `tieu_chuan`
+-- Constraints for table `tieuchuan`
 --
-ALTER TABLE `tieu_chuan`
-  ADD CONSTRAINT `fk_standards_set` FOREIGN KEY (`id_bo_tieu_chuan`) REFERENCES `bo_tieu_chuan` (`id`);
+ALTER TABLE `tieuchuan`
+  ADD CONSTRAINT `fk_tieu_chuan_bo` FOREIGN KEY (`MaBoTieuChuan`) REFERENCES `botieuchuan` (`MaBoTieuChuan`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

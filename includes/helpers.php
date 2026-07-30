@@ -72,14 +72,11 @@ function ensure_remember_tokens_table(): void
     db()->exec("
         CREATE TABLE IF NOT EXISTS remember_tokens (
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            id_nguoi_dung INT NOT NULL,
-            ma_token VARCHAR(255) NOT NULL,
+            MaNguoiDung INT NOT NULL,
+            ma_token VARCHAR(255) NOT NULL UNIQUE,
             het_han DATETIME NOT NULL,
             ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_remember_token_hash (ma_token),
-            KEY idx_remember_user (id_nguoi_dung),
-            KEY idx_remember_expires (het_han),
-            CONSTRAINT fk_remember_tokens_user FOREIGN KEY (id_nguoi_dung) REFERENCES nguoi_dung(id) ON DELETE CASCADE
+            CONSTRAINT fk_remember_tokens_nguoi_dung FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
 
@@ -94,7 +91,7 @@ function create_login_token(int $userId, bool $remember = false): void
     $days = $remember ? 30 : 7;
     $expiresAt = (new DateTimeImmutable('+' . $days . ' days'))->format('Y-m-d H:i:s');
 
-    $stmt = db()->prepare('INSERT INTO remember_tokens (id_nguoi_dung, ma_token, het_han) VALUES (:user_id, :token_hash, :expires_at)');
+    $stmt = db()->prepare('INSERT INTO remember_tokens (MaNguoiDung, ma_token, het_han) VALUES (:user_id, :token_hash, :expires_at)');
     $stmt->execute([
         'user_id' => $userId,
         'token_hash' => hash('sha256', $token),
@@ -142,10 +139,9 @@ function restore_login_from_cookie(): bool
     ensure_remember_tokens_table();
 
     $stmt = db()->prepare("
-        SELECT rt.id AS token_id, rt.id_nguoi_dung AS user_id, u.trang_thai AS status, v.ma_vai_tro AS role_code
+        SELECT rt.id AS token_id, rt.MaNguoiDung AS user_id, u.TrangThai AS status, u.VaiTro AS role_code
         FROM remember_tokens rt
-        JOIN nguoi_dung u ON u.id = rt.id_nguoi_dung
-        JOIN vai_tro v ON v.id = u.id_vai_tro
+        JOIN NguoiDung u ON u.MaNguoiDung = rt.MaNguoiDung
         WHERE rt.ma_token = :token_hash
           AND rt.het_han > NOW()
         LIMIT 1
@@ -153,7 +149,7 @@ function restore_login_from_cookie(): bool
     $stmt->execute(['token_hash' => hash('sha256', $token)]);
     $record = $stmt->fetch();
 
-    if (!$record || $record['status'] !== 'active') {
+    if (!$record || (int) $record['status'] !== 1) {
         clear_login_token();
         return false;
     }
@@ -196,7 +192,7 @@ function require_roles(array $allowedRoles): void
     if (!in_array(current_role(), $allowedRoles, true)) {
         $fallback = current_role() === 'admin'
             ? base_url('admin/dashboard.php')
-            : base_url('user/search.php');
+            : base_url('admin/evidences.php');
 
         header('Location: ' . $fallback);
         exit;
@@ -217,17 +213,12 @@ function log_activity(string $action, string $module, ?int $recordId = null, ?st
 {
     try {
         $pdo = db();
-        $hasCol = $pdo->query("SHOW COLUMNS FROM audit_logs LIKE 'ten_ban_ghi'")->fetch();
-        if (!$hasCol) {
-            $pdo->exec("ALTER TABLE audit_logs ADD COLUMN ten_ban_ghi VARCHAR(255) NULL AFTER phan_he");
-        }
-
         $userId = $_SESSION['user_id'] ?? null;
         $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
         $jsonVal = $newValue !== null ? json_encode($newValue, JSON_UNESCAPED_UNICODE) : null;
 
         $stmt = $pdo->prepare("
-            INSERT INTO audit_logs (id_nguoi_dung, hanh_dong, phan_he, ten_ban_ghi, id_ban_ghi, gia_tri_moi, dia_chi_ip)
+            INSERT INTO audit_logs (MaNguoiDung, hanh_dong, phan_he, ten_ban_ghi, id_ban_ghi, gia_tri_moi, dia_chi_ip)
             VALUES (:user_id, :action, :module, :record_name, :record_id, :new_val, :ip)
         ");
         $stmt->execute([
@@ -240,7 +231,7 @@ function log_activity(string $action, string $module, ?int $recordId = null, ?st
             'ip'          => $ip,
         ]);
     } catch (Throwable $e) {
-        // Silently swallow audit logging errors to prevent breaking main operations
+        // Silently swallow audit logging errors
     }
 }
 
@@ -256,7 +247,7 @@ function status_class(string $status): string
         'Đủ minh chứng' => 'success',
         'Đã duyệt' => 'success',
         'Hoạt động' => 'success',
-        'Đang áp dụng' => 'success',
+        'Đang hoạt động' => 'success',
         'Cần bổ sung' => 'warning',
         'Chờ rà soát' => 'warning',
         'Thiếu minh chứng' => 'danger',

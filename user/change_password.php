@@ -12,18 +12,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirmPassword = $_POST['confirm_password'] ?? '';
     $userId = (int) $_SESSION['user_id'];
 
-    $stmt = db()->prepare('SELECT mat_khau_hash FROM nguoi_dung WHERE id = :id LIMIT 1');
+    $stmt = db()->prepare('SELECT MatKhau FROM NguoiDung WHERE MaNguoiDung = :id LIMIT 1');
     $stmt->execute(['id' => $userId]);
     $user = $stmt->fetch();
 
-    if (!$user || !password_verify($currentPassword, $user['mat_khau_hash'])) {
+    if (!$user || !password_verify($currentPassword, $user['MatKhau'])) {
         $error = 'Mật khẩu hiện tại không chính xác.';
     } elseif (strlen($newPassword) < 6) {
         $error = 'Mật khẩu mới phải có ít nhất 6 ký tự.';
     } elseif ($newPassword !== $confirmPassword) {
         $error = 'Mật khẩu xác nhận chưa trùng khớp.';
     } else {
-        $update = db()->prepare('UPDATE nguoi_dung SET mat_khau_hash = :password_hash WHERE id = :id');
+        $update = db()->prepare('UPDATE NguoiDung SET MatKhau = :password_hash WHERE MaNguoiDung = :id');
         $update->execute([
             'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
             'id' => $userId,

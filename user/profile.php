@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $error = 'Không thể lưu ảnh đại diện vào hệ thống.';
                 } else {
                     $avatarPath = 'uploads/avatars/' . $storedName;
-                    $stmt = $pdo->prepare("UPDATE nguoi_dung SET duong_dan_anh_dai_dien = :avatar_path WHERE id = :id");
+                    $stmt = $pdo->prepare("UPDATE NguoiDung SET DuongDanAnhDaiDien = :avatar_path WHERE MaNguoiDung = :id");
                     $stmt->execute(['avatar_path' => $avatarPath, 'id' => $userId]);
                     $success = 'Cập nhật ảnh đại diện thành công.';
                 }
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($newPassword !== $confirmPassword) {
             $error = 'Mật khẩu xác nhận chưa trùng khớp.';
         } else {
-            $stmt = $pdo->prepare("UPDATE nguoi_dung SET mat_khau_hash = :password_hash WHERE id = :id");
+            $stmt = $pdo->prepare("UPDATE NguoiDung SET MatKhau = :password_hash WHERE MaNguoiDung = :id");
             $stmt->execute([
                 'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
                 'id' => $userId,
@@ -78,21 +78,18 @@ require_once __DIR__ . '/../includes/data.php';
 
 $stmt = $pdo->prepare("
     SELECT u.*,
-           u.id_don_vi AS department_id,
-           u.ten_dang_nhap AS username,
-           u.trang_thai AS status,
-           u.ho_ten AS full_name,
-           u.duong_dan_anh_dai_dien AS avatar_path,
-           r.ten_vai_tro AS role_name,
-           d.ten_don_vi AS department_name
-    FROM nguoi_dung u
-    JOIN vai_tro r ON r.id = u.id_vai_tro
-    LEFT JOIN don_vi d ON d.id = u.id_don_vi
-    WHERE u.id = :id
+           u.TenDangNhap AS username,
+           u.TrangThai AS status,
+           u.HoTen AS full_name,
+           u.DuongDanAnhDaiDien AS avatar_path,
+           u.VaiTro AS role_code
+    FROM NguoiDung u
+    WHERE u.MaNguoiDung = :id
     LIMIT 1
 ");
 $stmt->execute(['id' => $userId]);
 $profile = $stmt->fetch();
+$roleName = ($profile['role_code'] ?? 'user') === 'admin' ? 'Quản trị viên' : 'Người dùng';
 
 $pageTitle = page_title('Thông tin cá nhân');
 $heading = 'Thông tin cá nhân';
@@ -105,7 +102,7 @@ include __DIR__ . '/../includes/header.php';
                 <?= avatar_html($profile['avatar_path'] ?? null, $profile['full_name'], 'avatar profile-avatar') ?>
                 <div>
                     <h2 class="h5 mb-1"><?= htmlspecialchars($profile['full_name']) ?></h2>
-                    <p class="text-secondary mb-0"><?= htmlspecialchars($profile['role_name']) ?></p>
+                    <p class="text-secondary mb-0"><?= htmlspecialchars($roleName) ?></p>
                 </div>
             </div>
 
@@ -134,11 +131,11 @@ include __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Email</label>
-                    <input class="form-control bg-light" value="<?= htmlspecialchars($profile['email']) ?>" readonly title="Chỉ Quản trị viên mới có quyền đổi email">
+                    <input class="form-control bg-light" value="<?= htmlspecialchars($profile['Email'] ?? '') ?>" readonly title="Chỉ Quản trị viên mới có quyền đổi email">
                 </div>
                 <div class="mb-4">
                     <label class="form-label">Vai trò</label>
-                    <input class="form-control bg-light" value="<?= htmlspecialchars($profile['role_name']) ?>" readonly>
+                    <input class="form-control bg-light" value="<?= htmlspecialchars($roleName) ?>" readonly>
                 </div>
 
                 <button class="btn btn-primary w-100" type="submit">
@@ -155,7 +152,7 @@ include __DIR__ . '/../includes/header.php';
                     <tbody>
                     <tr>
                         <th style="width: 220px;">Mã người dùng</th>
-                        <td><?= htmlspecialchars($profile['ma_nguoi_dung'] ?? ('ND' . str_pad($profile['id'], 3, '0', STR_PAD_LEFT))) ?></td>
+                        <td>ND<?= str_pad((int)($profile['MaNguoiDung'] ?? 0), 3, '0', STR_PAD_LEFT) ?></td>
                     </tr>
                     <tr>
                         <th>Tên đăng nhập</th>

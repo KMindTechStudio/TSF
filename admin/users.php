@@ -8,115 +8,85 @@ $success = '';
 $error = '';
 $currentUserId = $_SESSION['user_id'] ?? 1;
 
-function ensure_user_code_column(PDO $pdo): void
-{
-    static $checked = false;
-
-    if ($checked) {
-        return;
-    }
-
-    $column = $pdo->query("SHOW COLUMNS FROM nguoi_dung LIKE 'ma_nguoi_dung'")->fetch();
-    if (!$column) {
-        $pdo->exec("ALTER TABLE nguoi_dung ADD COLUMN ma_nguoi_dung VARCHAR(50) NULL AFTER id");
-        $pdo->exec("UPDATE nguoi_dung SET ma_nguoi_dung = CONCAT('ND', LPAD(id, 3, '0')) WHERE ma_nguoi_dung IS NULL OR ma_nguoi_dung = ''");
-    }
-
-    $checked = true;
-}
-
-function default_user_email(string $username, int $id = 0): string
-{
-    $safeUsername = strtolower(preg_replace('/[^a-z0-9._-]+/i', '', $username));
-    $safeUsername = $safeUsername !== '' ? $safeUsername : 'user' . ($id > 0 ? $id : time());
-
-    return $safeUsername . '@fbu.edu.vn';
-}
-
-ensure_user_code_column($pdo);
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     try {
         if ($action === 'save_user') {
             $id           = (int) ($_POST['id'] ?? 0);
-            $userCode     = trim($_POST['ma_nguoi_dung'] ?? '');
             $fullName     = trim($_POST['ho_ten'] ?? '');
+            $department   = trim($_POST['don_vi_cong_tac'] ?? '');
+            $email        = trim($_POST['email'] ?? '');
+            $phone        = trim($_POST['sdt'] ?? '');
             $username     = trim($_POST['ten_dang_nhap'] ?? '');
-            $roleId       = (int) ($_POST['id_vai_tro'] ?? 0);
-            $departmentId = (int) ($_POST['id_don_vi'] ?? 0) ?: null;
-            $status       = $_POST['trang_thai'] ?? 'active';
+            $role         = trim($_POST['vai_tro'] ?? 'user');
+            $status       = (int) ($_POST['trang_thai'] ?? 1);
             $password     = $_POST['password'] ?? '';
 
-            if ($userCode === '' || $fullName === '' || $username === '' || $roleId <= 0) {
-                throw new RuntimeException('Vui lòng nhập đầy đủ mã người dùng, họ tên, vai trò và tên đăng nhập.');
+            if ($fullName === '' || $username === '' || $email === '') {
+                throw new RuntimeException('Vui lòng nhập đầy đủ họ tên, tên đăng nhập và email.');
             }
 
-            if (!in_array($status, ['active', 'locked'], true)) {
-                throw new RuntimeException('Trạng thái tài khoản không hợp lệ.');
+            if (!in_array($role, ['admin', 'user'], true)) {
+                throw new RuntimeException('Vai trò không hợp lệ. Chỉ chấp nhận Quản trị viên hoặc Người dùng.');
             }
 
-            $check = $pdo->prepare('SELECT id FROM nguoi_dung WHERE (ma_nguoi_dung = :user_code OR ten_dang_nhap = :username) AND id <> :id LIMIT 1');
+            $check = $pdo->prepare('SELECT MaNguoiDung FROM NguoiDung WHERE (TenDangNhap = :username OR Email = :email) AND MaNguoiDung <> :id LIMIT 1');
             $check->execute([
-                'user_code' => $userCode,
-                'username'  => $username,
-                'id'        => $id,
+                'username' => $username,
+                'email'    => $email,
+                'id'       => $id,
             ]);
             if ($check->fetch()) {
-                throw new RuntimeException('Mã người dùng hoặc tên đăng nhập đã tồn tại.');
+                throw new RuntimeException('Tên đăng nhập hoặc email đã tồn tại.');
             }
 
             if ($id > 0) {
-                $emailStmt = $pdo->prepare('SELECT email FROM nguoi_dung WHERE id = :id LIMIT 1');
-                $emailStmt->execute(['id' => $id]);
-                $currentEmail = $emailStmt->fetchColumn() ?: default_user_email($username, $id);
-
                 if ($password !== '') {
                     $stmt = $pdo->prepare("
-                        UPDATE nguoi_dung
-                        SET ma_nguoi_dung = :user_code,
-                            id_vai_tro = :role_id,
-                            id_don_vi = :department_id,
-                            ho_ten = :full_name,
-                            ten_dang_nhap = :username,
-                            email = :email,
-                            mat_khau_hash = :password_hash,
-                            trang_thai = :status
-                        WHERE id = :id
+                        UPDATE NguoiDung
+                        SET HoTen = :full_name,
+                            DonViCongTac = :dept,
+                            Email = :email,
+                            SDT = :phone,
+                            TenDangNhap = :username,
+                            MatKhau = :password_hash,
+                            VaiTro = :role,
+                            TrangThai = :status
+                        WHERE MaNguoiDung = :id
                     ");
                     $stmt->execute([
-                        'user_code'     => $userCode,
-                        'role_id'       => $roleId,
-                        'department_id' => $departmentId,
                         'full_name'     => $fullName,
+                        'dept'          => $department,
+                        'email'         => $email,
+                        'phone'         => $phone,
                         'username'      => $username,
-                        'email'         => $currentEmail,
                         'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                        'role'          => $role,
                         'status'        => $status,
                         'id'            => $id,
                     ]);
                     log_activity('cap_nhat', 'nguoi_dung', $id, $fullName . ' (' . $username . ')');
-                    $success = 'Cập nhật thông tin và đặt lại mật khẩu thành công.';
+                    $success = 'Cập nhật thông tin và mật khẩu tài khoản thành công.';
                 } else {
                     $stmt = $pdo->prepare("
-                        UPDATE nguoi_dung
-                        SET ma_nguoi_dung = :user_code,
-                            id_vai_tro = :role_id,
-                            id_don_vi = :department_id,
-                            ho_ten = :full_name,
-                            ten_dang_nhap = :username,
-                            email = :email,
-                            trang_thai = :status
-                        WHERE id = :id
+                        UPDATE NguoiDung
+                        SET HoTen = :full_name,
+                            DonViCongTac = :dept,
+                            Email = :email,
+                            SDT = :phone,
+                            TenDangNhap = :username,
+                            VaiTro = :role,
+                            TrangThai = :status
+                        WHERE MaNguoiDung = :id
                     ");
                     $stmt->execute([
-                        'user_code'     => $userCode,
-                        'role_id'       => $roleId,
-                        'department_id' => $departmentId,
                         'full_name'     => $fullName,
+                        'dept'          => $department,
+                        'email'         => $email,
+                        'phone'         => $phone,
                         'username'      => $username,
-                        'email'         => $currentEmail,
+                        'role'          => $role,
                         'status'        => $status,
                         'id'            => $id,
                     ]);
@@ -129,17 +99,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $stmt = $pdo->prepare("
-                    INSERT INTO nguoi_dung (ma_nguoi_dung, id_vai_tro, id_don_vi, ho_ten, ten_dang_nhap, email, mat_khau_hash, trang_thai)
-                    VALUES (:user_code, :role_id, :department_id, :full_name, :username, :email, :password_hash, :status)
+                    INSERT INTO NguoiDung (HoTen, DonViCongTac, Email, SDT, TenDangNhap, MatKhau, VaiTro, TrangThai)
+                    VALUES (:full_name, :dept, :email, :phone, :username, :password_hash, :role, :status)
                 ");
                 $stmt->execute([
-                    'user_code'     => $userCode,
-                    'role_id'       => $roleId,
-                    'department_id' => $departmentId,
                     'full_name'     => $fullName,
+                    'dept'          => $department,
+                    'email'         => $email,
+                    'phone'         => $phone,
                     'username'      => $username,
-                    'email'         => default_user_email($username),
                     'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                    'role'          => $role,
                     'status'        => $status,
                 ]);
                 $newId = (int) $pdo->lastInsertId();
@@ -153,12 +123,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($id === (int) $currentUserId) {
                 throw new RuntimeException('Không thể xóa tài khoản đang đăng nhập.');
             }
-            $stmtName = $pdo->prepare('SELECT ho_ten, ten_dang_nhap FROM nguoi_dung WHERE id = :id');
+            $stmtName = $pdo->prepare('SELECT HoTen, TenDangNhap FROM NguoiDung WHERE MaNguoiDung = :id');
             $stmtName->execute(['id' => $id]);
             $uRow = $stmtName->fetch();
-            $uName = $uRow ? ($uRow['ho_ten'] . ' (' . $uRow['ten_dang_nhap'] . ')') : ('#' . $id);
+            $uName = $uRow ? ($uRow['HoTen'] . ' (' . $uRow['TenDangNhap'] . ')') : ('#' . $id);
 
-            $stmt = $pdo->prepare('DELETE FROM nguoi_dung WHERE id = :id');
+            $stmt = $pdo->prepare('DELETE FROM NguoiDung WHERE MaNguoiDung = :id');
             $stmt->execute(['id' => $id]);
             log_activity('xoa', 'nguoi_dung', $id, $uName);
             $success = 'Xóa tài khoản thành công.';
@@ -169,34 +139,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($id === (int) $currentUserId) {
                 throw new RuntimeException('Không thể khóa tài khoản đang đăng nhập.');
             }
-            $stmtName = $pdo->prepare('SELECT ho_ten, ten_dang_nhap FROM nguoi_dung WHERE id = :id');
+            $stmtName = $pdo->prepare('SELECT HoTen, TenDangNhap FROM NguoiDung WHERE MaNguoiDung = :id');
             $stmtName->execute(['id' => $id]);
             $uRow = $stmtName->fetch();
-            $uName = $uRow ? ($uRow['ho_ten'] . ' (' . $uRow['ten_dang_nhap'] . ')') : ('#' . $id);
+            $uName = $uRow ? ($uRow['HoTen'] . ' (' . $uRow['TenDangNhap'] . ')') : ('#' . $id);
 
-            $stmt = $pdo->prepare("UPDATE nguoi_dung SET trang_thai = IF(trang_thai = 'active', 'locked', 'active') WHERE id = :id");
+            $stmt = $pdo->prepare("UPDATE NguoiDung SET TrangThai = IF(TrangThai = 1, 0, 1) WHERE MaNguoiDung = :id");
             $stmt->execute(['id' => $id]);
             log_activity('cap_nhat_trang_thai', 'nguoi_dung', $id, $uName);
-            $success = 'Cập nhật trạng thái tài khoản thành công.';
-        }
-
-        if ($action === 'update_user_status') {
-            $id     = (int) ($_POST['id'] ?? 0);
-            $status = $_POST['trang_thai'] ?? '';
-
-            if ($id === (int) $currentUserId && $status === 'locked') {
-                throw new RuntimeException('Không thể khóa tài khoản đang đăng nhập.');
-            }
-
-            if ($id <= 0 || !in_array($status, ['active', 'locked'], true)) {
-                throw new RuntimeException('Trạng thái tài khoản không hợp lệ.');
-            }
-
-            $stmt = $pdo->prepare('UPDATE nguoi_dung SET trang_thai = :status WHERE id = :id');
-            $stmt->execute([
-                'status' => $status,
-                'id'     => $id,
-            ]);
             $success = 'Cập nhật trạng thái tài khoản thành công.';
         }
     } catch (Throwable $exception) {
@@ -210,27 +160,28 @@ require_once __DIR__ . '/../includes/data.php';
 $searchKeyword = trim($_GET['search'] ?? $_GET['q'] ?? '');
 if ($searchKeyword !== '') {
     $users = array_filter($users, function ($user) use ($searchKeyword) {
-        $matchCode = search_contains($user['code'], $searchKeyword);
-        $matchName = search_contains($user['name'], $searchKeyword);
-        $matchRole = search_contains($user['role'], $searchKeyword);
-        $matchUser = search_contains($user['username'], $searchKeyword);
-        return $matchCode || $matchName || $matchRole || $matchUser;
+        $matchCode  = search_contains($user['code'], $searchKeyword);
+        $matchName  = search_contains($user['name'], $searchKeyword);
+        $matchRole  = search_contains($user['role'], $searchKeyword);
+        $matchUser  = search_contains($user['username'], $searchKeyword);
+        $matchEmail = search_contains($user['email'], $searchKeyword);
+        $matchPhone = search_contains($user['phone'], $searchKeyword);
+        $matchDept  = search_contains($user['department'], $searchKeyword);
+        return $matchCode || $matchName || $matchRole || $matchUser || $matchEmail || $matchPhone || $matchDept;
     });
 }
-
-$roleRows = $pdo->query('SELECT id, ma_vai_tro AS code, ten_vai_tro AS name FROM vai_tro ORDER BY id')->fetchAll();
 
 $isCreatingUser = isset($_GET['create']);
 $editId         = $isCreatingUser ? 0 : (int) ($_GET['edit'] ?? 0);
 $editingUser    = null;
 if ($editId > 0) {
-    $stmt = $pdo->prepare('SELECT * FROM nguoi_dung WHERE id = :id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT * FROM NguoiDung WHERE MaNguoiDung = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
     $editingUser = $stmt->fetch();
 }
 
-$pageTitle = page_title('Quản lý tài khoản');
-$heading   = 'Quản lý tài khoản và phân quyền';
+$pageTitle = page_title('Quản lý người dùng');
+$heading   = 'Quản lý người dùng';
 include __DIR__ . '/../includes/header.php';
 ?>
 <?php if (($editingUser || $isCreatingUser) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'accountFormModal';</script><?php endif; ?>
@@ -247,7 +198,7 @@ include __DIR__ . '/../includes/header.php';
             <form method="get" action="" class="mb-3" id="userSearchForm">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" id="userSearchInput" class="form-control" placeholder="Nhập mã người dùng, họ tên hoặc vai trò để tìm kiếm..." value="<?= htmlspecialchars($searchKeyword) ?>">
+                    <input type="text" name="search" id="userSearchInput" class="form-control" placeholder="Nhập mã, họ tên, đơn vị, email, sdt hoặc tên đăng nhập..." value="<?= htmlspecialchars($searchKeyword) ?>">
                     <?php if ($searchKeyword !== ''): ?>
                         <a href="<?= base_url('admin/users.php') ?>" class="btn btn-outline-secondary" title="Xóa tìm kiếm"><i class="bi bi-x-lg"></i></a>
                     <?php endif; ?>
@@ -258,11 +209,14 @@ include __DIR__ . '/../includes/header.php';
                 <table class="table" data-page-size="10">
                     <thead>
                     <tr>
-                        <th style="width: 60px;">Avatar</th>
                         <th>Mã người dùng</th>
                         <th>Họ tên</th>
-                        <th>Vai trò</th>
+                        <th>Đơn vị công tác</th>
+                        <th>Email</th>
+                        <th>Số điện thoại</th>
                         <th>Tên đăng nhập</th>
+                        <th>Mật khẩu</th>
+                        <th>Vai trò</th>
                         <th>Trạng thái</th>
                         <th class="text-end">Thao tác</th>
                     </tr>
@@ -270,37 +224,41 @@ include __DIR__ . '/../includes/header.php';
                     <tbody id="usersTableBody">
                     <?php foreach ($users as $user): ?>
                         <tr>
-                            <td><?= avatar_html($user['avatar'] ?? null, $user['name']) ?></td>
-                            <td class="fw-bold"><?= htmlspecialchars($user['code']) ?></td>
-                            <td class="fw-semibold"><?= htmlspecialchars($user['name']) ?></td>
-                            <td><?= htmlspecialchars($user['role']) ?></td>
-                            <td><?= htmlspecialchars($user['username']) ?></td>
+                            <td class="fw-bold text-nowrap"><?= htmlspecialchars($user['code']) ?></td>
+                            <td class="fw-semibold text-nowrap"><?= htmlspecialchars($user['name']) ?></td>
+                            <td><?= htmlspecialchars($user['department'] ?: '-') ?></td>
+                            <td><?= htmlspecialchars($user['email']) ?></td>
+                            <td><?= htmlspecialchars($user['phone'] ?: '-') ?></td>
+                            <td><code><?= htmlspecialchars($user['username']) ?></code></td>
+                            <td><span class="text-muted">••••••••</span></td>
                             <td>
-                                <form method="post" class="status-update-form">
-                                    <input type="hidden" name="action" value="update_user_status">
-                                    <input type="hidden" name="id" value="<?= $user['id'] ?>">
-                                    <?= status_select($user['status_raw'] ?? 'active', ['active' => 'Đang hoạt động', 'locked' => 'Khóa'], 'trang_thai', (int) $user['id'] === (int) $currentUserId, '', 'Cập nhật trạng thái tài khoản') ?>
-                                </form>
+                                <?php if ($user['role_code'] === 'admin'): ?>
+                                    <span class="badge bg-danger">Quản trị viên</span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary">Người dùng</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ((int) $user['status_raw'] === 1): ?>
+                                    <span class="badge bg-success">Đang hoạt động</span>
+                                <?php else: ?>
+                                    <span class="badge bg-warning text-dark">Ngưng áp dụng</span>
+                                <?php endif; ?>
                             </td>
                             <td class="text-end action-cell">
                                 <div class="action-buttons">
-                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $user['id'] ?>" title="Cập nhật thông tin tài khoản"><i class="bi bi-pencil"></i></a>
-                                    <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn mở/khóa tài khoản này?">
-                                        <input type="hidden" name="action" value="toggle_user">
-                                        <input type="hidden" name="id" value="<?= $user['id'] ?>">
-                                        <button class="btn btn-sm btn-outline-warning" type="submit" title="Mở/khóa tài khoản"><i class="bi bi-lock"></i></button>
-                                    </form>
-                                    <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa tài khoản này?">
+                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $user['id'] ?>" title="Sửa tài khoản"><i class="bi bi-pencil"></i></a>
+                                    <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa người dùng này?">
                                         <input type="hidden" name="action" value="delete_user">
                                         <input type="hidden" name="id" value="<?= $user['id'] ?>">
-                                        <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa tài khoản"><i class="bi bi-trash"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa"><i class="bi bi-trash"></i></button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                     <tr id="noDataRow" class="<?= !empty($users) ? 'd-none' : '' ?>">
-                        <td colspan="7" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
+                        <td colspan="10" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
                     </tr>
                     </tbody>
                 </table>
@@ -333,11 +291,13 @@ document.addEventListener('DOMContentLoaded', function () {
         let visibleCount = 0;
 
         rows.forEach(row => {
-            const codeCell = row.cells[1]?.textContent || '';
-            const nameCell = row.cells[2]?.textContent || '';
-            const roleCell = row.cells[3]?.textContent || '';
-            const userCell = row.cells[4]?.textContent || '';
-            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + roleCell + ' ' + userCell);
+            const codeCell  = row.cells[0]?.textContent || '';
+            const nameCell  = row.cells[1]?.textContent || '';
+            const deptCell  = row.cells[2]?.textContent || '';
+            const emailCell = row.cells[3]?.textContent || '';
+            const phoneCell = row.cells[4]?.textContent || '';
+            const userCell  = row.cells[5]?.textContent || '';
+            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + deptCell + ' ' + emailCell + ' ' + phoneCell + ' ' + userCell);
 
             if (query === '' || textToMatch.includes(query)) {
                 row.dataset.filteredOut = 'false';
@@ -368,46 +328,50 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title h5" id="accountFormModalLabel"><?= $editingUser ? 'Cập nhật tài khoản' : 'Tạo tài khoản mới' ?></h2>
+                <h2 class="modal-title h5" id="accountFormModalLabel"><?= $editingUser ? 'Cập nhật người dùng' : 'Tạo người dùng mới' ?></h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <div class="modal-body">
                 <form method="post">
                     <input type="hidden" name="action" value="save_user">
-                    <input type="hidden" name="id" value="<?= (int) ($editingUser['id'] ?? 0) ?>">
+                    <input type="hidden" name="id" value="<?= (int) ($editingUser['MaNguoiDung'] ?? 0) ?>">
                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Mã người dùng</label>
-                            <input class="form-control" name="ma_nguoi_dung" value="<?= htmlspecialchars($editingUser['ma_nguoi_dung'] ?? '') ?>" placeholder="VD: ND001" required>
+                        <div class="col-md-6">
+                            <label class="form-label">Họ tên <span class="text-danger">*</span></label>
+                            <input class="form-control" name="ho_ten" value="<?= htmlspecialchars($editingUser['HoTen'] ?? '') ?>" placeholder="Nhập họ tên" required>
                         </div>
-                        <div class="col-md-8">
-                            <label class="form-label">Họ tên</label>
-                            <input class="form-control" name="ho_ten" value="<?= htmlspecialchars($editingUser['ho_ten'] ?? '') ?>" required>
+                        <div class="col-md-6">
+                            <label class="form-label">Đơn vị công tác</label>
+                            <input class="form-control" name="don_vi_cong_tac" value="<?= htmlspecialchars($editingUser['DonViCongTac'] ?? '') ?>" placeholder="VD: Khoa CNTT">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email <span class="text-danger">*</span></label>
+                            <input class="form-control" type="email" name="email" value="<?= htmlspecialchars($editingUser['Email'] ?? '') ?>" placeholder="example@fbu.edu.vn" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Số điện thoại</label>
+                            <input class="form-control" name="sdt" value="<?= htmlspecialchars($editingUser['SDT'] ?? '') ?>" placeholder="VD: 0912345678">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
+                            <input class="form-control" name="ten_dang_nhap" value="<?= htmlspecialchars($editingUser['TenDangNhap'] ?? '') ?>" placeholder="Nhập tên đăng nhập" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><?= $editingUser ? 'Mật khẩu mới' : 'Mật khẩu' ?> <?= $editingUser ? '' : '<span class="text-danger">*</span>' ?></label>
+                            <input class="form-control" name="password" type="password" placeholder="<?= $editingUser ? 'Để trống nếu giữ nguyên' : 'Nhập mật khẩu' ?>" <?= $editingUser ? '' : 'required' ?>>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Vai trò</label>
-                            <select class="form-select" name="id_vai_tro" required>
-                                <?php foreach ($roleRows as $role): ?>
-                                    <option value="<?= $role['id'] ?>" <?= (int) ($editingUser['id_vai_tro'] ?? 0) === (int) $role['id'] ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($role['name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
+                            <select class="form-select" name="vai_tro">
+                                <option value="admin" <?= ($editingUser['VaiTro'] ?? 'user') === 'admin' ? 'selected' : '' ?>>Quản trị viên</option>
+                                <option value="user" <?= ($editingUser['VaiTro'] ?? 'user') === 'user' ? 'selected' : '' ?>>Người dùng</option>
                             </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Tên đăng nhập</label>
-                            <input class="form-control" name="ten_dang_nhap" value="<?= htmlspecialchars($editingUser['ten_dang_nhap'] ?? '') ?>" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label"><?= $editingUser ? 'Mật khẩu mới' : 'Mật khẩu' ?></label>
-                            <input class="form-control" name="password" type="password" <?= $editingUser ? '' : 'required' ?>>
-                            <?php if ($editingUser): ?><div class="form-text">Để trống nếu không đặt lại mật khẩu.</div><?php endif; ?>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Trạng thái</label>
                             <select class="form-select" name="trang_thai">
-                                <option value="active" <?= ($editingUser['trang_thai'] ?? 'active') === 'active' ? 'selected' : '' ?>>Đang hoạt động</option>
-                                <option value="locked" <?= ($editingUser['trang_thai'] ?? '') === 'locked' ? 'selected' : '' ?>>Khóa</option>
+                                <option value="1" <?= (int) ($editingUser['TrangThai'] ?? 1) === 1 ? 'selected' : '' ?>>Đang hoạt động</option>
+                                <option value="0" <?= (int) ($editingUser['TrangThai'] ?? 1) === 0 ? 'selected' : '' ?>>Ngưng áp dụng</option>
                             </select>
                         </div>
                     </div>
@@ -417,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <?php else: ?>
                             <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Hủy</button>
                         <?php endif; ?>
-                        <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Lưu tài khoản</button>
+                        <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Lưu người dùng</button>
                     </div>
                 </form>
             </div>
@@ -425,4 +389,3 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 </div>
 <?php include __DIR__ . '/../includes/footer.php'; ?>
-
