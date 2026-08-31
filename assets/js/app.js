@@ -329,7 +329,7 @@ function initTablePagination() {
             const stableRowHeight = Math.max(firstRowHeight, Number(table.dataset.rowHeight || 0));
             let visibleRows = 0;
 
-            tableWrapper.style.minHeight = `${headerHeight + (pageSize * stableRowHeight)}px`;
+            tableWrapper.style.minHeight = 'auto';
 
             rows.forEach((row) => {
                 row.hidden = true;
@@ -344,21 +344,6 @@ function initTablePagination() {
 
             if (emptyFilterRow) {
                 emptyFilterRow.hidden = activeRows.length > 0;
-            }
-
-            if (activeRows.length > 0 && totalPages > 1 && visibleRows < pageSize) {
-                const columnCount = Math.max(1, table.tHead?.rows[0]?.cells.length || rows[0]?.cells.length || 1);
-                const fillersNeeded = pageSize - visibleRows;
-
-                for (let index = 0; index < fillersNeeded; index += 1) {
-                    const fillerRow = document.createElement('tr');
-                    const fillerCell = document.createElement('td');
-                    fillerRow.className = 'pagination-filler-row';
-                    fillerCell.colSpan = columnCount;
-                    fillerCell.innerHTML = '&nbsp;';
-                    fillerRow.appendChild(fillerCell);
-                    tbody.appendChild(fillerRow);
-                }
             }
 
             pagination.innerHTML = '';
@@ -514,6 +499,7 @@ Object.assign(translations.en, {
     'Quản lý tiêu chuẩn': 'Manage Standards',
     'Quản lý tiêu chí': 'Manage Criteria',
     'Quản lý minh chứng': 'Manage Evidence',
+    'Quản lý người dùng': 'Manage Users',
     'Quản lý tài khoản': 'Manage Accounts',
     'Quản lý đơn vị': 'Manage Departments',
     'Danh sách đơn vị': 'Department List',

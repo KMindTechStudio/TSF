@@ -15,7 +15,7 @@
             <a class="<?= is_active('standards.php') ?>" href="<?= base_url('admin/standards.php') ?>"><i class="bi bi-diagram-3"></i> Quản lý tiêu chuẩn</a>
             <a class="<?= is_active('criteria.php') ?>" href="<?= base_url('admin/criteria.php') ?>"><i class="bi bi-list-check"></i> Quản lý tiêu chí</a>
             <a class="<?= is_active('evidences.php') ?>" href="<?= base_url('admin/evidences.php') ?>"><i class="bi bi-folder2-open"></i> Quản lý minh chứng</a>
-            <a class="<?= is_active('users.php') ?>" href="<?= base_url('admin/users.php') ?>"><i class="bi bi-people"></i> Quản lý tài khoản</a>
+            <a class="<?= is_active('users.php') ?>" href="<?= base_url('admin/users.php') ?>"><i class="bi bi-people"></i> Quản lý người dùng</a>
             <a class="<?= is_active('reports.php') ?>" href="<?= base_url('admin/reports.php') ?>"><i class="bi bi-bar-chart"></i> Thống kê</a>
         </nav>
     <?php else: ?>

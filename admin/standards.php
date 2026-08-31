@@ -12,50 +12,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         if ($action === 'save_standard') {
-            $id            = (int) ($_POST['id'] ?? 0);
-            $standardSetId = (int) ($_POST['ma_bo_tieu_chuan'] ?? 1);
+            $rawId         = trim($_POST['id'] ?? '');
+            $maTieuChuan   = trim($_POST['ma_tieu_chuan'] ?? '');
+            $standardSetId = trim($_POST['ma_bo_tieu_chuan'] ?? '');
             $name          = trim($_POST['ten_tieu_chuan'] ?? '');
             $description   = trim($_POST['mo_ta'] ?? '');
-            $order         = (int) ($_POST['thu_tu'] ?? 0);
             $status        = (int) ($_POST['trang_thai'] ?? 1);
 
-            if ($standardSetId <= 0 || $name === '') {
+            if ($standardSetId === '' || $name === '') {
                 throw new RuntimeException('Vui lòng chọn bộ tiêu chuẩn và nhập tên tiêu chuẩn.');
             }
 
-            if ($id > 0) {
-                $stmt = $pdo->prepare('UPDATE TieuChuan SET MaBoTieuChuan = :set_id, TenTieuChuan = :name, MoTa = :description, ThuTu = :thu_tu, TrangThai = :status WHERE MaTieuChuan = :id');
+            if ($rawId !== '') {
+                if ($maTieuChuan === '') {
+                    throw new RuntimeException('Vui lòng nhập Mã tiêu chuẩn.');
+                }
+                if ($maTieuChuan !== $rawId) {
+                    $chk = $pdo->prepare('SELECT COUNT(*) FROM TieuChuan WHERE MaTieuChuan = :code');
+                    $chk->execute(['code' => $maTieuChuan]);
+                    if ((int) $chk->fetchColumn() > 0) {
+                        throw new RuntimeException('Mã tiêu chuẩn "' . $maTieuChuan . '" đã tồn tại. Vui lòng nhập mã khác.');
+                    }
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+                    $upChild = $pdo->prepare('UPDATE TieuChi SET MaTieuChuan = :new_code WHERE MaTieuChuan = :old_code');
+                    $upChild->execute(['new_code' => $maTieuChuan, 'old_code' => $rawId]);
+                }
+
+                $stmt = $pdo->prepare('UPDATE TieuChuan SET MaTieuChuan = :new_code, MaBoTieuChuan = :set_id, TenTieuChuan = :name, MoTa = :description, TrangThai = :status WHERE MaTieuChuan = :old_code');
                 $stmt->execute([
+                    'new_code'    => $maTieuChuan,
                     'set_id'      => $standardSetId,
                     'name'        => $name,
                     'description' => $description,
-                    'thu_tu'      => $order,
                     'status'      => $status,
-                    'id'          => $id,
+                    'old_code'    => $rawId,
                 ]);
-                log_activity('cap_nhat', 'tieu_chuan', $id, 'TC' . str_pad($id, 2, '0', STR_PAD_LEFT) . ' - ' . $name);
+                if ($maTieuChuan !== $rawId) {
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+                }
+                log_activity('cap_nhat', 'tieu_chuan', 0, $maTieuChuan . ' - ' . $name);
                 $success = 'Cập nhật tiêu chuẩn thành công.';
             } else {
-                if ($order <= 0) {
-                    $order = (int) $pdo->query('SELECT COALESCE(MAX(ThuTu), 0) + 1 FROM TieuChuan')->fetchColumn();
+                if ($maTieuChuan === '') {
+                    throw new RuntimeException('Vui lòng nhập Mã tiêu chuẩn.');
                 }
-                $stmt = $pdo->prepare('INSERT INTO TieuChuan (MaBoTieuChuan, TenTieuChuan, MoTa, ThuTu, TrangThai) VALUES (:set_id, :name, :description, :thu_tu, :status)');
+                $chk = $pdo->prepare('SELECT COUNT(*) FROM TieuChuan WHERE MaTieuChuan = :code');
+                $chk->execute(['code' => $maTieuChuan]);
+                if ((int) $chk->fetchColumn() > 0) {
+                    throw new RuntimeException('Mã tiêu chuẩn "' . $maTieuChuan . '" đã tồn tại. Vui lòng nhập mã khác.');
+                }
+
+                $stmt = $pdo->prepare('INSERT INTO TieuChuan (MaTieuChuan, MaBoTieuChuan, TenTieuChuan, MoTa, TrangThai) VALUES (:code, :set_id, :name, :description, :status)');
                 $stmt->execute([
+                    'code'        => $maTieuChuan,
                     'set_id'      => $standardSetId,
                     'name'        => $name,
                     'description' => $description,
-                    'thu_tu'      => $order,
                     'status'      => $status,
                 ]);
-                $newId = (int) $pdo->lastInsertId();
-                log_activity('them_moi', 'tieu_chuan', $newId, 'TC' . str_pad($newId, 2, '0', STR_PAD_LEFT) . ' - ' . $name);
+                log_activity('them_moi', 'tieu_chuan', 0, $maTieuChuan . ' - ' . $name);
                 $success = 'Thêm tiêu chuẩn thành công.';
             }
         }
 
         if ($action === 'delete_standard') {
-            $id = (int) ($_POST['id'] ?? 0);
-            $stdCode = 'TC' . str_pad($id, 2, '0', STR_PAD_LEFT);
+            $id = trim($_POST['id'] ?? '');
 
             $checkChild = $pdo->prepare('SELECT COUNT(*) FROM TieuChi WHERE MaTieuChuan = :id');
             $checkChild->execute(['id' => $id]);
@@ -65,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt = $pdo->prepare('DELETE FROM TieuChuan WHERE MaTieuChuan = :id');
             $stmt->execute(['id' => $id]);
-            log_activity('xoa', 'tieu_chuan', $id, $stdCode);
+            log_activity('xoa', 'tieu_chuan', 0, $id);
             $success = 'Xóa tiêu chuẩn thành công.';
         }
     } catch (Throwable $exception) {
@@ -84,9 +105,9 @@ if ($searchKeyword !== '') {
 }
 
 $isCreatingStandard = isset($_GET['create']);
-$editId             = $isCreatingStandard ? 0 : (int) ($_GET['edit'] ?? 0);
+$editId             = $isCreatingStandard ? '' : trim($_GET['edit'] ?? '');
 $editingStandard    = null;
-if ($editId > 0) {
+if ($editId !== '') {
     $stmt = $pdo->prepare('SELECT * FROM TieuChuan WHERE MaTieuChuan = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
     $editingStandard = $stmt->fetch();
@@ -124,48 +145,38 @@ include __DIR__ . '/../includes/header.php';
                 <table class="table" data-page-size="10">
                     <thead>
                         <tr>
-                            <th>Mã tiêu chuẩn</th>
-                            <th>Tên tiêu chuẩn</th>
-                            <th>Mô tả</th>
-                            <th>Thứ tự</th>
-                            <th>Mã bộ tiêu chuẩn</th>
-                            <th>Trạng thái</th>
-                            <th class="text-end">Thao tác</th>
+                            <th class="text-nowrap" style="width: 120px;">Mã tiêu chuẩn</th>
+                            <th style="min-width: 220px;">Tên tiêu chuẩn</th>
+                            <th style="min-width: 220px;">Mô tả</th>
+                            <th class="text-nowrap" style="width: 140px;">Mã bộ tiêu chuẩn</th>
+                            <th class="text-end text-nowrap action-cell" style="width: 90px;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="standardsTableBody">
                     <?php foreach ($standards as $standard): ?>
                         <tr>
-                            <td class="fw-bold"><?= htmlspecialchars($standard['code']) ?></td>
+                            <td class="fw-bold text-nowrap"><?= htmlspecialchars($standard['code']) ?></td>
                             <td class="fw-semibold"><?= htmlspecialchars($standard['name']) ?></td>
-                            <td style="max-width: 250px;">
-                                <div class="text-truncate" title="<?= htmlspecialchars($standard['description']) ?>">
+                            <td>
+                                <div class="line-clamp-2 text-secondary" title="<?= htmlspecialchars($standard['description']) ?>">
                                     <?= htmlspecialchars($standard['description'] ?: '-') ?>
                                 </div>
                             </td>
-                            <td><?= $standard['order'] ?></td>
-                            <td><span class="badge bg-secondary"><?= htmlspecialchars($standard['set_code']) ?></span></td>
-                            <td>
-                                <?php if (($standard['status_raw'] ?? '') === 'active' || $standard['status'] === 'Đang hoạt động'): ?>
-                                    <span class="badge bg-success">Đang hoạt động</span>
-                                <?php else: ?>
-                                    <span class="badge bg-warning text-dark">Ngưng áp dụng</span>
-                                <?php endif; ?>
-                            </td>
+                            <td class="text-nowrap"><span class="badge bg-secondary"><?= htmlspecialchars($standard['set_code']) ?></span></td>
                             <td class="text-end action-cell">
                                 <div class="action-buttons">
-                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $standard['id'] ?>"><i class="bi bi-pencil"></i></a>
+                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $standard['id'] ?>" title="Sửa"><i class="bi bi-pencil"></i></a>
                                     <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa tiêu chuẩn này?">
                                         <input type="hidden" name="action" value="delete_standard">
                                         <input type="hidden" name="id" value="<?= $standard['id'] ?>">
-                                        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa"><i class="bi bi-trash"></i></button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                     <tr id="noDataRow" class="<?= !empty($standards) ? 'd-none' : '' ?>">
-                        <td colspan="7" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
+                        <td colspan="5" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
                     </tr>
                     </tbody>
                 </table>
@@ -239,11 +250,17 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="modal-body">
                 <form method="post">
                     <input type="hidden" name="action" value="save_standard">
-                    <input type="hidden" name="id" value="<?= (int) ($editingStandard['MaTieuChuan'] ?? 0) ?>">
+                    <input type="hidden" name="id" value="<?= htmlspecialchars($editingStandard['MaTieuChuan'] ?? '') ?>">
                     
-                    <div class="mb-3">
-                        <label class="form-label">Tên tiêu chuẩn <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="ten_tieu_chuan" rows="2" placeholder="Nhập tên tiêu chuẩn" required><?= htmlspecialchars($editingStandard['TenTieuChuan'] ?? '') ?></textarea>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Mã tiêu chuẩn <span class="text-danger">*</span></label>
+                            <input class="form-control" name="ma_tieu_chuan" value="<?= htmlspecialchars($editingStandard['MaTieuChuan'] ?? '') ?>" placeholder="VD: TC01 hoặc TC-01" required>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Tên tiêu chuẩn <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="ten_tieu_chuan" rows="2" placeholder="Nhập tên tiêu chuẩn" required><?= htmlspecialchars($editingStandard['TenTieuChuan'] ?? '') ?></textarea>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -253,28 +270,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Thứ tự</label>
-                            <input class="form-control" type="number" name="thu_tu" value="<?= (int) ($editingStandard['ThuTu'] ?? 0) ?>" placeholder="VD: 1">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Bộ tiêu chuẩn <span class="text-danger">*</span></label>
+                            <label class="form-label">Bộ tiêu chuẩn (Mã bộ tiêu chuẩn) <span class="text-danger">*</span></label>
                             <select class="form-select" name="ma_bo_tieu_chuan" required>
                                 <?php foreach ($standardSets as $set): ?>
-                                    <option value="<?= $set['id'] ?>" <?= (int) ($editingStandard['MaBoTieuChuan'] ?? 1) === (int) $set['id'] ? 'selected' : '' ?>>
+                                    <option value="<?= htmlspecialchars($set['id']) ?>" <?= (string) ($editingStandard['MaBoTieuChuan'] ?? '') === (string) $set['id'] ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($set['code'] . ' - ' . $set['name']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Trạng thái</label>
-                        <select class="form-select" name="trang_thai">
-                            <option value="1" <?= (int) ($editingStandard['TrangThai'] ?? 1) === 1 ? 'selected' : '' ?>>Đang hoạt động</option>
-                            <option value="0" <?= (int) ($editingStandard['TrangThai'] ?? 1) === 0 ? 'selected' : '' ?>>Ngưng áp dụng</option>
-                        </select>
+                        <div class="col-md-6">
+                            <label class="form-label">Trạng thái</label>
+                            <select class="form-select" name="trang_thai">
+                                <option value="1" <?= (int) ($editingStandard['TrangThai'] ?? 1) === 1 ? 'selected' : '' ?>>Đang hoạt động</option>
+                                <option value="0" <?= (int) ($editingStandard['TrangThai'] ?? 1) === 0 ? 'selected' : '' ?>>Ngưng áp dụng</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="d-flex gap-2 justify-content-end">

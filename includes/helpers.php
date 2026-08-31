@@ -154,7 +154,7 @@ function restore_login_from_cookie(): bool
         return false;
     }
 
-    $_SESSION['user_id'] = (int) $record['user_id'];
+    $_SESSION['user_id'] = $record['user_id'];
     $_SESSION['role'] = $record['role_code'];
 
     return true;

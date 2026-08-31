@@ -10,7 +10,7 @@
 - Quản lý tiêu chuẩn.
 - Quản lý tiêu chí.
 - Quản lý minh chứng.
-- Quản lý tài khoản.
+- Quản lý người dùng.
 - Thống kê phục vụ kiểm định.
 - Tìm kiếm minh chứng.
 - Lịch sử tải minh chứng.

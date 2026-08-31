@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $update = db()->prepare('UPDATE NguoiDung SET MatKhau = :password_hash WHERE MaNguoiDung = :id');
             $update->execute([
                 'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
-                'id' => (int) $resetState['user_id'],
+                'id' => $resetState['user_id'],
             ]);
             unset($_SESSION['password_reset']);
             $resetStep = 'done';
@@ -119,9 +119,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ((int) $user['status'] !== 1) {
             $error = 'Tài khoản đang bị khóa. Vui lòng liên hệ quản trị viên.';
         } else {
-            $_SESSION['user_id'] = (int) $user['id'];
+            $_SESSION['user_id'] = $user['id'];
             $_SESSION['role'] = $user['role_code'];
-            create_login_token((int) $user['id'], !empty($_POST['remember']));
+            create_login_token($user['id'], !empty($_POST['remember']));
+            log_activity('dang_nhap', 'he_thong', 0, 'Đăng nhập hệ thống');
 
             $update = db()->prepare('UPDATE NguoiDung SET DangNhapCuoi = NOW() WHERE MaNguoiDung = :id');
             $update->execute(['id' => $user['id']]);

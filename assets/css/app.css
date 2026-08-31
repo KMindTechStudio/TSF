@@ -770,29 +770,39 @@ html[data-theme="dark"] .logout-modal-icon {
     height: auto;
 }
 
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+    line-height: 1.38;
+    max-height: 2.8em;
+}
+
 .evidences-list-panel .table tbody tr {
-    height: 62px !important;
+    height: auto !important;
 }
 
 .table .pagination-filler-row {
-    display: table-row !important;
-    height: 62px !important;
-    visibility: visible !important;
-    pointer-events: none;
-}
-
-.table .pagination-filler-row > td {
-    display: table-cell !important;
-    height: 62px !important;
-    padding: 0 !important;
-    color: transparent;
-    background: transparent;
-    border-bottom: 1px solid var(--line);
+    display: none !important;
 }
 
 .evidences-list-panel .table th,
 .evidences-list-panel .table td {
     vertical-align: middle;
+    padding: 10px 12px;
+}
+
+@media (max-width: 768px) {
+    .table th.action-cell,
+    .table td.action-cell {
+        position: sticky;
+        right: 0;
+        background: var(--surface, #ffffff);
+        z-index: 2;
+        box-shadow: -3px 0 6px rgba(0, 0, 0, 0.05);
+    }
 }
 
 .column-filter-head {
@@ -881,31 +891,11 @@ html[data-theme="dark"] .logout-modal-icon {
     .accounts-list-panel .table-responsive,
     .evidences-list-panel .table-responsive,
     .criteria-list-panel .table-responsive,
-    .standards-list-panel .table-responsive {
-        min-height: 286px;
+    .standards-list-panel .table-responsive,
+    .standard-sets-list-panel .table-responsive {
+        min-height: auto !important;
         max-height: none;
-    }
-
-    .evidences-list-panel .table-responsive,
-    .criteria-list-panel .table-responsive {
-        min-height: 360px;
-    }
-
-    .evidences-list-panel .table-responsive {
-        overflow: visible;
-    }
-
-    .criteria-list-panel .table-responsive {
-        min-height: 700px;
-        overflow: visible;
-    }
-
-    .standards-list-panel .table-responsive {
-        min-height: 300px;
-    }
-
-    .accounts-list-panel .table-responsive {
-        min-height: 236px;
+        overflow-x: auto !important;
     }
 }
 
@@ -3300,7 +3290,7 @@ body.mobile-sidebar-open {
 @media (min-width: 1200px) {
     .evidences-list-panel .table-responsive.is-paginated-table,
     .criteria-list-panel .table-responsive.is-paginated-table {
-        overflow: visible !important;
+        overflow-x: auto !important;
     }
 }
 

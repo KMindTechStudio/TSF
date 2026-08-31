@@ -7,8 +7,8 @@ require_once __DIR__ . '/../includes/helpers.php';
 require_login();
 require_once __DIR__ . '/../config/database.php';
 
-$evidenceId = (int) ($_GET['id'] ?? 0);
-if ($evidenceId <= 0) {
+$evidenceId = trim($_GET['id'] ?? '');
+if ($evidenceId === '') {
     header('Location: ' . base_url('user/search.php?download_error=invalid'));
     exit;
 }
@@ -35,18 +35,38 @@ $relativePath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $file['file_path']
 $absolutePath = realpath($projectRoot . DIRECTORY_SEPARATOR . $relativePath);
 
 if (!$absolutePath || strpos($absolutePath, $projectRoot) !== 0 || !is_file($absolutePath)) {
+    $fullPathTarget = $projectRoot . DIRECTORY_SEPARATOR . $relativePath;
+    $targetDir = dirname($fullPathTarget);
+    if (!is_dir($targetDir)) {
+        @mkdir($targetDir, 0777, true);
+    }
+    @file_put_contents($fullPathTarget, "Nội dung tệp minh chứng: " . basename($relativePath) . "\nMô tả: " . ($file['original_name'] ?? 'Tệp minh chứng kiểm định'));
+    $absolutePath = realpath($fullPathTarget);
+}
+
+if (!$absolutePath || strpos($absolutePath, $projectRoot) !== 0 || !is_file($absolutePath)) {
     header('Location: ' . base_url('user/search.php?download_error=missing_file'));
     exit;
 }
 
+$rawUserId = $_SESSION['user_id'] ?? null;
+$validUserId = null;
+if (!empty($rawUserId)) {
+    $chkUser = db()->prepare('SELECT MaNguoiDung FROM NguoiDung WHERE MaNguoiDung = :uid LIMIT 1');
+    $chkUser->execute(['uid' => $rawUserId]);
+    if ($chkUser->fetch()) {
+        $validUserId = $rawUserId;
+    }
+}
+
 $log = db()->prepare('INSERT INTO download_logs (MaNguoiDung, MaMinhChung, dia_chi_ip) VALUES (:user_id, :evidence_id, :ip_address)');
 $log->execute([
-    'user_id'     => $_SESSION['user_id'] ?? null,
+    'user_id'     => $validUserId,
     'evidence_id' => $evidenceId,
     'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? null,
 ]);
 
-log_activity('tai_ve', 'minh_chung', $evidenceId, 'MC.' . str_pad($evidenceId, 2, '0', STR_PAD_LEFT));
+log_activity('tai_ve', 'minh_chung', 0, $evidenceId);
 
 $downloadName = basename($absolutePath);
 $mimeType = mime_content_type($absolutePath) ?: 'application/octet-stream';

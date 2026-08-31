@@ -12,46 +12,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         if ($action === 'save_standard_set') {
-            $id          = (int) ($_POST['id'] ?? 0);
-            $name        = trim($_POST['ten_bo_tieu_chuan'] ?? '');
-            $issuingBody = trim($_POST['co_quan_ban_hanh'] ?? '');
-            $version     = (int) ($_POST['nam_ban_hanh'] ?? date('Y'));
-            $description = trim($_POST['mo_ta'] ?? '');
-            $status      = (int) ($_POST['trang_thai'] ?? 1);
+            $rawId          = trim($_POST['id'] ?? '');
+            $maBoTieuChuan  = trim($_POST['ma_bo_tieu_chuan'] ?? '');
+            $name           = trim($_POST['ten_bo_tieu_chuan'] ?? '');
+            $thongTu        = trim($_POST['thong_tu'] ?? '');
+            $ngayBanHanh    = trim($_POST['ngay_ban_hanh'] ?? '');
+            $description    = trim($_POST['mo_ta'] ?? '');
+            $status         = (int) ($_POST['trang_thai'] ?? 1);
 
             if ($name === '') {
                 throw new RuntimeException('Vui lòng nhập Tên bộ tiêu chuẩn.');
             }
 
-            if ($id > 0) {
-                $stmt = $pdo->prepare('UPDATE BoTieuChuan SET TenBoTieuChuan = :name, CoQuanBanHanh = :issuing_body, NamBanHanh = :version, MoTa = :description, TrangThai = :status WHERE MaBoTieuChuan = :id');
+            if ($rawId !== '') {
+                if ($maBoTieuChuan === '') {
+                    throw new RuntimeException('Vui lòng nhập Mã bộ tiêu chuẩn.');
+                }
+                if ($maBoTieuChuan !== $rawId) {
+                    $chk = $pdo->prepare('SELECT COUNT(*) FROM BoTieuChuan WHERE MaBoTieuChuan = :code');
+                    $chk->execute(['code' => $maBoTieuChuan]);
+                    if ((int) $chk->fetchColumn() > 0) {
+                        throw new RuntimeException('Mã bộ tiêu chuẩn "' . $maBoTieuChuan . '" đã tồn tại. Vui lòng nhập mã khác.');
+                    }
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+                    $upChild = $pdo->prepare('UPDATE TieuChuan SET MaBoTieuChuan = :new_code WHERE MaBoTieuChuan = :old_code');
+                    $upChild->execute(['new_code' => $maBoTieuChuan, 'old_code' => $rawId]);
+                }
+
+                $stmt = $pdo->prepare('UPDATE BoTieuChuan SET MaBoTieuChuan = :new_code, TenBoTieuChuan = :name, ThongTu = :thong_tu, NgayBanHanh = :ngay_ban_hanh, MoTa = :description, TrangThai = :status WHERE MaBoTieuChuan = :old_code');
                 $stmt->execute([
+                    'new_code'     => $maBoTieuChuan,
                     'name'         => $name,
-                    'issuing_body' => $issuingBody,
-                    'version'      => $version,
+                    'thong_tu'     => $thongTu,
+                    'ngay_ban_hanh'=> $ngayBanHanh ?: null,
                     'description'  => $description,
                     'status'       => $status,
-                    'id'           => $id,
+                    'old_code'     => $rawId,
                 ]);
-                log_activity('cap_nhat', 'bo_tieu_chuan', $id, 'BTC' . str_pad($id, 2, '0', STR_PAD_LEFT) . ' - ' . $name);
+                if ($maBoTieuChuan !== $rawId) {
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+                }
+                log_activity('cap_nhat', 'bo_tieu_chuan', 0, $maBoTieuChuan . ' - ' . $name);
                 $success = 'Cập nhật bộ tiêu chuẩn thành công.';
             } else {
-                $stmt = $pdo->prepare('INSERT INTO BoTieuChuan (TenBoTieuChuan, CoQuanBanHanh, NamBanHanh, MoTa, TrangThai) VALUES (:name, :issuing_body, :version, :description, :status)');
+                if ($maBoTieuChuan === '') {
+                    throw new RuntimeException('Vui lòng nhập Mã bộ tiêu chuẩn.');
+                }
+                $chk = $pdo->prepare('SELECT COUNT(*) FROM BoTieuChuan WHERE MaBoTieuChuan = :code');
+                $chk->execute(['code' => $maBoTieuChuan]);
+                if ((int) $chk->fetchColumn() > 0) {
+                    throw new RuntimeException('Mã bộ tiêu chuẩn "' . $maBoTieuChuan . '" đã tồn tại. Vui lòng nhập mã khác.');
+                }
+
+                $stmt = $pdo->prepare('INSERT INTO BoTieuChuan (MaBoTieuChuan, TenBoTieuChuan, ThongTu, NgayBanHanh, MoTa, TrangThai) VALUES (:code, :name, :thong_tu, :ngay_ban_hanh, :description, :status)');
                 $stmt->execute([
+                    'code'         => $maBoTieuChuan,
                     'name'         => $name,
-                    'issuing_body' => $issuingBody,
-                    'version'      => $version,
+                    'thong_tu'     => $thongTu,
+                    'ngay_ban_hanh'=> $ngayBanHanh ?: null,
                     'description'  => $description,
                     'status'       => $status,
                 ]);
-                $newId = (int) $pdo->lastInsertId();
-                log_activity('them_moi', 'bo_tieu_chuan', $newId, 'BTC' . str_pad($newId, 2, '0', STR_PAD_LEFT) . ' - ' . $name);
+                log_activity('them_moi', 'bo_tieu_chuan', 0, $maBoTieuChuan . ' - ' . $name);
                 $success = 'Thêm bộ tiêu chuẩn thành công.';
             }
         }
 
         if ($action === 'delete_standard_set') {
-            $id = (int) ($_POST['id'] ?? 0);
+            $id = trim($_POST['id'] ?? '');
 
             $checkChild = $pdo->prepare('SELECT COUNT(*) FROM TieuChuan WHERE MaBoTieuChuan = :id');
             $checkChild->execute(['id' => $id]);
@@ -59,11 +87,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Không thể xóa bộ tiêu chuẩn này vì đang có các tiêu chuẩn thuộc bộ tiêu chuẩn.');
             }
 
-            $setCode = 'BTC' . str_pad($id, 2, '0', STR_PAD_LEFT);
-
             $stmt = $pdo->prepare('DELETE FROM BoTieuChuan WHERE MaBoTieuChuan = :id');
             $stmt->execute(['id' => $id]);
-            log_activity('xoa', 'bo_tieu_chuan', $id, $setCode);
+            log_activity('xoa', 'bo_tieu_chuan', 0, $id);
             $success = 'Xóa bộ tiêu chuẩn thành công.';
         }
     } catch (Throwable $exception) {
@@ -79,14 +105,14 @@ if ($searchKeyword !== '') {
     $standardSets = array_filter($standardSets, function ($set) use ($searchKeyword) {
         return search_contains($set['code'] ?? '', $searchKeyword) || 
                search_contains($set['name'] ?? '', $searchKeyword) ||
-               search_contains($set['version'] ?? '', $searchKeyword);
+               search_contains($set['thong_tu'] ?? '', $searchKeyword);
     });
 }
 
 $isCreatingSet = isset($_GET['create']);
-$editId        = $isCreatingSet ? 0 : (int) ($_GET['edit'] ?? 0);
+$editId        = $isCreatingSet ? '' : trim($_GET['edit'] ?? '');
 $editingSet    = null;
-if ($editId > 0) {
+if ($editId !== '') {
     $stmt = $pdo->prepare('SELECT * FROM BoTieuChuan WHERE MaBoTieuChuan = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
     $editingSet = $stmt->fetch();
@@ -102,18 +128,17 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="row g-4 standards-layout">
     <div class="col-12">
-        <div class="panel standards-list-panel">
+        <div class="panel standard-sets-list-panel">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
                 <h2 class="h5 mb-0">Danh sách bộ tiêu chuẩn</h2>
                 <div class="d-flex gap-2">
                     <a class="btn btn-primary" href="<?= base_url('admin/standard_sets.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm mới</a>
-                    <button class="btn btn-outline-secondary" type="button"><i class="bi bi-file-earmark-spreadsheet me-1"></i> Xuất Excel</button>
                 </div>
             </div>
             <form method="get" action="" class="mb-3" id="standardSetSearchForm">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" id="standardSetSearchInput" class="form-control" placeholder="Nhập mã, tên bộ tiêu chuẩn hoặc năm phát hành để tìm kiếm..." value="<?= htmlspecialchars($searchKeyword) ?>">
+                    <input type="text" name="search" id="standardSetSearchInput" class="form-control" placeholder="Nhập mã, tên bộ tiêu chuẩn hoặc thông tư để tìm kiếm..." value="<?= htmlspecialchars($searchKeyword) ?>">
                     <?php if ($searchKeyword !== ''): ?>
                         <a href="<?= base_url('admin/standard_sets.php') ?>" class="btn btn-outline-secondary" title="Xóa tìm kiếm"><i class="bi bi-x-lg"></i></a>
                     <?php endif; ?>
@@ -124,48 +149,40 @@ include __DIR__ . '/../includes/header.php';
                 <table class="table" data-page-size="10">
                     <thead>
                         <tr>
-                            <th>Mã bộ</th>
-                            <th>Tên bộ tiêu chuẩn</th>
-                            <th>Cơ quan ban hành</th>
-                            <th>Năm ban hành</th>
-                            <th>Mô tả</th>
-                            <th>Trạng thái</th>
-                            <th class="text-end">Thao tác</th>
+                            <th class="text-nowrap" style="width: 130px;">Mã bộ tiêu chuẩn</th>
+                            <th style="min-width: 200px;">Tên bộ tiêu chuẩn</th>
+                            <th class="text-nowrap" style="min-width: 180px;">Thông tư</th>
+                            <th class="text-nowrap" style="width: 130px;">Ngày ban hành</th>
+                            <th style="min-width: 200px;">Mô tả</th>
+                            <th class="text-end text-nowrap action-cell" style="width: 90px;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="standardSetsTableBody">
                     <?php foreach ($standardSets as $set): ?>
                         <tr>
-                            <td class="fw-bold"><?= htmlspecialchars($set['code']) ?></td>
+                            <td class="fw-bold text-nowrap"><?= htmlspecialchars($set['code']) ?></td>
                             <td class="fw-semibold"><?= htmlspecialchars($set['name']) ?></td>
-                            <td><?= htmlspecialchars($set['issuing_body'] ?: 'Chưa cập nhật') ?></td>
-                            <td><?= htmlspecialchars($set['year']) ?></td>
-                            <td style="max-width: 250px;">
-                                <div class="text-truncate" title="<?= htmlspecialchars($set['description']) ?>">
+                            <td class="text-nowrap"><span class="badge bg-secondary"><?= htmlspecialchars($set['thong_tu']) ?></span></td>
+                            <td class="text-nowrap"><?= htmlspecialchars($set['ngay_ban_hanh']) ?></td>
+                            <td>
+                                <div class="line-clamp-2 text-secondary" title="<?= htmlspecialchars($set['description']) ?>">
                                     <?= htmlspecialchars($set['description'] ?: '-') ?>
                                 </div>
                             </td>
-                            <td>
-                                <?php if (($set['status_raw'] ?? '') === 'active' || $set['status'] === 'Đang hoạt động'): ?>
-                                    <span class="badge bg-success">Đang hoạt động</span>
-                                <?php else: ?>
-                                    <span class="badge bg-warning text-dark">Ngưng áp dụng</span>
-                                <?php endif; ?>
-                            </td>
                             <td class="text-end action-cell">
                                 <div class="action-buttons">
-                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $set['id'] ?>"><i class="bi bi-pencil"></i></a>
+                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $set['id'] ?>" title="Sửa"><i class="bi bi-pencil"></i></a>
                                     <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa bộ tiêu chuẩn này?">
                                         <input type="hidden" name="action" value="delete_standard_set">
                                         <input type="hidden" name="id" value="<?= $set['id'] ?>">
-                                        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa"><i class="bi bi-trash"></i></button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                     <tr id="noDataRow" class="<?= !empty($standardSets) ? 'd-none' : '' ?>">
-                        <td colspan="7" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
+                        <td colspan="6" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
                     </tr>
                     </tbody>
                 </table>
@@ -200,10 +217,10 @@ document.addEventListener('DOMContentLoaded', function () {
         rows.forEach(row => {
             const codeCell = row.cells[0]?.textContent || '';
             const nameCell = row.cells[1]?.textContent || '';
-            const issuingCell = row.cells[2]?.textContent || '';
-            const yearCell = row.cells[3]?.textContent || '';
+            const ttCell   = row.cells[2]?.textContent || '';
+            const dateCell = row.cells[3]?.textContent || '';
             const descCell = row.cells[4]?.textContent || '';
-            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + issuingCell + ' ' + yearCell + ' ' + descCell);
+            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + ttCell + ' ' + dateCell + ' ' + descCell);
 
             if (query === '' || textToMatch.includes(query)) {
                 row.dataset.filteredOut = 'false';
@@ -240,21 +257,27 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="modal-body">
                 <form method="post">
                     <input type="hidden" name="action" value="save_standard_set">
-                    <input type="hidden" name="id" value="<?= (int) ($editingSet['MaBoTieuChuan'] ?? 0) ?>">
+                    <input type="hidden" name="id" value="<?= htmlspecialchars($editingSet['MaBoTieuChuan'] ?? '') ?>">
                     
-                    <div class="mb-3">
-                        <label class="form-label">Tên bộ tiêu chuẩn <span class="text-danger">*</span></label>
-                        <input class="form-control" name="ten_bo_tieu_chuan" value="<?= htmlspecialchars($editingSet['TenBoTieuChuan'] ?? '') ?>" placeholder="Nhập tên bộ tiêu chuẩn" required>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Mã bộ tiêu chuẩn <span class="text-danger">*</span></label>
+                            <input class="form-control" name="ma_bo_tieu_chuan" value="<?= htmlspecialchars($editingSet['MaBoTieuChuan'] ?? '') ?>" placeholder="VD: BTC01 hoặc BTC-2025" required>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Tên bộ tiêu chuẩn <span class="text-danger">*</span></label>
+                            <input class="form-control" name="ten_bo_tieu_chuan" value="<?= htmlspecialchars($editingSet['TenBoTieuChuan'] ?? '') ?>" placeholder="Nhập tên bộ tiêu chuẩn" required>
+                        </div>
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Cơ quan ban hành</label>
-                            <input class="form-control" name="co_quan_ban_hanh" value="<?= htmlspecialchars($editingSet['CoQuanBanHanh'] ?? 'Bộ Giáo dục và Đào tạo') ?>" placeholder="VD: Bộ Giáo dục và Đào tạo">
+                            <label class="form-label">Thông tư</label>
+                            <input class="form-control" name="thong_tu" value="<?= htmlspecialchars($editingSet['ThongTu'] ?? ($editingSet['CoQuanBanHanh'] ?? 'Thông tư 04/2016/TT-BGDĐT')) ?>" placeholder="VD: Thông tư 04/2016/TT-BGDĐT">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Năm ban hành</label>
-                            <input class="form-control" type="number" name="nam_ban_hanh" value="<?= htmlspecialchars($editingSet['NamBanHanh'] ?? date('Y')) ?>" placeholder="VD: 2025" required>
+                            <label class="form-label">Ngày ban hành</label>
+                            <input class="form-control" type="date" name="ngay_ban_hanh" value="<?= htmlspecialchars($editingSet['NgayBanHanh'] ?? '2025-01-15') ?>">
                         </div>
                     </div>
 

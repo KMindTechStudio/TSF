@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (current_role() !== 'admin') {
         $error = 'Tài khoản người dùng chỉ có quyền Xem và Tải minh chứng xuống.';
     } elseif (($_POST['action'] ?? '') === 'delete_evidence') {
-    $evidenceId = (int) ($_POST['id'] ?? 0);
+    $evidenceId = trim($_POST['id'] ?? '');
 
     try {
         $pdo->beginTransaction();
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('DELETE FROM download_logs WHERE MaMinhChung = :id')->execute(['id' => $evidenceId]);
         $pdo->prepare('DELETE FROM MinhChung WHERE MaMinhChung = :id')->execute(['id' => $evidenceId]);
 
-        log_activity('xoa', 'minh_chung', $evidenceId, 'MC' . str_pad($evidenceId, 2, '0', STR_PAD_LEFT));
+        log_activity('xoa', 'minh_chung', 0, $evidenceId);
 
         $pdo->commit();
 
@@ -48,18 +48,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Không thể xóa minh chứng: ' . $exception->getMessage();
     }
     } elseif (($_POST['action'] ?? '') === 'save_evidence') {
-    $evidenceId   = (int) ($_POST['id'] ?? 0);
+    $rawId        = trim($_POST['id'] ?? '');
+    $maMinhChung  = trim($_POST['ma_minh_chung'] ?? '');
     $title        = trim($_POST['ten_minh_chung'] ?? '');
     $description  = trim($_POST['mo_ta'] ?? '');
     $academicYear = trim($_POST['nam_hoc'] ?? '');
     $typeId       = (int) ($_POST['ma_loai'] ?? 0) ?: null;
-    $criteriaId   = (int) ($_POST['ma_tieu_chi'] ?? 0);
-    $userId       = (int) ($_POST['ma_nguoi_dung'] ?? 0) ?: ($_SESSION['user_id'] ?? 1);
+    $criteriaId   = trim($_POST['ma_tieu_chi'] ?? '');
+    $userId       = trim($_POST['ma_nguoi_dung'] ?? '') ?: ($_SESSION['user_id'] ?? 'ND001');
     $status       = (int) ($_POST['trang_thai'] ?? 1);
 
     $file = $_FILES['evidence_file'] ?? null;
 
-    if ($title === '' || $criteriaId <= 0) {
+    if ($title === '' || $criteriaId === '') {
         $error = 'Vui lòng nhập tên minh chứng và chọn mã tiêu chí.';
     } elseif ($file && $file['error'] === UPLOAD_ERR_OK && (int) $file['size'] > $maxUploadBytes) {
         $error = 'Dung lượng tệp tin tải lên vượt quá giới hạn tối đa cho phép (' . $maxUploadMb . 'MB).';
@@ -81,10 +82,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            if ($evidenceId > 0) {
+            if ($rawId !== '') {
+                if ($maMinhChung === '') {
+                    throw new RuntimeException('Vui lòng nhập Mã minh chứng.');
+                }
+                if ($maMinhChung !== $rawId) {
+                    $chk = $pdo->prepare('SELECT COUNT(*) FROM MinhChung WHERE MaMinhChung = :code');
+                    $chk->execute(['code' => $maMinhChung]);
+                    if ((int) $chk->fetchColumn() > 0) {
+                        throw new RuntimeException('Mã minh chứng "' . $maMinhChung . '" đã tồn tại. Vui lòng nhập mã khác.');
+                    }
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+                    $upLogs = $pdo->prepare('UPDATE download_logs SET MaMinhChung = :new_code WHERE MaMinhChung = :old_code');
+                    $upLogs->execute(['new_code' => $maMinhChung, 'old_code' => $rawId]);
+                }
+
                 if ($relativePath) {
-                    $stmt = $pdo->prepare('UPDATE MinhChung SET TenMinhChung = :title, MoTa = :desc, TepTin = :file, NamHoc = :year, TrangThai = :status, MaLoai = :type_id, MaTieuChi = :criteria_id, MaNguoiDung = :user_id WHERE MaMinhChung = :id');
+                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, MoTa = :desc, TepTin = :file, NamHoc = :year, TrangThai = :status, MaLoai = :type_id, MaTieuChi = :criteria_id, MaNguoiDung = :user_id WHERE MaMinhChung = :old_code');
                     $stmt->execute([
+                        'new_code'    => $maMinhChung,
                         'title'       => $title,
                         'desc'        => $description,
                         'file'        => $relativePath,
@@ -93,11 +109,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'type_id'     => $typeId,
                         'criteria_id' => $criteriaId,
                         'user_id'     => $userId,
-                        'id'          => $evidenceId,
+                        'old_code'    => $rawId,
                     ]);
                 } else {
-                    $stmt = $pdo->prepare('UPDATE MinhChung SET TenMinhChung = :title, MoTa = :desc, NamHoc = :year, TrangThai = :status, MaLoai = :type_id, MaTieuChi = :criteria_id, MaNguoiDung = :user_id WHERE MaMinhChung = :id');
+                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, MoTa = :desc, NamHoc = :year, TrangThai = :status, MaLoai = :type_id, MaTieuChi = :criteria_id, MaNguoiDung = :user_id WHERE MaMinhChung = :old_code');
                     $stmt->execute([
+                        'new_code'    => $maMinhChung,
                         'title'       => $title,
                         'desc'        => $description,
                         'year'        => $academicYear,
@@ -105,14 +122,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'type_id'     => $typeId,
                         'criteria_id' => $criteriaId,
                         'user_id'     => $userId,
-                        'id'          => $evidenceId,
+                        'old_code'    => $rawId,
                     ]);
                 }
-                log_activity('cap_nhat', 'minh_chung', $evidenceId, $title);
+                if ($maMinhChung !== $rawId) {
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+                }
+                log_activity('cap_nhat', 'minh_chung', 0, $maMinhChung . ' - ' . $title);
                 $success = 'Cập nhật minh chứng thành công.';
             } else {
-                $stmt = $pdo->prepare('INSERT INTO MinhChung (TenMinhChung, MoTa, TepTin, NamHoc, TrangThai, MaLoai, MaTieuChi, MaNguoiDung) VALUES (:title, :desc, :file, :year, :status, :type_id, :criteria_id, :user_id)');
+                if ($maMinhChung === '') {
+                    throw new RuntimeException('Vui lòng nhập Mã minh chứng.');
+                }
+                $chk = $pdo->prepare('SELECT COUNT(*) FROM MinhChung WHERE MaMinhChung = :code');
+                $chk->execute(['code' => $maMinhChung]);
+                if ((int) $chk->fetchColumn() > 0) {
+                    throw new RuntimeException('Mã minh chứng "' . $maMinhChung . '" đã tồn tại. Vui lòng nhập mã khác.');
+                }
+
+                $stmt = $pdo->prepare('INSERT INTO MinhChung (MaMinhChung, TenMinhChung, MoTa, TepTin, NamHoc, TrangThai, MaLoai, MaTieuChi, MaNguoiDung) VALUES (:code, :title, :desc, :file, :year, :status, :type_id, :criteria_id, :user_id)');
                 $stmt->execute([
+                    'code'        => $maMinhChung,
                     'title'       => $title,
                     'desc'        => $description,
                     'file'        => $relativePath,
@@ -122,8 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'criteria_id' => $criteriaId,
                     'user_id'     => $userId,
                 ]);
-                $newId = (int) $pdo->lastInsertId();
-                log_activity('them_moi', 'minh_chung', $newId, $title);
+                log_activity('them_moi', 'minh_chung', 0, $maMinhChung . ' - ' . $title);
                 $success = 'Thêm mới minh chứng thành công.';
             }
 
@@ -145,18 +174,18 @@ if ($success) {
 require_once __DIR__ . '/../includes/data.php';
 
 $isCreatingEvidence = isset($_GET['create']);
-$editId = $isCreatingEvidence ? 0 : (int) ($_GET['edit'] ?? 0);
-$viewId = (int) ($_GET['view'] ?? 0);
+$editId = $isCreatingEvidence ? '' : trim($_GET['edit'] ?? '');
+$viewId = trim($_GET['view'] ?? '');
 
 $editingEvidence = null;
-if ($editId > 0) {
+if ($editId !== '') {
     $stmt = $pdo->prepare('SELECT * FROM MinhChung WHERE MaMinhChung = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
     $editingEvidence = $stmt->fetch();
 }
 
 $viewingEvidence = null;
-if ($viewId > 0) {
+if ($viewId !== '') {
     $stmt = $pdo->prepare('SELECT * FROM MinhChung WHERE MaMinhChung = :id LIMIT 1');
     $stmt->execute(['id' => $viewId]);
     $viewingEvidence = $stmt->fetch();
@@ -215,59 +244,63 @@ include __DIR__ . '/../includes/header.php';
                 <table class="table" data-page-size="10">
                     <thead>
                     <tr>
-                        <th>Mã minh chứng</th>
-                        <th>Tên minh chứng</th>
-                        <th>Mô tả</th>
-                        <th>Tệp tin</th>
-                        <th>Năm học</th>
-                        <th>Ngày cập nhật</th>
-                        <th>Trạng thái</th>
-                        <th>Mã loại</th>
-                        <th>Mã tiêu chí</th>
-                        <th>Mã người dùng</th>
-                        <th class="text-end">Thao tác</th>
+                        <th class="text-nowrap" style="width: 110px;">Mã minh chứng</th>
+                        <th style="min-width: 180px; max-width: 240px;">Tên minh chứng</th>
+                        <th style="min-width: 180px; max-width: 240px;">Mô tả</th>
+                        <th class="text-nowrap" style="min-width: 110px; max-width: 130px;">Tệp tin</th>
+                        <th class="text-nowrap" style="width: 80px;">Năm học</th>
+                        <th class="text-nowrap" style="width: 120px;">Ngày cập nhật</th>
+                        <th class="text-nowrap" style="width: 110px;">Trạng thái</th>
+                        <th class="text-nowrap" style="width: 85px;">Mã tiêu chí</th>
+                        <th class="text-nowrap" style="width: 85px;">Mã người dùng</th>
+                        <th class="text-end text-nowrap action-cell" style="width: 100px;">Thao tác</th>
                     </tr>
                     </thead>
                     <tbody id="evidencesTableBody">
                     <?php foreach ($evidences as $item): ?>
                         <tr>
                             <td class="fw-bold text-nowrap"><?= htmlspecialchars($item['code']) ?></td>
-                            <td class="fw-semibold"><?= htmlspecialchars($item['name']) ?></td>
-                            <td style="max-width: 200px;">
-                                <div class="text-truncate" title="<?= htmlspecialchars($item['description']) ?>">
+                            <td class="fw-semibold" style="min-width: 180px; max-width: 240px;">
+                                <div class="line-clamp-2" title="<?= htmlspecialchars($item['name']) ?>">
+                                    <?= htmlspecialchars($item['name']) ?>
+                                </div>
+                            </td>
+                            <td style="min-width: 180px; max-width: 240px;">
+                                <div class="line-clamp-2 text-secondary" title="<?= htmlspecialchars($item['description']) ?>">
                                     <?= htmlspecialchars($item['description'] ?: '-') ?>
                                 </div>
                             </td>
-                            <td>
+                            <td class="text-nowrap">
                                 <?php if (!empty($item['file_path'])): ?>
-                                    <code><?= htmlspecialchars(basename($item['file_path'])) ?></code>
+                                    <code class="d-inline-block text-truncate align-middle" style="max-width: 130px;" title="<?= htmlspecialchars(basename($item['file_path'])) ?>">
+                                        <?= htmlspecialchars(basename($item['file_path'])) ?>
+                                    </code>
                                 <?php else: ?>
                                     <span class="text-secondary small">Không có</span>
                                 <?php endif; ?>
                             </td>
-                            <td><?= htmlspecialchars($item['year'] ?: '-') ?></td>
-                            <td class="text-nowrap"><?= htmlspecialchars($item['updated']) ?></td>
-                            <td>
+                            <td class="text-nowrap"><?= htmlspecialchars($item['year'] ?: '-') ?></td>
+                            <td class="text-nowrap small text-secondary"><?= htmlspecialchars($item['updated'] ?: '-') ?></td>
+                            <td class="text-nowrap">
                                 <?php if ((int) $item['status_raw'] === 1): ?>
                                     <span class="badge bg-success">Đang hoạt động</span>
                                 <?php else: ?>
                                     <span class="badge bg-warning text-dark">Ngưng áp dụng</span>
                                 <?php endif; ?>
                             </td>
-                            <td><span class="badge bg-secondary"><?= htmlspecialchars($item['type_code']) ?></span></td>
-                            <td><span class="badge bg-info text-dark"><?= htmlspecialchars($item['criteria_code']) ?></span></td>
-                            <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($item['user_code']) ?></span></td>
+                            <td class="text-nowrap"><span class="badge bg-info text-dark"><?= htmlspecialchars($item['criteria_code']) ?></span></td>
+                            <td class="text-nowrap"><span class="badge bg-light text-dark border"><?= htmlspecialchars($item['user_code']) ?></span></td>
                             <td class="text-end action-cell">
                                 <div class="action-buttons">
-                                    <a class="btn btn-sm btn-outline-secondary" href="?view=<?= $item['id'] ?>" title="Xem thông tin minh chứng"><i class="bi bi-eye"></i></a>
+                                    <a class="btn btn-sm btn-outline-secondary" href="?view=<?= urlencode($item['id']) ?>" title="Xem thông tin minh chứng"><i class="bi bi-eye"></i></a>
                                     <?php if (!empty($item['file_path'])): ?>
-                                        <a class="btn btn-sm btn-outline-success" href="<?= base_url('user/download.php?id=' . $item['id']) ?>" title="Tải tài liệu về"><i class="bi bi-download"></i></a>
+                                        <a class="btn btn-sm btn-outline-success" href="<?= base_url('user/download.php?id=' . urlencode($item['id'])) ?>" title="Tải tài liệu về"><i class="bi bi-download"></i></a>
                                     <?php endif; ?>
                                     <?php if (current_role() === 'admin'): ?>
-                                        <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $item['id'] ?>" title="Sửa"><i class="bi bi-pencil"></i></a>
+                                        <a class="btn btn-sm btn-outline-primary" href="?edit=<?= urlencode($item['id']) ?>" title="Sửa"><i class="bi bi-pencil"></i></a>
                                         <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa minh chứng này?">
                                             <input type="hidden" name="action" value="delete_evidence">
-                                            <input type="hidden" name="id" value="<?= $item['id'] ?>">
+                                            <input type="hidden" name="id" value="<?= htmlspecialchars($item['id']) ?>">
                                             <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa"><i class="bi bi-trash"></i></button>
                                         </form>
                                     <?php endif; ?>
@@ -276,7 +309,7 @@ include __DIR__ . '/../includes/header.php';
                         </tr>
                     <?php endforeach; ?>
                     <?php if (!$evidences): ?>
-                        <tr><td colspan="11" class="text-center text-secondary py-4">Không tìm thấy minh chứng phù hợp.</td></tr>
+                        <tr><td colspan="10" class="text-center text-secondary py-4">Không tìm thấy minh chứng phù hợp.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
@@ -295,11 +328,17 @@ include __DIR__ . '/../includes/header.php';
             <div class="modal-body">
             <form method="post" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="save_evidence">
-                <input type="hidden" name="id" value="<?= (int) ($editingEvidence['MaMinhChung'] ?? 0) ?>">
+                <input type="hidden" name="id" value="<?= htmlspecialchars($editingEvidence['MaMinhChung'] ?? '') ?>">
 
-                <div class="mb-3">
-                    <label class="form-label">Tên minh chứng <span class="text-danger">*</span></label>
-                    <textarea class="form-control" name="ten_minh_chung" rows="2" placeholder="Nhập tên minh chứng" required><?= htmlspecialchars($editingEvidence['TenMinhChung'] ?? '') ?></textarea>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Mã minh chứng <span class="text-danger">*</span></label>
+                        <input class="form-control" name="ma_minh_chung" value="<?= htmlspecialchars($editingEvidence['MaMinhChung'] ?? '') ?>" placeholder="VD: MC01 hoặc MC-01" required>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Tên minh chứng <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="ten_minh_chung" rows="2" placeholder="Nhập tên minh chứng" required><?= htmlspecialchars($editingEvidence['TenMinhChung'] ?? '') ?></textarea>
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -332,32 +371,21 @@ include __DIR__ . '/../includes/header.php';
                 </div>
 
                 <div class="row g-3 mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Mã loại minh chứng</label>
-                        <select class="form-select" name="ma_loai">
-                            <option value="">-- Chọn mã loại --</option>
-                            <?php foreach ($evidenceTypes as $type): ?>
-                                <option value="<?= $type['id'] ?>" <?= (int) ($editingEvidence['MaLoai'] ?? 0) === (int) $type['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars('LMC' . str_pad($type['id'], 2, '0', STR_PAD_LEFT) . ' - ' . $type['name']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="form-label">Mã tiêu chí <span class="text-danger">*</span></label>
                         <select class="form-select" name="ma_tieu_chi" required>
                             <?php foreach ($criteria as $item): ?>
-                                <option value="<?= $item['id'] ?>" <?= (int) ($editingEvidence['MaTieuChi'] ?? 0) === (int) $item['id'] ? 'selected' : '' ?>>
+                                <option value="<?= htmlspecialchars($item['id']) ?>" <?= (string) ($editingEvidence['MaTieuChi'] ?? '') === (string) $item['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($item['code'] . ' - ' . $item['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Mã người dùng</label>
-                        <select class="form-select" name="ma_nguoi_dung">
+                    <div class="col-md-6">
+                        <label class="form-label">Mã người dùng <span class="text-danger">*</span></label>
+                        <select class="form-select" name="ma_nguoi_dung" required>
                             <?php foreach ($users as $u): ?>
-                                <option value="<?= $u['id'] ?>" <?= (int) ($editingEvidence['MaNguoiDung'] ?? $_SESSION['user_id'] ?? 1) === (int) $u['id'] ? 'selected' : '' ?>>
+                                <option value="<?= htmlspecialchars($u['id']) ?>" <?= (string) ($editingEvidence['MaNguoiDung'] ?? $_SESSION['user_id'] ?? 'ND001') === (string) $u['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($u['code'] . ' - ' . $u['name']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -381,14 +409,14 @@ include __DIR__ . '/../includes/header.php';
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title h5" id="evidenceViewModalLabel">
-                    <i class="bi bi-file-earmark-text text-primary me-1"></i> Thông tin minh chứng: <code>MC<?= str_pad((int)($viewingEvidence['MaMinhChung'] ?? 0), 2, '0', STR_PAD_LEFT) ?></code>
+                    <i class="bi bi-file-earmark-text text-primary me-1"></i> Thông tin minh chứng: <code><?= htmlspecialchars($viewingEvidence['MaMinhChung'] ?? '') ?></code>
                 </h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label fw-bold">Mã minh chứng</label>
-                    <input class="form-control bg-light" value="<?= htmlspecialchars('MC' . str_pad((int)($viewingEvidence['MaMinhChung'] ?? 0), 2, '0', STR_PAD_LEFT)) ?>" readonly>
+                    <input class="form-control bg-light" value="<?= htmlspecialchars($viewingEvidence['MaMinhChung'] ?? '') ?>" readonly>
                 </div>
 
                 <div class="mb-3">
@@ -406,7 +434,7 @@ include __DIR__ . '/../includes/header.php';
                     <div class="d-flex align-items-center gap-2">
                         <input class="form-control bg-light" value="<?= htmlspecialchars(basename($viewingEvidence['TepTin'] ?? 'Không có tệp')) ?>" readonly>
                         <?php if (!empty($viewingEvidence['TepTin'])): ?>
-                            <a class="btn btn-outline-success text-nowrap" href="<?= base_url('user/download.php?id=' . (int) $viewingEvidence['MaMinhChung']) ?>" title="Tải tệp tin về">
+                            <a class="btn btn-outline-success text-nowrap" href="<?= base_url('user/download.php?id=' . urlencode($viewingEvidence['MaMinhChung'] ?? '')) ?>" title="Tải tệp tin về">
                                 <i class="bi bi-download me-1"></i> Tải về
                             </a>
                         <?php endif; ?>

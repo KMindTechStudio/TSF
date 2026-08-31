@@ -12,53 +12,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         if ($action === 'save_criterion') {
-            $id          = (int) ($_POST['id'] ?? 0);
-            $standardId  = (int) ($_POST['ma_tieu_chuan'] ?? 0);
+            $rawId       = trim($_POST['id'] ?? '');
+            $maTieuChi   = trim($_POST['ma_tieu_chi'] ?? '');
+            $standardId  = trim($_POST['ma_tieu_chuan'] ?? '');
             $name        = trim($_POST['ten_tieu_chi'] ?? '');
             $content     = trim($_POST['noi_dung'] ?? '');
-            $order       = (int) ($_POST['thu_tu'] ?? 0);
             $status      = (int) ($_POST['trang_thai'] ?? 1);
 
-            if ($standardId <= 0 || $name === '') {
+            if ($standardId === '' || $name === '') {
                 throw new RuntimeException('Vui lòng chọn tiêu chuẩn và nhập tên tiêu chí.');
             }
 
-            if ($id > 0) {
-                $stmt = $pdo->prepare('UPDATE TieuChi SET MaTieuChuan = :standard_id, TenTieuChi = :name, NoiDung = :content, ThuTu = :thu_tu, TrangThai = :status WHERE MaTieuChi = :id');
+            if ($rawId !== '') {
+                if ($maTieuChi === '') {
+                    throw new RuntimeException('Vui lòng nhập Mã tiêu chí.');
+                }
+                if ($maTieuChi !== $rawId) {
+                    $chk = $pdo->prepare('SELECT COUNT(*) FROM TieuChi WHERE MaTieuChi = :code');
+                    $chk->execute(['code' => $maTieuChi]);
+                    if ((int) $chk->fetchColumn() > 0) {
+                        throw new RuntimeException('Mã tiêu chí "' . $maTieuChi . '" đã tồn tại. Vui lòng nhập mã khác.');
+                    }
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+                    $upChild = $pdo->prepare('UPDATE MinhChung SET MaTieuChi = :new_code WHERE MaTieuChi = :old_code');
+                    $upChild->execute(['new_code' => $maTieuChi, 'old_code' => $rawId]);
+                }
+
+                $stmt = $pdo->prepare('UPDATE TieuChi SET MaTieuChi = :new_code, MaTieuChuan = :standard_id, TenTieuChi = :name, NoiDung = :content, TrangThai = :status WHERE MaTieuChi = :old_code');
                 $stmt->execute([
+                    'new_code'    => $maTieuChi,
                     'standard_id' => $standardId,
                     'name'        => $name,
                     'content'     => $content,
-                    'thu_tu'      => $order,
                     'status'      => $status,
-                    'id'          => $id,
+                    'old_code'    => $rawId,
                 ]);
-                log_activity('cap_nhat', 'tieu_chi', $id, 'TC' . str_pad($standardId, 2, '0', STR_PAD_LEFT) . '.' . $order . ' - ' . $name);
+                if ($maTieuChi !== $rawId) {
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+                }
+                log_activity('cap_nhat', 'tieu_chi', 0, $maTieuChi . ' - ' . $name);
                 $success = 'Cập nhật tiêu chí thành công.';
             } else {
-                if ($order <= 0) {
-                    $order = (int) $pdo->query('SELECT COALESCE(MAX(ThuTu), 0) + 1 FROM TieuChi WHERE MaTieuChuan = ' . $standardId)->fetchColumn();
+                if ($maTieuChi === '') {
+                    throw new RuntimeException('Vui lòng nhập Mã tiêu chí.');
                 }
-                $stmt = $pdo->prepare('INSERT INTO TieuChi (MaTieuChuan, TenTieuChi, NoiDung, ThuTu, TrangThai) VALUES (:standard_id, :name, :content, :thu_tu, :status)');
+                $chk = $pdo->prepare('SELECT COUNT(*) FROM TieuChi WHERE MaTieuChi = :code');
+                $chk->execute(['code' => $maTieuChi]);
+                if ((int) $chk->fetchColumn() > 0) {
+                    throw new RuntimeException('Mã tiêu chí "' . $maTieuChi . '" đã tồn tại. Vui lòng nhập mã khác.');
+                }
+
+                $stmt = $pdo->prepare('INSERT INTO TieuChi (MaTieuChi, MaTieuChuan, TenTieuChi, NoiDung, TrangThai) VALUES (:code, :standard_id, :name, :content, :status)');
                 $stmt->execute([
+                    'code'        => $maTieuChi,
                     'standard_id' => $standardId,
                     'name'        => $name,
                     'content'     => $content,
-                    'thu_tu'      => $order,
                     'status'      => $status,
                 ]);
-                $newId = (int) $pdo->lastInsertId();
-                log_activity('them_moi', 'tieu_chi', $newId, 'TC' . str_pad($standardId, 2, '0', STR_PAD_LEFT) . '.' . $order . ' - ' . $name);
+                log_activity('them_moi', 'tieu_chi', 0, $maTieuChi . ' - ' . $name);
                 $success = 'Thêm tiêu chí thành công.';
             }
         }
 
         if ($action === 'delete_criterion') {
-            $id = (int) ($_POST['id'] ?? 0);
+            $id = trim($_POST['id'] ?? '');
 
             $stmt = $pdo->prepare('DELETE FROM TieuChi WHERE MaTieuChi = :id');
             $stmt->execute(['id' => $id]);
-            log_activity('xoa', 'tieu_chi', $id, '#' . $id);
+            log_activity('xoa', 'tieu_chi', 0, $id);
             $success = 'Xóa tiêu chí thành công.';
         }
     } catch (Throwable $exception) {
@@ -69,39 +91,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 require_once __DIR__ . '/../includes/data.php';
 
-$selectedStandard = trim($_GET['standard'] ?? '');
-$searchKeyword    = trim($_GET['search'] ?? $_GET['q'] ?? $_GET['keyword'] ?? '');
+$searchKeyword = trim($_GET['search'] ?? $_GET['q'] ?? '');
+$filterStd     = trim($_GET['standard_id'] ?? $_GET['standard'] ?? '');
 
-if ($selectedStandard !== '' || $searchKeyword !== '') {
-    $criteria = array_filter($criteria, function ($item) use ($selectedStandard, $searchKeyword) {
-        if ($selectedStandard !== '' && $item['standard'] !== $selectedStandard) {
+$filteredCriteria = array_filter($criteria, function ($item) use ($searchKeyword, $filterStd) {
+    if ($filterStd !== '' && (string) $item['standard_id'] !== (string) $filterStd) {
+        return false;
+    }
+
+    if ($searchKeyword !== '') {
+        $matchCode = search_contains($item['code'], $searchKeyword);
+        $matchName = search_contains($item['name'], $searchKeyword);
+        $matchDesc = search_contains($item['description'], $searchKeyword);
+        $matchStd  = search_contains($item['standard'], $searchKeyword);
+        if (!$matchCode && !$matchName && !$matchDesc && !$matchStd) {
             return false;
         }
+    }
 
-        if ($searchKeyword !== '') {
-            $matchCode = search_contains($item['code'], $searchKeyword);
-            $matchName = search_contains($item['name'], $searchKeyword);
-            $matchDesc = search_contains($item['description'] ?? '', $searchKeyword);
-            $matchStd  = search_contains($item['standard'], $searchKeyword);
-            if (!$matchCode && !$matchName && !$matchDesc && !$matchStd) {
-                return false;
-            }
-        }
-
-        return true;
-    });
-}
+    return true;
+});
 
 try {
-    $standardRows = $pdo->query('SELECT MaTieuChuan AS id, TenTieuChuan AS name FROM TieuChuan ORDER BY ThuTu, MaTieuChuan')->fetchAll();
+    $standardRows = $pdo->query('SELECT MaTieuChuan AS id, TenTieuChuan AS name FROM TieuChuan ORDER BY MaTieuChuan')->fetchAll();
 } catch (Throwable $e) {
     $standardRows = [];
 }
 
 $isCreatingCriterion = isset($_GET['create']);
-$editId              = $isCreatingCriterion ? 0 : (int) ($_GET['edit'] ?? 0);
+$editId              = $isCreatingCriterion ? '' : trim($_GET['edit'] ?? '');
 $editingCriterion    = null;
-if ($editId > 0) {
+if ($editId !== '') {
     $stmt = $pdo->prepare('SELECT * FROM TieuChi WHERE MaTieuChi = :id LIMIT 1');
     $stmt->execute(['id' => $editId]);
     $editingCriterion = $stmt->fetch();
@@ -149,13 +169,11 @@ include __DIR__ . '/../includes/header.php';
                 <table class="table" data-page-size="10">
                     <thead>
                         <tr>
-                            <th>Mã tiêu chí</th>
-                            <th>Tên tiêu chí</th>
-                            <th>Nội dung</th>
-                            <th>Thứ tự</th>
-                            <th>Mã tiêu chuẩn</th>
-                            <th>Trạng thái</th>
-                            <th class="text-end">Thao tác</th>
+                            <th class="text-nowrap" style="width: 120px;">Mã tiêu chí</th>
+                            <th style="min-width: 220px;">Tên tiêu chí</th>
+                            <th style="min-width: 220px;">Nội dung</th>
+                            <th class="text-nowrap" style="width: 140px;">Mã tiêu chuẩn</th>
+                            <th class="text-end text-nowrap action-cell" style="width: 90px;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="criteriaTableBody">
@@ -163,26 +181,18 @@ include __DIR__ . '/../includes/header.php';
                         <tr>
                             <td class="fw-bold text-nowrap"><?= htmlspecialchars($item['code']) ?></td>
                             <td class="fw-semibold"><?= htmlspecialchars($item['name']) ?></td>
-                            <td style="max-width: 280px;">
-                                <div class="text-truncate" title="<?= htmlspecialchars($item['description'] ?? '') ?>">
+                            <td>
+                                <div class="line-clamp-2 text-secondary" title="<?= htmlspecialchars($item['description'] ?? '') ?>">
                                     <?= htmlspecialchars($item['description'] !== '' ? $item['description'] : '-') ?>
                                 </div>
                             </td>
-                            <td><?= $item['order'] ?></td>
-                            <td><span class="badge bg-secondary"><?= htmlspecialchars($item['standard_code']) ?></span></td>
-                            <td>
-                                <?php if (($item['status_raw'] ?? '') === 'active' || $item['status'] === 'Đang hoạt động'): ?>
-                                    <span class="badge bg-success">Đang hoạt động</span>
-                                <?php else: ?>
-                                    <span class="badge bg-warning text-dark">Ngưng áp dụng</span>
-                                <?php endif; ?>
-                            </td>
+                            <td class="text-nowrap"><span class="badge bg-secondary"><?= htmlspecialchars($item['standard_code']) ?></span></td>
                             <td class="text-end action-cell">
                                 <div class="action-buttons">
-                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $item['id'] ?>" title="Sửa"><i class="bi bi-pencil"></i></a>
+                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= urlencode($item['id']) ?>" title="Sửa"><i class="bi bi-pencil"></i></a>
                                     <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa tiêu chí này?">
                                         <input type="hidden" name="action" value="delete_criterion">
-                                        <input type="hidden" name="id" value="<?= $item['id'] ?>">
+                                        <input type="hidden" name="id" value="<?= htmlspecialchars($item['id']) ?>">
                                         <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa"><i class="bi bi-trash"></i></button>
                                     </form>
                                 </div>
@@ -190,7 +200,7 @@ include __DIR__ . '/../includes/header.php';
                         </tr>
                     <?php endforeach; ?>
                     <tr id="noDataRow" class="<?= !empty($criteria) ? 'd-none' : '' ?>">
-                        <td colspan="7" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
+                        <td colspan="5" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
                     </tr>
                     </tbody>
                 </table>
@@ -272,11 +282,17 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="modal-body">
             <form method="post">
                 <input type="hidden" name="action" value="save_criterion">
-                <input type="hidden" name="id" value="<?= (int) ($editingCriterion['MaTieuChi'] ?? 0) ?>">
+                <input type="hidden" name="id" value="<?= htmlspecialchars($editingCriterion['MaTieuChi'] ?? '') ?>">
                 
-                <div class="mb-3">
-                    <label class="form-label">Tên tiêu chí <span class="text-danger">*</span></label>
-                    <textarea class="form-control" name="ten_tieu_chi" rows="2" placeholder="Nhập tên tiêu chí" required><?= htmlspecialchars($editingCriterion['TenTieuChi'] ?? '') ?></textarea>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Mã tiêu chí <span class="text-danger">*</span></label>
+                        <input class="form-control" name="ma_tieu_chi" value="<?= htmlspecialchars($editingCriterion['MaTieuChi'] ?? '') ?>" placeholder="VD: TC01.1 hoặc TCHI01" required>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Tên tiêu chí <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="ten_tieu_chi" rows="2" placeholder="Nhập tên tiêu chí" required><?= htmlspecialchars($editingCriterion['TenTieuChi'] ?? '') ?></textarea>
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -286,28 +302,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
-                        <label class="form-label">Thứ tự</label>
-                        <input class="form-control" type="number" name="thu_tu" value="<?= (int) ($editingCriterion['ThuTu'] ?? 0) ?>" placeholder="VD: 1">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">Thuộc tiêu chuẩn <span class="text-danger">*</span></label>
+                        <label class="form-label">Tiêu chuẩn (Mã tiêu chuẩn) <span class="text-danger">*</span></label>
                         <select class="form-select" name="ma_tieu_chuan" required>
                             <?php foreach ($standardRows as $standard): ?>
-                                <option value="<?= $standard['id'] ?>" <?= (int) ($editingCriterion['MaTieuChuan'] ?? 0) === (int) $standard['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars('TC' . str_pad($standard['id'], 2, '0', STR_PAD_LEFT) . ' - ' . $standard['name']) ?>
+                                <option value="<?= htmlspecialchars($standard['id']) ?>" <?= (string) ($editingCriterion['MaTieuChuan'] ?? '') === (string) $standard['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($standard['id'] . ' - ' . $standard['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Trạng thái</label>
-                    <select class="form-select" name="trang_thai">
-                        <option value="1" <?= (int) ($editingCriterion['TrangThai'] ?? 1) === 1 ? 'selected' : '' ?>>Đang hoạt động</option>
-                        <option value="0" <?= (int) ($editingCriterion['TrangThai'] ?? 1) === 0 ? 'selected' : '' ?>>Ngưng áp dụng</option>
-                    </select>
+                    <div class="col-md-6">
+                        <label class="form-label">Trạng thái</label>
+                        <select class="form-select" name="trang_thai">
+                            <option value="1" <?= (int) ($editingCriterion['TrangThai'] ?? 1) === 1 ? 'selected' : '' ?>>Đang hoạt động</option>
+                            <option value="0" <?= (int) ($editingCriterion['TrangThai'] ?? 1) === 0 ? 'selected' : '' ?>>Ngưng áp dụng</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="d-flex gap-2 justify-content-end">

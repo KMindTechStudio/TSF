@@ -23,7 +23,7 @@ CREATE TABLE NguoiDung (
     HoTen VARCHAR(150) NOT NULL,
     DonViCongTac VARCHAR(255) NULL,
     Email VARCHAR(150) NOT NULL UNIQUE,
-    SDT VARCHAR(30) NULL,
+    SoDienThoai VARCHAR(30) NULL,
     TenDangNhap VARCHAR(80) NOT NULL UNIQUE,
     MatKhau VARCHAR(255) NOT NULL,
     VaiTro ENUM('admin', 'user') NOT NULL DEFAULT 'user',
@@ -45,10 +45,10 @@ CREATE TABLE remember_tokens (
 
 -- 2. Table BoTieuChuan
 CREATE TABLE BoTieuChuan (
-    MaBoTieuChuan INT AUTO_INCREMENT PRIMARY KEY,
+    MaBoTieuChuan VARCHAR(50) NOT NULL PRIMARY KEY,
     TenBoTieuChuan VARCHAR(255) NOT NULL,
-    CoQuanBanHanh VARCHAR(255) NULL,
-    NamBanHanh INT NULL,
+    ThongTu VARCHAR(255) NULL,
+    NgayBanHanh DATE NULL,
     MoTa TEXT NULL,
     TrangThai TINYINT(1) NOT NULL DEFAULT 1,
     NgayTao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -56,11 +56,11 @@ CREATE TABLE BoTieuChuan (
 
 -- 3. Table TieuChuan
 CREATE TABLE TieuChuan (
-    MaTieuChuan INT AUTO_INCREMENT PRIMARY KEY,
+    MaTieuChuan VARCHAR(50) NOT NULL PRIMARY KEY,
     TenTieuChuan VARCHAR(255) NOT NULL,
     MoTa TEXT NULL,
     ThuTu INT NOT NULL DEFAULT 0,
-    MaBoTieuChuan INT NOT NULL,
+    MaBoTieuChuan VARCHAR(50) NOT NULL,
     TrangThai TINYINT(1) NOT NULL DEFAULT 1,
     NgayTao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_tieu_chuan_bo FOREIGN KEY (MaBoTieuChuan) REFERENCES BoTieuChuan(MaBoTieuChuan) ON DELETE CASCADE
@@ -72,7 +72,7 @@ CREATE TABLE TieuChi (
     TenTieuChi VARCHAR(255) NOT NULL,
     NoiDung TEXT NULL,
     ThuTu INT NOT NULL DEFAULT 0,
-    MaTieuChuan INT NOT NULL,
+    MaTieuChuan VARCHAR(50) NOT NULL,
     TrangThai TINYINT(1) NOT NULL DEFAULT 1,
     NgayTao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_tieu_chi_chuan FOREIGN KEY (MaTieuChuan) REFERENCES TieuChuan(MaTieuChuan) ON DELETE CASCADE
@@ -120,21 +120,21 @@ CREATE TABLE audit_logs (
 
 CREATE TABLE download_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    MaNguoiDung INT NULL,
-    MaMinhChung INT NOT NULL,
+    MaNguoiDung VARCHAR(50) NULL,
+    MaMinhChung VARCHAR(50) NOT NULL,
     ngay_tai TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     dia_chi_ip VARCHAR(45) NULL,
     CONSTRAINT fk_download_logs_nguoi_dung FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung) ON DELETE SET NULL,
     CONSTRAINT fk_download_logs_minh_chung FOREIGN KEY (MaMinhChung) REFERENCES MinhChung(MaMinhChung) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- Sample Seed Data
-INSERT INTO NguoiDung (HoTen, DonViCongTac, Email, SDT, TenDangNhap, MatKhau, VaiTro, TrangThai) VALUES
+INSERT INTO NguoiDung (HoTen, DonViCongTac, Email, SoDienThoai, TenDangNhap, MatKhau, VaiTro, TrangThai) VALUES
 ('Quản trị viên', 'Khoa Công nghệ thông tin', 'admin@fbu.edu.vn', '0912345678', 'admin', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'admin', 1),
-('Nguyễn Văn A', 'Phòng Đảm bảo chất lượng', 'user01@fbu.edu.vn', '0987654321', 'user01', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1);
+('Nguyễn Văn A', 'Phòng Đảm bảo chất lượng', 'user01@fbu.edu.vn', '0987654321', 'kiemdinhtt', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1),
+('Trần Thị B', 'Bộ môn Kỹ thuật phần mềm', 'user02@fbu.edu.vn', '0911223344', 'viewer01', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1);
 
-INSERT INTO BoTieuChuan (TenBoTieuChuan, CoQuanBanHanh, NamBanHanh, MoTa, TrangThai) VALUES
-('Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo', 'Bộ Giáo dục và Đào tạo', 2025, 'Bộ tiêu chuẩn dùng cho cơ sở dữ liệu minh chứng phục vụ kiểm định CTĐT', 1);
+INSERT INTO BoTieuChuan (TenBoTieuChuan, ThongTu, NgayBanHanh, MoTa, TrangThai) VALUES
+('Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo', 'Thông tư 04/2016/TT-BGDĐT', '2025-01-15', 'Bộ tiêu chuẩn dùng cho cơ sở dữ liệu minh chứng phục vụ kiểm định CTĐT', 1);
 
 INSERT INTO TieuChuan (TenTieuChuan, MoTa, ThuTu, MaBoTieuChuan, TrangThai) VALUES
 ('Mục tiêu và chuẩn đầu ra của chương trình đào tạo', 'Quản lý minh chứng liên quan mục tiêu và chuẩn đầu ra', 1, 1, 1),

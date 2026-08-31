@@ -19,6 +19,52 @@ include __DIR__ . '/../includes/header.php';
         <?php foreach ($standards as $standard): ?><tr><td class="fw-bold"><?= htmlspecialchars($standard['code']) ?></td><td><?= htmlspecialchars($standard['name']) ?></td><td><?= $standard['criteria'] ?></td><td><?= $standard['evidences'] ?></td><td><?= readonly_status_select($standard['status']) ?></td></tr><?php endforeach; ?>
         </tbody></table></div>
     </div></div>
-    <div class="col-xl-4"><div class="panel h-100"><h2 class="h5 mb-3">Nhật ký gần đây</h2><ul class="timeline"><?php foreach ($activityLogs as $log): ?><li><strong><?= htmlspecialchars($log['action']) ?></strong><div class="small text-secondary"><?= htmlspecialchars($log['actor']) ?> · <?= htmlspecialchars($log['time']) ?></div></li><?php endforeach; ?></ul></div></div>
+    <div class="col-xl-4">
+        <div class="panel h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Nhật ký gần đây</h2>
+                <span class="badge bg-light text-dark border"><?= count($activityLogs) ?> hoạt động</span>
+            </div>
+            
+            <?php if (empty($activityLogs)): ?>
+                <div class="text-center text-secondary py-4">Chưa có nhật ký hoạt động</div>
+            <?php else: ?>
+                <ul class="list-group list-group-flush border-top">
+                    <?php foreach ($activityLogs as $log): ?>
+                        <li class="list-group-item px-0 py-3 border-bottom">
+                            <div class="d-flex align-items-start gap-2">
+                                <span class="badge <?= $log['badge_class'] ?> p-2 rounded-circle fs-6">
+                                    <i class="bi <?= $log['icon'] ?>"></i>
+                                </span>
+                                <div class="flex-grow-1 min-width-0">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <strong class="text-dark small me-2"><?= htmlspecialchars($log['action_name']) ?></strong>
+                                        <span class="badge bg-light text-secondary border fs-7" style="font-size: 0.725rem;">
+                                            <?= htmlspecialchars($log['time']) ?>
+                                        </span>
+                                    </div>
+                                    <?php if (!empty($log['detail'])): ?>
+                                        <div class="text-secondary small mb-1 text-truncate" title="<?= htmlspecialchars($log['detail']) ?>">
+                                            <code><?= htmlspecialchars($log['detail']) ?></code>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div class="d-flex align-items-center gap-1 text-muted" style="font-size: 0.78rem;">
+                                        <i class="bi bi-person-circle"></i>
+                                        <span><?= htmlspecialchars($log['actor']) ?></span>
+                                        <span class="mx-1">•</span>
+                                        <?php if ($log['role_code'] === 'admin'): ?>
+                                            <span class="text-danger fw-semibold">Quản trị viên</span>
+                                        <?php else: ?>
+                                            <span class="text-primary fw-semibold">Người dùng</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+    </div>
 </div>
 <?php include __DIR__ . '/../includes/footer.php'; ?>
