@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/helpers.php';
 require_roles(['admin']);
 require_once __DIR__ . '/../includes/data.php';
 $pageTitle = page_title('Tổng quan');
-$heading = 'Tổng quan cơ sở dữ liệu minh chứng';
+$heading = 'Tổng quan';
 include __DIR__ . '/../includes/header.php';
 ?>
 <div class="row g-3 mb-4">

@@ -119,7 +119,7 @@ if ($editId !== '') {
 }
 
 $pageTitle = page_title('Quản lý bộ tiêu chuẩn');
-$heading   = 'Quản lý bộ tiêu chuẩn kiểm định';
+$heading   = 'Quản lý bộ tiêu chuẩn';
 include __DIR__ . '/../includes/header.php';
 ?>
 <?php if (($editingSet || $isCreatingSet) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'standardSetFormModal';</script><?php endif; ?>

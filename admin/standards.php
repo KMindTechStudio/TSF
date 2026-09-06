@@ -114,7 +114,7 @@ if ($editId !== '') {
 }
 
 $pageTitle = page_title('Quản lý tiêu chuẩn');
-$heading   = 'Quản lý tiêu chuẩn kiểm định';
+$heading   = 'Quản lý tiêu chuẩn';
 include __DIR__ . '/../includes/header.php';
 ?>
 <?php if (($editingStandard || $isCreatingStandard) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'standardFormModal';</script><?php endif; ?>

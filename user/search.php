@@ -60,7 +60,7 @@ $years = array_values(array_unique(array_filter(array_column($evidences, 'year')
 $types = array_values(array_unique(array_filter(array_column($evidences, 'type_name'))));
 
 $pageTitle = page_title('Tìm kiếm minh chứng');
-$heading = 'Tìm kiếm và khai thác minh chứng';
+$heading = 'Tìm kiếm minh chứng';
 include __DIR__ . '/../includes/header.php';
 ?>
 <div class="panel mb-4">

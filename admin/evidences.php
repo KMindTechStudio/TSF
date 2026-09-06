@@ -210,8 +210,8 @@ if ($searchKeyword !== '') {
     });
 }
 
-$pageTitle = page_title('Quản lý minh chứng');
-$heading   = 'Quản lý hồ sơ minh chứng';
+$pageTitle = page_title(current_role() === 'admin' ? 'Quản lý minh chứng' : 'Xem minh chứng');
+$heading   = current_role() === 'admin' ? 'Quản lý minh chứng' : 'Xem minh chứng';
 include __DIR__ . '/../includes/header.php';
 ?>
 <?php if (($editingEvidence || $isCreatingEvidence) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'evidenceFormModal';</script><?php endif; ?>

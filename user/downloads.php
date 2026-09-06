@@ -19,7 +19,7 @@ $stmt = db()->query("
 $downloadRows = $stmt->fetchAll();
 
 $pageTitle = page_title('Lịch sử tải');
-$heading = 'Lịch sử tải minh chứng';
+$heading = 'Lịch sử tải';
 include __DIR__ . '/../includes/header.php';
 ?>
 <div class="panel">

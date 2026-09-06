@@ -72,7 +72,7 @@ function ensure_remember_tokens_table(): void
     db()->exec("
         CREATE TABLE IF NOT EXISTS remember_tokens (
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            MaNguoiDung INT NOT NULL,
+            MaNguoiDung VARCHAR(50) NOT NULL,
             ma_token VARCHAR(255) NOT NULL UNIQUE,
             het_han DATETIME NOT NULL,
             ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -83,7 +83,7 @@ function ensure_remember_tokens_table(): void
     $created = true;
 }
 
-function create_login_token(int $userId, bool $remember = false): void
+function create_login_token($userId, bool $remember = false): void
 {
     ensure_remember_tokens_table();
 

@@ -128,7 +128,7 @@ if ($editId !== '') {
 }
 
 $pageTitle = page_title('Quản lý tiêu chí');
-$heading   = 'Quản lý tiêu chí đánh giá';
+$heading   = 'Quản lý tiêu chí';
 include __DIR__ . '/../includes/header.php';
 ?>
 <?php if (($editingCriterion || $isCreatingCriterion) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'criterionFormModal';</script><?php endif; ?>

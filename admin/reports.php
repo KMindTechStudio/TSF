@@ -4,7 +4,7 @@ require_roles(['admin']);
 require_once __DIR__ . '/../includes/data.php';
 
 $pageTitle = page_title('Thống kê');
-$heading = 'Thống kê phục vụ kiểm định';
+$heading = 'Thống kê';
 
 // 1. Calculate top metrics
 $updated_evidence_count = count($evidences);

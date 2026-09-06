@@ -36,7 +36,7 @@ CREATE TABLE NguoiDung (
 -- Table remember_tokens
 CREATE TABLE remember_tokens (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    MaNguoiDung INT NOT NULL,
+    MaNguoiDung VARCHAR(50) NOT NULL,
     ma_token VARCHAR(255) NOT NULL UNIQUE,
     het_han DATETIME NOT NULL,
     ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
