@@ -195,7 +195,6 @@ $resetEmailValue = htmlspecialchars($_SESSION['password_reset']['email'] ?? ($_P
                     <?= htmlspecialchars($error) ?>
                 </div>
             <?php endif; ?>
-            <p class="small text-secondary mt-3 mb-0">Tài khoản mẫu: <strong>admin / 123456</strong> hoặc <strong>kiemdinhtt / 123456</strong>.</p>
         </form>
     </section>
 </main>
