@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+date_default_timezone_set('Asia/Ho_Chi_Minh');
 
 if (!function_exists('str_contains')) {
     function str_contains(string $haystack, string $needle): bool
@@ -453,6 +454,8 @@ function page_title(string $title): string
 
 function export_to_excel(string $filename, string $title, array $columns, array $data): void
 {
+    date_default_timezone_set('Asia/Ho_Chi_Minh');
+
     if (ob_get_length()) {
         ob_end_clean();
     }

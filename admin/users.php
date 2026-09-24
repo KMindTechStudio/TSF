@@ -7,14 +7,10 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
     require_once __DIR__ . '/../includes/data.php';
 
     $selectedRole     = trim($_GET['role'] ?? '');
-    $selectedDept     = trim($_GET['department'] ?? '');
     $searchKeyword    = trim($_GET['search'] ?? $_GET['q'] ?? '');
 
     if ($selectedRole !== '') {
         $users = array_filter($users, fn($u) => $u['role_raw'] === $selectedRole);
-    }
-    if ($selectedDept !== '') {
-        $users = array_filter($users, fn($u) => $u['department'] === $selectedDept);
     }
     if ($searchKeyword !== '') {
         $users = array_filter($users, fn($u) => 
@@ -28,7 +24,6 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
     $columns = [
         ['key' => 'code', 'label' => 'Mã người dùng', 'align' => 'center', 'width' => '130px'],
         ['key' => 'name', 'label' => 'Họ và tên', 'align' => 'left', 'width' => '220px'],
-        ['key' => 'department', 'label' => 'Đơn vị công tác', 'align' => 'left', 'width' => '220px'],
         ['key' => 'email', 'label' => 'Email', 'align' => 'left', 'width' => '220px'],
         ['key' => 'phone', 'label' => 'Số điện thoại', 'align' => 'center', 'width' => '120px'],
         ['key' => 'username', 'label' => 'Tên đăng nhập', 'align' => 'center', 'width' => '130px'],
@@ -52,7 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $rawId        = trim($_POST['id'] ?? '');
             $maNguoiDung  = trim($_POST['ma_nguoi_dung'] ?? '');
             $fullName     = trim($_POST['ho_ten'] ?? '');
-            $department   = trim($_POST['don_vi_cong_tac'] ?? '');
             $email        = trim($_POST['email'] ?? '');
             $phone        = trim($_POST['sdt'] ?? '');
             $username     = trim($_POST['ten_dang_nhap'] ?? '');
@@ -115,7 +109,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         UPDATE NguoiDung
                         SET MaNguoiDung = :new_code,
                             HoTen = :full_name,
-                            DonViCongTac = :dept,
                             Email = :email,
                             {$phoneCol} = :phone,
                             TenDangNhap = :username,
@@ -127,7 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([
                         'new_code'      => $maNguoiDung,
                         'full_name'     => $fullName,
-                        'dept'          => $department,
                         'email'         => $email,
                         'phone'         => $phone,
                         'username'      => $username,
@@ -146,7 +138,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         UPDATE NguoiDung
                         SET MaNguoiDung = :new_code,
                             HoTen = :full_name,
-                            DonViCongTac = :dept,
                             Email = :email,
                             {$phoneCol} = :phone,
                             TenDangNhap = :username,
@@ -157,7 +148,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([
                         'new_code'      => $maNguoiDung,
                         'full_name'     => $fullName,
-                        'dept'          => $department,
                         'email'         => $email,
                         'phone'         => $phone,
                         'username'      => $username,
@@ -193,13 +183,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $stmt = $pdo->prepare("
-                    INSERT INTO NguoiDung (MaNguoiDung, HoTen, DonViCongTac, Email, {$phoneCol}, TenDangNhap, MatKhau, VaiTro, TrangThai)
-                    VALUES (:code, :full_name, :dept, :email, :phone, :username, :password_hash, :role, :status)
+                    INSERT INTO NguoiDung (MaNguoiDung, HoTen, Email, {$phoneCol}, TenDangNhap, MatKhau, VaiTro, TrangThai)
+                    VALUES (:code, :full_name, :email, :phone, :username, :password_hash, :role, :status)
                 ");
                 $stmt->execute([
                     'code'          => $maNguoiDung,
                     'full_name'     => $fullName,
-                    'dept'          => $department,
                     'email'         => $email,
                     'phone'         => $phone,
                     'username'      => $username,
@@ -260,8 +249,7 @@ if ($searchKeyword !== '') {
         $matchUser  = search_contains($user['username'], $searchKeyword);
         $matchEmail = search_contains($user['email'], $searchKeyword);
         $matchPhone = search_contains($user['phone'], $searchKeyword);
-        $matchDept  = search_contains($user['department'], $searchKeyword);
-        return $matchCode || $matchName || $matchRole || $matchUser || $matchEmail || $matchPhone || $matchDept;
+        return $matchCode || $matchName || $matchRole || $matchUser || $matchEmail || $matchPhone;
     });
 }
 
@@ -274,10 +262,6 @@ if ($editId !== '') {
     $editingUser = $stmt->fetch();
 }
 
-ensure_don_vi_table();
-$deptStmt = $pdo->query("SELECT ten_don_vi FROM don_vi WHERE trang_thai = 'active' ORDER BY id ASC");
-$departmentsList = $deptStmt->fetchAll(PDO::FETCH_COLUMN);
-
 $maxStmt = $pdo->query("SELECT MaNguoiDung FROM NguoiDung WHERE MaNguoiDung LIKE 'ND%' ORDER BY LENGTH(MaNguoiDung) DESC, MaNguoiDung DESC LIMIT 1");
 $lastCode = $maxStmt->fetchColumn();
 if ($lastCode && preg_match('/ND(\d+)/i', $lastCode, $m)) {
@@ -287,28 +271,82 @@ if ($lastCode && preg_match('/ND(\d+)/i', $lastCode, $m)) {
     $suggestedUserCode = 'ND001';
 }
 
+$totalUsersCount   = count($users);
+$adminUsersCount   = 0;
+$regularUsersCount = 0;
+$activeUsersCount  = 0;
+
+foreach ($users as $u) {
+    if (($u['role_code'] ?? '') === 'admin' || ($u['role'] ?? '') === 'admin') {
+        $adminUsersCount++;
+    } else {
+        $regularUsersCount++;
+    }
+    if ((int) ($u['status_raw'] ?? 1) === 1) {
+        $activeUsersCount++;
+    }
+}
+
 $pageTitle = page_title('Quản lý người dùng');
 $heading   = 'Quản lý người dùng';
 include __DIR__ . '/../includes/header.php';
 ?>
 <?php if (($editingUser || $isCreatingUser) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'accountFormModal';</script><?php endif; ?>
-<?php if ($success): ?><div class="alert alert-success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
-<?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
+<?php if ($success): ?><div class="alert alert-success alert-dismissible fade show" role="alert"><?= htmlspecialchars($success) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div><?php endif; ?>
+<?php if ($error): ?><div class="alert alert-danger alert-dismissible fade show" role="alert"><?= htmlspecialchars($error) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div><?php endif; ?>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="metric-card metric-blue">
+            <i class="bi bi-people-fill"></i>
+            <span>Tổng tài khoản</span>
+            <strong class="count-up" data-count-to="<?= $totalUsersCount ?>"><?= $totalUsersCount ?></strong>
+            <small class="text-secondary">Tài khoản trên hệ thống</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card metric-red">
+            <i class="bi bi-shield-lock-fill"></i>
+            <span>Quản trị viên</span>
+            <strong class="count-up" data-count-to="<?= $adminUsersCount ?>"><?= $adminUsersCount ?></strong>
+            <small class="text-secondary">Quyền quản trị cao nhất</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card metric-amber">
+            <i class="bi bi-person-badge-fill"></i>
+            <span>Người dùng</span>
+            <strong class="count-up" data-count-to="<?= $regularUsersCount ?>"><?= $regularUsersCount ?></strong>
+            <small class="text-secondary">Khai thác dữ liệu CSDL</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card metric-green">
+            <i class="bi bi-check-circle-fill"></i>
+            <span>Đang hoạt động</span>
+            <strong class="count-up" data-count-to="<?= $activeUsersCount ?>"><?= $activeUsersCount ?></strong>
+            <small class="text-secondary">Trạng thái kích hoạt</small>
+        </div>
+    </div>
+</div>
 
 <div class="row g-4 accounts-layout">
     <div class="col-12">
         <div class="panel accounts-list-panel">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-                <h2 class="h5 mb-0">Danh sách người dùng</h2>
+                <div>
+                    <h2 class="h5 mb-1">Danh sách người dùng</h2>
+                    <p class="text-secondary small mb-0">Quản lý tài khoản, phân quyền và trạng thái người dùng trong hệ thống.</p>
+                </div>
                 <div class="d-flex gap-2">
-                    <a class="btn btn-primary" href="<?= base_url('admin/users.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm mới</a>
-                    <a class="btn btn-outline-secondary" id="exportExcelBtn" href="<?= base_url('admin/users.php?export=excel' . ($searchKeyword !== '' ? '&search=' . urlencode($searchKeyword) : '')) ?>"><i class="bi bi-file-earmark-spreadsheet me-1"></i> Xuất Excel</a>
+                    <a class="btn btn-primary" href="<?= base_url('admin/users.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm người dùng</a>
+                    <a class="btn btn-outline-success" id="exportExcelBtn" href="<?= base_url('admin/users.php?export=excel' . ($searchKeyword !== '' ? '&search=' . urlencode($searchKeyword) : '')) ?>"><i class="bi bi-file-earmark-excel me-1"></i> Xuất Excel</a>
                 </div>
             </div>
             <form method="get" action="" class="mb-3" id="userSearchForm">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" id="userSearchInput" class="form-control" placeholder="Nhập mã, họ tên, đơn vị, email, sdt hoặc tên đăng nhập..." value="<?= htmlspecialchars($searchKeyword) ?>">
+                    <input type="text" name="search" id="userSearchInput" class="form-control" placeholder="Nhập mã, họ tên, email, sdt hoặc tên đăng nhập..." value="<?= htmlspecialchars($searchKeyword) ?>">
                     <?php if ($searchKeyword !== ''): ?>
                         <a href="<?= base_url('admin/users.php') ?>" class="btn btn-outline-secondary" title="Xóa tìm kiếm"><i class="bi bi-x-lg"></i></a>
                     <?php endif; ?>
@@ -316,30 +354,33 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             </form>
             <div class="table-responsive">
-                <table class="table" data-page-size="10">
+                <table class="table align-middle" data-page-size="10">
                     <thead>
                     <tr>
-                        <th class="text-nowrap" style="width: 120px;">Mã người dùng</th>
-                        <th style="min-width: 160px;">Họ tên</th>
-                        <th style="min-width: 160px;">Đơn vị công tác</th>
-                        <th style="min-width: 180px;">Email</th>
-                        <th class="text-nowrap" style="width: 120px;">Số điện thoại</th>
-                        <th class="text-nowrap" style="width: 130px;">Tên đăng nhập</th>
-                        <th class="text-nowrap" style="width: 100px;">Mật khẩu</th>
-                        <th class="text-nowrap" style="width: 110px;">Vai trò</th>
-                        <th class="text-nowrap" style="width: 120px;">Trạng thái</th>
-                        <th class="text-end text-nowrap action-cell" style="width: 90px;">Thao tác</th>
+                        <th class="text-nowrap" style="width: 120px;">Mã tài khoản</th>
+                        <th style="min-width: 200px;">Họ tên & Người dùng</th>
+                        <th style="min-width: 200px;">Email liên hệ</th>
+                        <th class="text-nowrap" style="width: 140px;">Số điện thoại</th>
+                        <th class="text-nowrap" style="width: 140px;">Tên đăng nhập</th>
+                        <th class="text-nowrap" style="width: 120px;">Mật khẩu</th>
+                        <th class="text-nowrap" style="width: 130px;">Vai trò</th>
+                        <th class="text-nowrap" style="width: 130px;">Trạng thái</th>
+                        <th class="text-end text-nowrap action-cell" style="width: 100px;">Thao tác</th>
                     </tr>
                     </thead>
                     <tbody id="usersTableBody">
                     <?php foreach ($users as $user): ?>
                         <tr>
-                            <td class="fw-bold text-nowrap"><?= htmlspecialchars($user['code']) ?></td>
-                            <td class="fw-semibold text-nowrap"><?= htmlspecialchars($user['name']) ?></td>
-                            <td class="text-nowrap"><?= htmlspecialchars($user['department'] ?: '-') ?></td>
-                            <td class="text-nowrap"><?= htmlspecialchars($user['email']) ?></td>
-                            <td class="text-nowrap"><?= htmlspecialchars($user['phone'] ?: '-') ?></td>
-                            <td><code><?= htmlspecialchars($user['username']) ?></code></td>
+                            <td class="fw-bold text-nowrap text-primary"><?= htmlspecialchars($user['code']) ?></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <?= avatar_html($user['avatar'] ?? null, $user['name'], 'avatar avatar-sm') ?>
+                                    <span class="fw-semibold text-dark"><?= htmlspecialchars($user['name']) ?></span>
+                                </div>
+                            </td>
+                            <td class="text-nowrap"><i class="bi bi-envelope text-muted me-1"></i><?= htmlspecialchars($user['email']) ?></td>
+                            <td class="text-nowrap"><?php if ($user['phone']): ?><i class="bi bi-telephone text-muted me-1"></i><?= htmlspecialchars($user['phone']) ?><?php else: ?><span class="text-muted">-</span><?php endif; ?></td>
+                            <td><code class="px-2 py-1 bg-light border rounded text-primary fw-bold"><?= htmlspecialchars($user['username']) ?></code></td>
                             <td class="text-nowrap">
                                 <div class="d-inline-flex align-items-center gap-1">
                                     <span class="text-muted pwd-text" data-masked="true" data-plain="<?= htmlspecialchars($user['username'] === 'admin' ? 'admin123' : '123456') ?>">••••••••</span>
@@ -350,32 +391,32 @@ include __DIR__ . '/../includes/header.php';
                             </td>
                             <td class="text-nowrap">
                                 <?php if ($user['role_code'] === 'admin'): ?>
-                                    <span class="badge bg-danger">Quản trị viên</span>
+                                    <span class="badge text-bg-danger px-2.5 py-1.5"><i class="bi bi-shield-lock-fill me-1"></i>Quản trị viên</span>
                                 <?php else: ?>
-                                    <span class="badge bg-secondary">Người dùng</span>
+                                    <span class="badge text-bg-secondary px-2.5 py-1.5"><i class="bi bi-person-fill me-1"></i>Người dùng</span>
                                 <?php endif; ?>
                             </td>
                             <td class="text-nowrap">
                                 <?php if ((int) $user['status_raw'] === 1): ?>
-                                    <span class="badge bg-success">Đang hoạt động</span>
+                                    <span class="badge text-bg-success px-2.5 py-1.5"><i class="bi bi-check-circle-fill me-1"></i>Đang hoạt động</span>
                                 <?php else: ?>
-                                    <span class="badge bg-warning text-dark">Ngưng áp dụng</span>
+                                    <span class="badge text-bg-warning text-dark px-2.5 py-1.5"><i class="bi bi-dash-circle-fill me-1"></i>Ngưng áp dụng</span>
                                 <?php endif; ?>
                             </td>
                             <td class="text-end action-cell">
-                                <div class="action-buttons">
-                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $user['id'] ?>" title="Sửa"><i class="bi bi-pencil"></i></a>
+                                <div class="action-buttons d-flex justify-content-end gap-1">
+                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $user['id'] ?>" title="Sửa tài khoản"><i class="bi bi-pencil"></i></a>
                                     <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa người dùng này?">
                                         <input type="hidden" name="action" value="delete_user">
                                         <input type="hidden" name="id" value="<?= $user['id'] ?>">
-                                        <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa"><i class="bi bi-trash"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa tài khoản"><i class="bi bi-trash"></i></button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                     <tr id="noDataRow" class="<?= !empty($users) ? 'd-none' : '' ?>">
-                        <td colspan="10" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
+                        <td colspan="9" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
                     </tr>
                     </tbody>
                 </table>
@@ -410,11 +451,10 @@ document.addEventListener('DOMContentLoaded', function () {
         rows.forEach(row => {
             const codeCell  = row.cells[0]?.textContent || '';
             const nameCell  = row.cells[1]?.textContent || '';
-            const deptCell  = row.cells[2]?.textContent || '';
-            const emailCell = row.cells[3]?.textContent || '';
-            const phoneCell = row.cells[4]?.textContent || '';
-            const userCell  = row.cells[5]?.textContent || '';
-            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + deptCell + ' ' + emailCell + ' ' + phoneCell + ' ' + userCell);
+            const emailCell = row.cells[2]?.textContent || '';
+            const phoneCell = row.cells[3]?.textContent || '';
+            const userCell  = row.cells[4]?.textContent || '';
+            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + emailCell + ' ' + phoneCell + ' ' + userCell);
 
             if (query === '' || textToMatch.includes(query)) {
                 row.dataset.filteredOut = 'false';
@@ -497,17 +537,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="col-md-8">
                             <label class="form-label">Họ tên <span class="text-danger">*</span></label>
                             <input class="form-control" name="ho_ten" value="<?= htmlspecialchars($editingUser['HoTen'] ?? '') ?>" placeholder="Nhập họ tên" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Đơn vị công tác</label>
-                            <select class="form-select" name="don_vi_cong_tac">
-                                <option value="">-- Chọn đơn vị --</option>
-                                <?php foreach ($departmentsList as $dName): ?>
-                                    <option value="<?= htmlspecialchars($dName) ?>" <?= ($editingUser['DonViCongTac'] ?? '') === $dName ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($dName) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Email <span class="text-danger">*</span></label>

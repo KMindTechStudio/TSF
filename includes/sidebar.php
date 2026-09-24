@@ -21,7 +21,7 @@
     <?php else: ?>
         <nav class="nav-group">
             <p>Khai thác dữ liệu</p>
-            <a class="<?= is_active('evidences.php') ?>" href="<?= base_url('admin/evidences.php') ?>"><i class="bi bi-folder2-open"></i> Xem Minh Chứng</a>
+            <a class="<?= is_active('evidences.php') ?>" href="<?= base_url('admin/evidences.php') ?>"><i class="bi bi-folder2-open"></i> CSDL Minh chứng</a>
         </nav>
     <?php endif; ?>
 

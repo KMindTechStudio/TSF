@@ -1,6 +1,8 @@
 <?php
 // Config/database.php
 
+date_default_timezone_set('Asia/Ho_Chi_Minh');
+
 define('DB_HOST', '127.0.0.1');
 define('DB_USER', 'root');
 define('DB_PASS', '');
@@ -20,12 +22,14 @@ function db(): PDO
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ]);
+            $pdo->exec("SET time_zone = '+07:00';");
         } catch (PDOException $e) {
             try {
                 $rootDsn = sprintf('mysql:host=%s;charset=%s', DB_HOST, DB_CHARSET);
                 $rootPdo = new PDO($rootDsn, DB_USER, DB_PASS, [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 ]);
+                $rootPdo->exec("SET time_zone = '+07:00';");
                 $rootPdo->exec("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
 
                 $schemaFile = __DIR__ . '/../database/schema.sql';
@@ -40,6 +44,7 @@ function db(): PDO
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES   => false,
                 ]);
+                $pdo->exec("SET time_zone = '+07:00';");
             } catch (PDOException $e2) {
                 die('Lỗi kết nối CSDL: ' . $e2->getMessage());
             }

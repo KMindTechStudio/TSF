@@ -9,7 +9,7 @@
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
-SET time_zone = "+00:00";
+SET time_zone = "+07:00";
 
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -270,7 +270,6 @@ INSERT INTO `MinhChung` (`MaMinhChung`, `TenMinhChung`, `MoTa`, `TepTin`, `NamHo
 CREATE TABLE `NguoiDung` (
   `MaNguoiDung` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `HoTen` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `DonViCongTac` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `Email` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `SoDienThoai` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `TenDangNhap` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -286,10 +285,10 @@ CREATE TABLE `NguoiDung` (
 -- Dumping data for table `NguoiDung`
 --
 
-INSERT INTO `NguoiDung` (`MaNguoiDung`, `HoTen`, `DonViCongTac`, `Email`, `SoDienThoai`, `TenDangNhap`, `MatKhau`, `VaiTro`, `TrangThai`, `DuongDanAnhDaiDien`, `DangNhapCuoi`, `NgayTao`) VALUES
-('ND001', 'Quản trị viên', 'Khoa Công nghệ thông tin', 'admin@fbu.edu.vn', '0912345678', 'admin', '$2y$10$epbVeUHJztDc/l95cLcWlu/.bkc9SsQ/IQqRVKbEXqLVUtjVn3u36', 'admin', 1, NULL, NULL, '2026-08-31 13:46:14'),
-('ND002', 'Nguyễn Văn A', 'Phòng Đảm bảo chất lượng', 'user01@fbu.edu.vn', '0987654321', 'kiemdinhtt', '$2y$10$epbVeUHJztDc/l95cLcWlu/.bkc9SsQ/IQqRVKbEXqLVUtjVn3u36', 'user', 1, NULL, NULL, '2026-08-31 13:46:14'),
-('ND003', 'Trần Thị B', 'Bộ môn Kỹ thuật phần mềm', 'user02@fbu.edu.vn', '0911223344', 'viewer01', '$2y$10$epbVeUHJztDc/l95cLcWlu/.bkc9SsQ/IQqRVKbEXqLVUtjVn3u36', 'user', 1, NULL, NULL, '2026-08-31 13:46:14');
+INSERT INTO `NguoiDung` (`MaNguoiDung`, `HoTen`, `Email`, `SoDienThoai`, `TenDangNhap`, `MatKhau`, `VaiTro`, `TrangThai`, `DuongDanAnhDaiDien`, `DangNhapCuoi`, `NgayTao`) VALUES
+('ND001', 'Quản trị viên', 'admin@fbu.edu.vn', '0912345678', 'admin', '$2y$10$epbVeUHJztDc/l95cLcWlu/.bkc9SsQ/IQqRVKbEXqLVUtjVn3u36', 'admin', 1, NULL, NULL, '2026-08-31 13:46:14'),
+('ND002', 'Nguyễn Văn A', 'user01@fbu.edu.vn', '0987654321', 'kiemdinhtt', '$2y$10$epbVeUHJztDc/l95cLcWlu/.bkc9SsQ/IQqRVKbEXqLVUtjVn3u36', 'user', 1, NULL, NULL, '2026-08-31 13:46:14'),
+('ND003', 'Trần Thị B', 'user02@fbu.edu.vn', '0911223344', 'viewer01', '$2y$10$epbVeUHJztDc/l95cLcWlu/.bkc9SsQ/IQqRVKbEXqLVUtjVn3u36', 'user', 1, NULL, NULL, '2026-08-31 13:46:14');
 
 -- --------------------------------------------------------
 

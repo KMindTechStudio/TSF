@@ -19,14 +19,14 @@ function seed_database_if_needed($force = false) {
     $passHash = password_hash('123456', PASSWORD_DEFAULT);
 
     $usersData = [
-        ['ND001', 'Quản trị viên', 'Khoa Công nghệ thông tin', 'admin@fbu.edu.vn', '0912345678', 'admin', 'admin', 1],
-        ['ND002', 'Nguyễn Văn A', 'Phòng Đảm bảo chất lượng', 'user01@fbu.edu.vn', '0987654321', 'kiemdinhtt', 'user', 1],
-        ['ND003', 'Trần Thị B', 'Bộ môn Kỹ thuật phần mềm', 'user02@fbu.edu.vn', '0911223344', 'viewer01', 'user', 1],
+        ['ND001', 'Quản trị viên', 'admin@fbu.edu.vn', '0912345678', 'admin', 'admin', 1],
+        ['ND002', 'Nguyễn Văn A', 'user01@fbu.edu.vn', '0987654321', 'kiemdinhtt', 'user', 1],
+        ['ND003', 'Trần Thị B', 'user02@fbu.edu.vn', '0911223344', 'viewer01', 'user', 1],
     ];
 
-    $stmtUser = $pdo->prepare("INSERT INTO NguoiDung (MaNguoiDung, HoTen, DonViCongTac, Email, SoDienThoai, TenDangNhap, MatKhau, VaiTro, TrangThai) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmtUser = $pdo->prepare("INSERT INTO NguoiDung (MaNguoiDung, HoTen, Email, SoDienThoai, TenDangNhap, MatKhau, VaiTro, TrangThai) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     foreach ($usersData as $u) {
-        $stmtUser->execute([$u[0], $u[1], $u[2], $u[3], $u[4], $u[5], $passHash, $u[6], $u[7]]);
+        $stmtUser->execute([$u[0], $u[1], $u[2], $u[3], $u[4], $passHash, $u[5], $u[6]]);
     }
 
     // 2. Seed BoTieuChuan (55 standard sets)

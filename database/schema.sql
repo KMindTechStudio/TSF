@@ -5,6 +5,7 @@ CREATE DATABASE IF NOT EXISTS kiemdinh_cntt
 USE kiemdinh_cntt;
 
 SET NAMES utf8mb4;
+SET time_zone = '+07:00';
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS download_logs;
@@ -21,7 +22,6 @@ DROP TABLE IF EXISTS NguoiDung;
 CREATE TABLE NguoiDung (
     MaNguoiDung INT AUTO_INCREMENT PRIMARY KEY,
     HoTen VARCHAR(150) NOT NULL,
-    DonViCongTac VARCHAR(255) NULL,
     Email VARCHAR(150) NOT NULL UNIQUE,
     SoDienThoai VARCHAR(30) NULL,
     TenDangNhap VARCHAR(80) NOT NULL UNIQUE,
@@ -128,10 +128,10 @@ CREATE TABLE download_logs (
     CONSTRAINT fk_download_logs_minh_chung FOREIGN KEY (MaMinhChung) REFERENCES MinhChung(MaMinhChung) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-INSERT INTO NguoiDung (HoTen, DonViCongTac, Email, SoDienThoai, TenDangNhap, MatKhau, VaiTro, TrangThai) VALUES
-('Quản trị viên', 'Khoa Công nghệ thông tin', 'admin@fbu.edu.vn', '0912345678', 'admin', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'admin', 1),
-('Nguyễn Văn A', 'Phòng Đảm bảo chất lượng', 'user01@fbu.edu.vn', '0987654321', 'kiemdinhtt', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1),
-('Trần Thị B', 'Bộ môn Kỹ thuật phần mềm', 'user02@fbu.edu.vn', '0911223344', 'viewer01', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1);
+INSERT INTO NguoiDung (HoTen, Email, SoDienThoai, TenDangNhap, MatKhau, VaiTro, TrangThai) VALUES
+('Quản trị viên', 'admin@fbu.edu.vn', '0912345678', 'admin', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'admin', 1),
+('Nguyễn Văn A', 'user01@fbu.edu.vn', '0987654321', 'kiemdinhtt', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1),
+('Trần Thị B', 'user02@fbu.edu.vn', '0911223344', 'viewer01', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1);
 
 INSERT INTO BoTieuChuan (TenBoTieuChuan, ThongTu, NgayBanHanh, MoTa, TrangThai) VALUES
 ('Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo', 'Thông tư 04/2016/TT-BGDĐT', '2025-01-15', 'Bộ tiêu chuẩn dùng cho cơ sở dữ liệu minh chứng phục vụ kiểm định CTĐT', 1);
