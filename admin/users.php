@@ -38,6 +38,71 @@ $pdo = db();
 $success = '';
 $error = '';
 $currentUserId = $_SESSION['user_id'] ?? 'ND001';
+$failedFormData = null;
+
+// AJAX Endpoint for real-time validation of MaNguoiDung, Email & Username uniqueness
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'check_duplicate') {
+    header('Content-Type: application/json; charset=utf-8');
+    $field = trim($_GET['field'] ?? '');
+    $val = trim($_GET['value'] ?? '');
+    $excludeId = trim($_GET['id'] ?? '');
+
+    $res = ['exists' => false, 'message' => ''];
+
+    if ($field === 'code') {
+        if ($val === '') {
+            $res = ['exists' => false, 'message' => ''];
+        } else {
+            $stmt = $pdo->prepare('SELECT MaNguoiDung, HoTen FROM NguoiDung WHERE LOWER(MaNguoiDung) = LOWER(:val) AND MaNguoiDung <> :id LIMIT 1');
+            $stmt->execute(['val' => $val, 'id' => $excludeId]);
+            $found = $stmt->fetch();
+            if ($found) {
+                $res = [
+                    'exists' => true,
+                    'message' => 'Mã tài khoản này đã tồn tại trong hệ thống (thuộc về: ' . htmlspecialchars($found['HoTen']) . '). Vui lòng nhập mã khác.'
+                ];
+            } else {
+                $res = ['exists' => false, 'message' => 'Mã tài khoản hợp lệ.'];
+            }
+        }
+    } elseif ($field === 'email') {
+        if ($val === '') {
+            $res = ['exists' => false, 'message' => ''];
+        } elseif (!filter_var($val, FILTER_VALIDATE_EMAIL)) {
+            $res = ['exists' => true, 'invalid_format' => true, 'message' => 'Định dạng email không hợp lệ (VD: user@fbu.edu.vn).'];
+        } else {
+            $stmt = $pdo->prepare('SELECT MaNguoiDung, HoTen FROM NguoiDung WHERE LOWER(Email) = LOWER(:val) AND MaNguoiDung <> :id LIMIT 1');
+            $stmt->execute(['val' => $val, 'id' => $excludeId]);
+            $found = $stmt->fetch();
+            if ($found) {
+                $res = [
+                    'exists' => true,
+                    'message' => 'Email này đã tồn tại trong hệ thống (thuộc về: ' . htmlspecialchars($found['HoTen']) . '). Vui lòng nhập email khác.'
+                ];
+            } else {
+                $res = ['exists' => false, 'message' => 'Email hợp lệ và có thể sử dụng.'];
+            }
+        }
+    } elseif ($field === 'username') {
+        if ($val === '') {
+            $res = ['exists' => false, 'message' => ''];
+        } else {
+            $stmt = $pdo->prepare('SELECT MaNguoiDung, HoTen FROM NguoiDung WHERE LOWER(TenDangNhap) = LOWER(:val) AND MaNguoiDung <> :id LIMIT 1');
+            $stmt->execute(['val' => $val, 'id' => $excludeId]);
+            $found = $stmt->fetch();
+            if ($found) {
+                $res = [
+                    'exists' => true,
+                    'message' => 'Tên đăng nhập này đã tồn tại trong hệ thống (thuộc về: ' . htmlspecialchars($found['HoTen']) . '). Vui lòng chọn tên khác.'
+                ];
+            } else {
+                $res = ['exists' => false, 'message' => 'Tên đăng nhập hợp lệ.'];
+            }
+        }
+    }
+    echo json_encode($res, JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -58,18 +123,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Vui lòng nhập đầy đủ họ tên, tên đăng nhập và email.');
             }
 
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new RuntimeException('Địa chỉ email "' . htmlspecialchars($email) . '" không đúng định dạng. Vui lòng kiểm tra lại (VD: example@fbu.edu.vn).');
+            }
+
             if (!in_array($role, ['admin', 'user'], true)) {
                 throw new RuntimeException('Vai trò không hợp lệ. Chỉ chấp nhận Quản trị viên hoặc Người dùng.');
             }
 
-            $check = $pdo->prepare('SELECT MaNguoiDung FROM NguoiDung WHERE (TenDangNhap = :username OR Email = :email) AND MaNguoiDung <> :id LIMIT 1');
-            $check->execute([
+            // Kiểm tra tính duy nhất của Email
+            $checkEmail = $pdo->prepare('SELECT MaNguoiDung, HoTen FROM NguoiDung WHERE LOWER(Email) = LOWER(:email) AND MaNguoiDung <> :id LIMIT 1');
+            $checkEmail->execute([
+                'email' => $email,
+                'id'    => $rawId,
+            ]);
+            $foundEmailUser = $checkEmail->fetch();
+            if ($foundEmailUser) {
+                throw new RuntimeException('Email "' . htmlspecialchars($email) . '" đã tồn tại trong hệ thống (được sử dụng bởi: ' . htmlspecialchars($foundEmailUser['HoTen']) . '). Mỗi người dùng phải có một email duy nhất, không được trùng lặp.');
+            }
+
+            // Kiểm tra tính duy nhất của Tên đăng nhập
+            $checkUsername = $pdo->prepare('SELECT MaNguoiDung FROM NguoiDung WHERE LOWER(TenDangNhap) = LOWER(:username) AND MaNguoiDung <> :id LIMIT 1');
+            $checkUsername->execute([
                 'username' => $username,
-                'email'    => $email,
                 'id'       => $rawId,
             ]);
-            if ($check->fetch()) {
-                throw new RuntimeException('Tên đăng nhập hoặc email đã tồn tại.');
+            if ($checkUsername->fetch()) {
+                throw new RuntimeException('Tên đăng nhập "' . htmlspecialchars($username) . '" đã tồn tại trong hệ thống. Vui lòng chọn tên đăng nhập khác.');
             }
 
             $phoneCol = 'SoDienThoai';
@@ -84,10 +164,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new RuntimeException('Vui lòng nhập Mã người dùng.');
                 }
                 if ($maNguoiDung !== $rawId) {
-                    $chk = $pdo->prepare('SELECT COUNT(*) FROM NguoiDung WHERE MaNguoiDung = :code');
-                    $chk->execute(['code' => $maNguoiDung]);
-                    if ((int) $chk->fetchColumn() > 0) {
-                        throw new RuntimeException('Mã người dùng "' . $maNguoiDung . '" đã tồn tại. Vui lòng nhập mã khác.');
+                    $chk = $pdo->prepare('SELECT MaNguoiDung, HoTen FROM NguoiDung WHERE LOWER(MaNguoiDung) = LOWER(:code) AND MaNguoiDung <> :old_id LIMIT 1');
+                    $chk->execute(['code' => $maNguoiDung, 'old_id' => $rawId]);
+                    $foundCodeUser = $chk->fetch();
+                    if ($foundCodeUser) {
+                        throw new RuntimeException('Mã người dùng "' . htmlspecialchars($maNguoiDung) . '" đã tồn tại trong hệ thống (thuộc về: ' . htmlspecialchars($foundCodeUser['HoTen']) . '). Vui lòng nhập mã khác.');
                     }
                     $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
                     $upMc = $pdo->prepare('UPDATE MinhChung SET MaNguoiDung = :new_code WHERE MaNguoiDung = :old_code');
@@ -98,6 +179,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $upLog = $pdo->prepare('UPDATE audit_logs SET MaNguoiDung = :new_code WHERE MaNguoiDung = :old_code');
                     $upLog->execute(['new_code' => $maNguoiDung, 'old_code' => $rawId]);
+
+                    $upDl = $pdo->prepare('UPDATE download_logs SET MaNguoiDung = :new_code WHERE MaNguoiDung = :old_code');
+                    $upDl->execute(['new_code' => $maNguoiDung, 'old_code' => $rawId]);
 
                     if (($_SESSION['user_id'] ?? '') === $rawId) {
                         $_SESSION['user_id'] = $maNguoiDung;
@@ -172,10 +256,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $maNguoiDung = 'ND001';
                     }
                 }
-                $chk = $pdo->prepare('SELECT COUNT(*) FROM NguoiDung WHERE MaNguoiDung = :code');
+                $chk = $pdo->prepare('SELECT MaNguoiDung, HoTen FROM NguoiDung WHERE LOWER(MaNguoiDung) = LOWER(:code) LIMIT 1');
                 $chk->execute(['code' => $maNguoiDung]);
-                if ((int) $chk->fetchColumn() > 0) {
-                    throw new RuntimeException('Mã người dùng "' . $maNguoiDung . '" đã tồn tại. Vui lòng nhập mã khác.');
+                $foundCodeUser = $chk->fetch();
+                if ($foundCodeUser) {
+                    throw new RuntimeException('Mã người dùng "' . htmlspecialchars($maNguoiDung) . '" đã tồn tại trong hệ thống (thuộc về: ' . htmlspecialchars($foundCodeUser['HoTen']) . '). Vui lòng nhập mã khác.');
                 }
 
                 if ($password === '') {
@@ -232,10 +317,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             log_activity('cap_nhat_trang_thai', 'nguoi_dung', 0, $uName);
             $success = 'Cập nhật trạng thái tài khoản thành công.';
         }
+    } catch (PDOException $exception) {
+        if ($exception->getCode() == 23000) {
+            $msg = $exception->getMessage();
+            if (stripos($msg, 'PRIMARY') !== false || stripos($msg, 'MaNguoiDung') !== false) {
+                $error = 'Không thể lưu: Mã người dùng này đã tồn tại trong hệ thống. Vui lòng nhập mã khác.';
+            } elseif (stripos($msg, 'Email') !== false || stripos($msg, 'key \'Email\'') !== false) {
+                $error = 'Không thể lưu: Email này đã tồn tại trong hệ thống. Mỗi người dùng phải có một email duy nhất.';
+            } elseif (stripos($msg, 'TenDangNhap') !== false) {
+                $error = 'Không thể lưu: Tên đăng nhập này đã tồn tại trong hệ thống. Vui lòng chọn tên khác.';
+            } else {
+                $error = 'Không thể thực hiện thao tác: Dữ liệu (Mã tài khoản, Email hoặc Tên đăng nhập) đã bị trùng lặp trong hệ thống.';
+            }
+        } else {
+            $error = 'Lỗi cơ sở dữ liệu: ' . $exception->getMessage();
+        }
+        if (($action ?? '') === 'save_user') {
+            $failedFormData = $_POST;
+        }
     } catch (Throwable $exception) {
         $error = 'Không thể thực hiện thao tác: ' . $exception->getMessage();
+        if (($action ?? '') === 'save_user') {
+            $failedFormData = $_POST;
+        }
     }
-    unset($_GET['create'], $_GET['edit']);
+    if ($success) {
+        unset($_GET['create'], $_GET['edit']);
+    }
 }
 
 require_once __DIR__ . '/../includes/data.php';
@@ -253,8 +361,8 @@ if ($searchKeyword !== '') {
     });
 }
 
-$isCreatingUser = isset($_GET['create']);
-$editId         = $isCreatingUser ? '' : trim($_GET['edit'] ?? '');
+$isCreatingUser = isset($_GET['create']) || ($error !== '' && !empty($failedFormData) && empty($failedFormData['id']));
+$editId         = trim($_GET['edit'] ?? ($failedFormData['id'] ?? ''));
 $editingUser    = null;
 if ($editId !== '') {
     $stmt = $pdo->prepare('SELECT * FROM NguoiDung WHERE MaNguoiDung = :id LIMIT 1');
@@ -270,6 +378,18 @@ if ($lastCode && preg_match('/ND(\d+)/i', $lastCode, $m)) {
 } else {
     $suggestedUserCode = 'ND001';
 }
+
+$formValues = [
+    'MaNguoiDung' => $failedFormData['ma_nguoi_dung'] ?? ($editingUser['MaNguoiDung'] ?? ($isCreatingUser ? $suggestedUserCode : '')),
+    'HoTen'       => $failedFormData['ho_ten'] ?? ($editingUser['HoTen'] ?? ''),
+    'Email'       => $failedFormData['email'] ?? ($editingUser['Email'] ?? ''),
+    'SoDienThoai' => $failedFormData['sdt'] ?? ($editingUser['SoDienThoai'] ?? ($editingUser['SDT'] ?? '')),
+    'TenDangNhap' => $failedFormData['ten_dang_nhap'] ?? ($editingUser['TenDangNhap'] ?? ''),
+    'VaiTro'      => $failedFormData['vai_tro'] ?? ($editingUser['VaiTro'] ?? 'user'),
+    'TrangThai'   => isset($failedFormData['trang_thai']) ? (int)$failedFormData['trang_thai'] : (int)($editingUser['TrangThai'] ?? 1),
+    'id'          => $failedFormData['id'] ?? ($editingUser['MaNguoiDung'] ?? ''),
+];
+$shouldOpenModal = ($editingUser || $isCreatingUser || !empty($failedFormData));
 
 $totalUsersCount   = count($users);
 $adminUsersCount   = 0;
@@ -291,7 +411,7 @@ $pageTitle = page_title('Quản lý người dùng');
 $heading   = 'Quản lý người dùng';
 include __DIR__ . '/../includes/header.php';
 ?>
-<?php if (($editingUser || $isCreatingUser) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'accountFormModal';</script><?php endif; ?>
+<?php if ($shouldOpenModal && !$success): ?><script>document.body.dataset.autoOpenModal = 'accountFormModal';</script><?php endif; ?>
 <?php if ($success): ?><div class="alert alert-success alert-dismissible fade show" role="alert"><?= htmlspecialchars($success) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-danger alert-dismissible fade show" role="alert"><?= htmlspecialchars($error) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div><?php endif; ?>
 
@@ -515,45 +635,220 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    // Live validation for Code, Email and Username uniqueness
+    const codeInput = document.getElementById('userFormCode');
+    const codeFeedback = document.getElementById('userCodeFeedback');
+    const emailInput = document.getElementById('userFormEmail');
+    const emailFeedback = document.getElementById('userEmailFeedback');
+    const usernameInput = document.getElementById('userFormUsername');
+    const usernameFeedback = document.getElementById('userUsernameFeedback');
+    const userIdInput = document.getElementById('userFormId');
+    const userForm = document.getElementById('userAccountForm');
+
+    let codeTimer = null;
+    let emailTimer = null;
+    let usernameTimer = null;
+    let isCodeDuplicate = false;
+    let isEmailDuplicate = false;
+    let isUsernameDuplicate = false;
+
+    function checkCodeUnique() {
+        if (!codeInput) return;
+        const val = codeInput.value.trim();
+        const currentId = userIdInput ? userIdInput.value.trim() : '';
+
+        if (val === '') {
+            codeInput.classList.remove('is-invalid', 'is-valid');
+            isCodeDuplicate = false;
+            return;
+        }
+
+        fetch(`<?= base_url('admin/users.php') ?>?ajax=check_duplicate&field=code&value=${encodeURIComponent(val)}&id=${encodeURIComponent(currentId)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.exists) {
+                    codeInput.classList.add('is-invalid');
+                    codeInput.classList.remove('is-valid');
+                    if (codeFeedback) codeFeedback.textContent = data.message || 'Mã người dùng này đã tồn tại trong hệ thống.';
+                    isCodeDuplicate = true;
+                } else {
+                    codeInput.classList.remove('is-invalid');
+                    codeInput.classList.add('is-valid');
+                    isCodeDuplicate = false;
+                }
+            })
+            .catch(() => {
+                isCodeDuplicate = false;
+            });
+    }
+
+    function checkEmailUnique() {
+        if (!emailInput) return;
+        const val = emailInput.value.trim();
+        const currentId = userIdInput ? userIdInput.value.trim() : '';
+
+        if (val === '') {
+            emailInput.classList.remove('is-invalid', 'is-valid');
+            isEmailDuplicate = false;
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(val)) {
+            emailInput.classList.add('is-invalid');
+            emailInput.classList.remove('is-valid');
+            if (emailFeedback) emailFeedback.textContent = 'Định dạng email chưa hợp lệ (VD: example@fbu.edu.vn).';
+            isEmailDuplicate = true;
+            return;
+        }
+
+        fetch(`<?= base_url('admin/users.php') ?>?ajax=check_duplicate&field=email&value=${encodeURIComponent(val)}&id=${encodeURIComponent(currentId)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.exists) {
+                    emailInput.classList.add('is-invalid');
+                    emailInput.classList.remove('is-valid');
+                    if (emailFeedback) emailFeedback.textContent = data.message || 'Email này đã tồn tại trong hệ thống. Vui lòng nhập email khác.';
+                    isEmailDuplicate = true;
+                } else {
+                    emailInput.classList.remove('is-invalid');
+                    emailInput.classList.add('is-valid');
+                    isEmailDuplicate = false;
+                }
+            })
+            .catch(() => {
+                isEmailDuplicate = false;
+            });
+    }
+
+    function checkUsernameUnique() {
+        if (!usernameInput) return;
+        const val = usernameInput.value.trim();
+        const currentId = userIdInput ? userIdInput.value.trim() : '';
+
+        if (val === '') {
+            usernameInput.classList.remove('is-invalid', 'is-valid');
+            isUsernameDuplicate = false;
+            return;
+        }
+
+        fetch(`<?= base_url('admin/users.php') ?>?ajax=check_duplicate&field=username&value=${encodeURIComponent(val)}&id=${encodeURIComponent(currentId)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.exists) {
+                    usernameInput.classList.add('is-invalid');
+                    usernameInput.classList.remove('is-valid');
+                    if (usernameFeedback) usernameFeedback.textContent = data.message || 'Tên đăng nhập này đã tồn tại trong hệ thống.';
+                    isUsernameDuplicate = true;
+                } else {
+                    usernameInput.classList.remove('is-invalid');
+                    usernameInput.classList.add('is-valid');
+                    isUsernameDuplicate = false;
+                }
+            })
+            .catch(() => {
+                isUsernameDuplicate = false;
+            });
+    }
+
+    if (codeInput) {
+        codeInput.addEventListener('input', function () {
+            clearTimeout(codeTimer);
+            codeTimer = setTimeout(checkCodeUnique, 350);
+        });
+        codeInput.addEventListener('blur', checkCodeUnique);
+    }
+
+    if (emailInput) {
+        emailInput.addEventListener('input', function () {
+            clearTimeout(emailTimer);
+            emailTimer = setTimeout(checkEmailUnique, 350);
+        });
+        emailInput.addEventListener('blur', checkEmailUnique);
+    }
+
+    if (usernameInput) {
+        usernameInput.addEventListener('input', function () {
+            clearTimeout(usernameTimer);
+            usernameTimer = setTimeout(checkUsernameUnique, 350);
+        });
+        usernameInput.addEventListener('blur', checkUsernameUnique);
+    }
+
+    if (userForm) {
+        userForm.addEventListener('submit', function (e) {
+            if (isCodeDuplicate) {
+                e.preventDefault();
+                codeInput.focus();
+                alert('Mã người dùng đã tồn tại trong hệ thống. Vui lòng chọn mã khác!');
+                return false;
+            }
+            if (isEmailDuplicate) {
+                e.preventDefault();
+                emailInput.focus();
+                alert('Email đã tồn tại trong hệ thống hoặc không hợp lệ. Vui lòng kiểm tra lại!');
+                return false;
+            }
+            if (isUsernameDuplicate) {
+                e.preventDefault();
+                usernameInput.focus();
+                alert('Tên đăng nhập đã tồn tại trong hệ thống. Vui lòng chọn tên khác!');
+                return false;
+            }
+        });
+    }
 });
 </script>
 
-<div class="modal fade management-form-modal" id="accountFormModal" tabindex="-1" aria-labelledby="accountFormModalLabel" aria-hidden="true" <?= ($editingUser || $isCreatingUser) ? 'data-auto-open-modal' : '' ?>>
+<div class="modal fade management-form-modal" id="accountFormModal" tabindex="-1" aria-labelledby="accountFormModalLabel" aria-hidden="true" <?= $shouldOpenModal ? 'data-auto-open-modal' : '' ?>>
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title h5" id="accountFormModalLabel"><?= $editingUser ? 'Cập nhật người dùng' : 'Tạo người dùng mới' ?></h2>
+                <h2 class="modal-title h5" id="accountFormModalLabel"><?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? 'Cập nhật người dùng' : 'Tạo người dùng mới' ?></h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <div class="modal-body">
-                <form method="post">
+                <?php if ($error && !empty($failedFormData)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i><?= htmlspecialchars($error) ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+                    </div>
+                <?php endif; ?>
+                <form method="post" id="userAccountForm">
                     <input type="hidden" name="action" value="save_user">
-                    <input type="hidden" name="id" value="<?= htmlspecialchars($editingUser['MaNguoiDung'] ?? '') ?>">
+                    <input type="hidden" name="id" id="userFormId" value="<?= htmlspecialchars($formValues['id']) ?>">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label">Mã người dùng <span class="text-danger">*</span></label>
-                            <input class="form-control" name="ma_nguoi_dung" value="<?= htmlspecialchars($editingUser['MaNguoiDung'] ?? ($isCreatingUser ? $suggestedUserCode : '')) ?>" placeholder="VD: <?= htmlspecialchars($suggestedUserCode) ?>" required>
+                            <label class="form-label" for="userFormCode">Mã người dùng <span class="text-danger">*</span> <span class="badge bg-light text-primary border ms-1"><i class="bi bi-shield-check me-1"></i>Duy nhất</span></label>
+                            <input class="form-control" id="userFormCode" name="ma_nguoi_dung" value="<?= htmlspecialchars($formValues['MaNguoiDung']) ?>" placeholder="VD: <?= htmlspecialchars($suggestedUserCode) ?>" required autocomplete="off">
+                            <div class="invalid-feedback" id="userCodeFeedback">Mã người dùng này đã tồn tại trong hệ thống.</div>
+                            <div class="form-text text-muted small"><i class="bi bi-info-circle me-1"></i>Mã định danh duy nhất (PK).</div>
                         </div>
                         <div class="col-md-8">
                             <label class="form-label">Họ tên <span class="text-danger">*</span></label>
-                            <input class="form-control" name="ho_ten" value="<?= htmlspecialchars($editingUser['HoTen'] ?? '') ?>" placeholder="Nhập họ tên" required>
+                            <input class="form-control" name="ho_ten" value="<?= htmlspecialchars($formValues['HoTen']) ?>" placeholder="Nhập họ tên" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Email <span class="text-danger">*</span></label>
-                            <input class="form-control" type="email" name="email" value="<?= htmlspecialchars($editingUser['Email'] ?? '') ?>" placeholder="example@fbu.edu.vn" required>
+                            <label class="form-label" for="userFormEmail">Email <span class="text-danger">*</span> <span class="badge bg-light text-primary border ms-1"><i class="bi bi-shield-check me-1"></i>Duy nhất</span></label>
+                            <input class="form-control" type="email" id="userFormEmail" name="email" value="<?= htmlspecialchars($formValues['Email']) ?>" placeholder="example@fbu.edu.vn" required autocomplete="off">
+                            <div class="invalid-feedback" id="userEmailFeedback">Email này đã tồn tại trong hệ thống.</div>
+                            <div class="form-text text-muted small" id="userEmailHelper"><i class="bi bi-info-circle me-1"></i>Email duy nhất trong toàn hệ thống.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Số điện thoại</label>
-                            <input class="form-control" name="sdt" value="<?= htmlspecialchars($editingUser['SoDienThoai'] ?? ($editingUser['SDT'] ?? '')) ?>" placeholder="VD: 0912345678">
+                            <input class="form-control" name="sdt" value="<?= htmlspecialchars($formValues['SoDienThoai']) ?>" placeholder="VD: 0912345678">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
-                            <input class="form-control" name="ten_dang_nhap" value="<?= htmlspecialchars($editingUser['TenDangNhap'] ?? '') ?>" placeholder="Nhập tên đăng nhập" required>
+                            <label class="form-label" for="userFormUsername">Tên đăng nhập <span class="text-danger">*</span> <span class="badge bg-light text-primary border ms-1"><i class="bi bi-shield-check me-1"></i>Duy nhất</span></label>
+                            <input class="form-control" id="userFormUsername" name="ten_dang_nhap" value="<?= htmlspecialchars($formValues['TenDangNhap']) ?>" placeholder="Nhập tên đăng nhập" required autocomplete="off">
+                            <div class="invalid-feedback" id="userUsernameFeedback">Tên đăng nhập này đã tồn tại trong hệ thống.</div>
+                            <div class="form-text text-muted small"><i class="bi bi-info-circle me-1"></i>Tên đăng nhập duy nhất để truy cập.</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label"><?= $editingUser ? 'Mật khẩu mới' : 'Mật khẩu' ?> <?= $editingUser ? '' : '<span class="text-danger">*</span>' ?></label>
+                            <label class="form-label"><?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? 'Mật khẩu mới' : 'Mật khẩu' ?> <?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? '' : '<span class="text-danger">*</span>' ?></label>
                             <div class="input-group">
-                                <input class="form-control" name="password" id="userFormPassword" type="password" placeholder="<?= $editingUser ? 'Để trống nếu giữ nguyên' : 'Nhập mật khẩu' ?>" <?= $editingUser ? '' : 'required' ?>>
+                                <input class="form-control" name="password" id="userFormPassword" type="password" placeholder="<?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? 'Để trống nếu giữ nguyên' : 'Nhập mật khẩu' ?>" <?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? '' : 'required' ?>>
                                 <button class="btn btn-outline-secondary" type="button" id="toggleUserFormPasswordBtn" title="Hiện/Ẩn mật khẩu">
                                     <i class="bi bi-eye"></i>
                                 </button>
@@ -562,25 +857,25 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="col-md-6">
                             <label class="form-label">Vai trò</label>
                             <select class="form-select" name="vai_tro">
-                                <option value="admin" <?= ($editingUser['VaiTro'] ?? 'user') === 'admin' ? 'selected' : '' ?>>Quản trị viên</option>
-                                <option value="user" <?= ($editingUser['VaiTro'] ?? 'user') === 'user' ? 'selected' : '' ?>>Người dùng</option>
+                                <option value="admin" <?= ($formValues['VaiTro']) === 'admin' ? 'selected' : '' ?>>Quản trị viên</option>
+                                <option value="user" <?= ($formValues['VaiTro']) === 'user' ? 'selected' : '' ?>>Người dùng</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Trạng thái</label>
                             <select class="form-select" name="trang_thai">
-                                <option value="1" <?= (int) ($editingUser['TrangThai'] ?? 1) === 1 ? 'selected' : '' ?>>Đang hoạt động</option>
-                                <option value="0" <?= (int) ($editingUser['TrangThai'] ?? 1) === 0 ? 'selected' : '' ?>>Ngưng áp dụng</option>
+                                <option value="1" <?= (int) ($formValues['TrangThai']) === 1 ? 'selected' : '' ?>>Đang hoạt động</option>
+                                <option value="0" <?= (int) ($formValues['TrangThai']) === 0 ? 'selected' : '' ?>>Ngưng áp dụng</option>
                             </select>
                         </div>
                     </div>
                     <div class="d-flex gap-2 justify-content-end mt-4">
-                        <?php if ($editingUser): ?>
+                        <?php if ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))): ?>
                             <a class="btn btn-outline-secondary" href="<?= base_url('admin/users.php') ?>">Hủy sửa</a>
                         <?php else: ?>
                             <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Hủy</button>
                         <?php endif; ?>
-                        <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Lưu người dùng</button>
+                        <button class="btn btn-primary" id="saveUserSubmitBtn" type="submit"><i class="bi bi-save me-1"></i> Lưu người dùng</button>
                     </div>
                 </form>
             </div>
