@@ -533,7 +533,7 @@ include __DIR__ . '/../includes/header.php';
                             <td><code class="px-2 py-1 bg-light border rounded text-primary fw-bold"><?= htmlspecialchars($user['username']) ?></code></td>
                             <td class="text-nowrap">
                                 <div class="d-inline-flex align-items-center gap-1">
-                                    <span class="text-muted pwd-text" data-masked="true" data-plain="<?= htmlspecialchars($user['username'] === 'admin' ? 'admin123' : '123456') ?>">••••••••</span>
+                                    <span class="text-muted pwd-text" data-masked="true" data-plain="123456">••••••••</span>
                                     <button type="button" class="btn btn-sm btn-light border-0 p-1 text-secondary toggle-pwd-btn" title="Ẩn/Hiện mật khẩu">
                                         <i class="bi bi-eye"></i>
                                     </button>
