@@ -77,12 +77,8 @@ function db(): PDO
                 $pdo->exec("ALTER TABLE audit_logs MODIFY COLUMN MaNguoiDung VARCHAR(50) NULL;");
                 $pdo->exec("ALTER TABLE remember_tokens MODIFY COLUMN MaNguoiDung VARCHAR(50) NOT NULL;");
                 $pdo->exec("ALTER TABLE MinhChung MODIFY COLUMN MaMinhChung VARCHAR(50) NOT NULL;");
-                $pdo->exec("ALTER TABLE MinhChung MODIFY COLUMN MaTieuChi VARCHAR(50) NULL;");
+                $pdo->exec("ALTER TABLE MinhChung MODIFY COLUMN MaBoTieuChuan VARCHAR(50) NULL;");
                 $pdo->exec("ALTER TABLE MinhChung MODIFY COLUMN MaNguoiDung VARCHAR(50) NULL;");
-                $pdo->exec("ALTER TABLE TieuChi MODIFY COLUMN MaTieuChi VARCHAR(50) NOT NULL;");
-                $pdo->exec("ALTER TABLE TieuChi MODIFY COLUMN MaTieuChuan VARCHAR(50) NOT NULL;");
-                $pdo->exec("ALTER TABLE TieuChuan MODIFY COLUMN MaTieuChuan VARCHAR(50) NOT NULL;");
-                $pdo->exec("ALTER TABLE TieuChuan MODIFY COLUMN MaBoTieuChuan VARCHAR(50) NOT NULL;");
                 $pdo->exec("ALTER TABLE BoTieuChuan MODIFY COLUMN MaBoTieuChuan VARCHAR(50) NOT NULL;");
                 $pdo->exec("ALTER TABLE NguoiDung MODIFY COLUMN MaNguoiDung VARCHAR(50) NOT NULL;");
                 $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");

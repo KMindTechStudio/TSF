@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new RuntimeException('Mã bộ tiêu chuẩn "' . $maBoTieuChuan . '" đã tồn tại. Vui lòng nhập mã khác.');
                     }
                     $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
-                    $upChild = $pdo->prepare('UPDATE TieuChuan SET MaBoTieuChuan = :new_code WHERE MaBoTieuChuan = :old_code');
+                    $upChild = $pdo->prepare('UPDATE MinhChung SET MaBoTieuChuan = :new_code WHERE MaBoTieuChuan = :old_code');
                     $upChild->execute(['new_code' => $maBoTieuChuan, 'old_code' => $rawId]);
                 }
 
@@ -103,10 +103,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'delete_standard_set') {
             $id = trim($_POST['id'] ?? '');
 
-            $checkChild = $pdo->prepare('SELECT COUNT(*) FROM TieuChuan WHERE MaBoTieuChuan = :id');
+            $checkChild = $pdo->prepare('SELECT COUNT(*) FROM MinhChung WHERE MaBoTieuChuan = :id');
             $checkChild->execute(['id' => $id]);
             if ((int) $checkChild->fetchColumn() > 0) {
-                throw new RuntimeException('Không thể xóa bộ tiêu chuẩn này vì đang có các tiêu chuẩn thuộc bộ tiêu chuẩn.');
+                throw new RuntimeException('Không thể xóa bộ tiêu chuẩn này vì đang có các minh chứng thuộc bộ tiêu chuẩn.');
             }
 
             $stmt = $pdo->prepare('DELETE FROM BoTieuChuan WHERE MaBoTieuChuan = :id');
@@ -140,8 +140,8 @@ if ($editId !== '') {
     $editingSet = $stmt->fetch();
 }
 
-$pageTitle = page_title('Quản lý bộ tiêu chuẩn');
-$heading   = 'Quản lý bộ tiêu chuẩn';
+$pageTitle = page_title('Quản lý Bộ Tiêu chuẩn động');
+$heading   = 'Quản lý Bộ Tiêu chuẩn động';
 include __DIR__ . '/../includes/header.php';
 ?>
 <?php if (($editingSet || $isCreatingSet) && !$success && !$error): ?><script>document.body.dataset.autoOpenModal = 'standardSetFormModal';</script><?php endif; ?>
