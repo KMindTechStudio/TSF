@@ -25,81 +25,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($email === '') {
             $resetError = 'Vui lòng nhập địa chỉ email.';
         } else {
-            $stmt = db()->prepare('SELECT MaNguoiDung AS id, HoTen AS full_name, Email FROM NguoiDung WHERE LOWER(Email) = LOWER(:email) LIMIT 1');
+            $stmt = db()->prepare('SELECT MaNguoiDung AS id, HoTen AS full_name, TenDangNhap AS username, Email FROM NguoiDung WHERE LOWER(Email) = LOWER(:email) LIMIT 1');
             $stmt->execute(['email' => $email]);
             $resetUser = $stmt->fetch();
 
             if (!$resetUser) {
-                $resetError = 'Email này chưa được đăng ký trong hệ thống. Vui lòng kiểm tra lại thông tin.';
+                $resetError = 'email không khớp trong hệ thống';
             } else {
-                $code = (string) random_int(100000, 999999);
-                $_SESSION['password_reset'] = [
-                    'user_id' => (int) $resetUser['id'],
-                    'email' => $resetUser['email'],
-                    'code_hash' => password_hash($code, PASSWORD_DEFAULT),
-                    'expires_at' => time() + 300,
-                    'verified' => false,
-                ];
+                $defaultPassword = '123456';
+                $passwordHash = password_hash($defaultPassword, PASSWORD_DEFAULT);
+                $update = db()->prepare('UPDATE NguoiDung SET MatKhau = :password_hash WHERE MaNguoiDung = :id');
+                $update->execute([
+                    'password_hash' => $passwordHash,
+                    'id'            => $resetUser['id'],
+                ]);
+                log_activity('reset_mat_khau', 'nguoi_dung', 0, 'Reset mật khẩu về mặc định 123456 cho: ' . $resetUser['full_name'] . ' (' . $resetUser['username'] . ')');
 
-                $subject = 'Ma xac minh dat lai mat khau';
-                $message = "Xin chao {$resetUser['full_name']},\n\nMa xac minh dat lai mat khau cua ban la: {$code}\nMa co hieu luc trong 5 phut.\n\nHe thong CSDL minh chung kiem dinh.";
-                $headers = 'From: no-reply@fbu.edu.vn' . "\r\n" .
-                    'Content-Type: text/plain; charset=UTF-8';
-                $sent = @mail($resetUser['email'], $subject, $message, $headers);
-
-                $resetStep = 'code';
-                $resetSuccess = $sent
-                    ? 'Mã xác minh đã được gửi về email đã đăng ký. Vui lòng kiểm tra hộp thư.'
-                    : 'XAMPP chưa cấu hình SMTP nên chưa gửi được email. Mã xác minh demo: ' . $code;
+                $resetStep = 'done';
+                $resetSuccess = 'Đặt lại mật khẩu thành công! Tài khoản <strong>' . htmlspecialchars($resetUser['username']) . '</strong> (' . htmlspecialchars($resetUser['full_name']) . ') đã được reset về mật khẩu mặc định: <strong>' . $defaultPassword . '</strong>. Bạn có thể sử dụng mật khẩu này để đăng nhập ngay.';
+                $_POST['username'] = $resetUser['username'];
             }
-        }
-    } elseif ($action === 'verify_code') {
-        $showResetModal = true;
-        $resetStep = 'code';
-        $inputCode = trim($_POST['verification_code'] ?? '');
-        $resetState = $_SESSION['password_reset'] ?? null;
-
-        if (!$resetState || empty($resetState['code_hash'])) {
-            $resetError = 'Phiên xác minh không hợp lệ. Vui lòng nhập lại email.';
-            $resetStep = 'email';
-        } elseif (($resetState['expires_at'] ?? 0) < time()) {
-            unset($_SESSION['password_reset']);
-            $resetError = 'Mã xác minh đã hết hạn. Vui lòng yêu cầu mã mới.';
-            $resetStep = 'email';
-        } elseif (!password_verify($inputCode, $resetState['code_hash'])) {
-            $resetError = 'Mã xác minh không chính xác. Vui lòng kiểm tra lại thông tin.';
-        } else {
-            $_SESSION['password_reset']['verified'] = true;
-            $resetStep = 'password';
-            $resetSuccess = 'Xác minh thành công. Vui lòng nhập mật khẩu mới.';
-        }
-    } elseif ($action === 'complete_reset') {
-        $showResetModal = true;
-        $resetStep = 'password';
-        $resetState = $_SESSION['password_reset'] ?? null;
-        $newPassword = $_POST['new_password'] ?? '';
-        $confirmPassword = $_POST['confirm_password'] ?? '';
-
-        if (!$resetState || empty($resetState['verified'])) {
-            $resetError = 'Bạn cần xác minh mã trước khi đặt mật khẩu mới.';
-            $resetStep = 'email';
-        } elseif (($resetState['expires_at'] ?? 0) < time()) {
-            unset($_SESSION['password_reset']);
-            $resetError = 'Phiên đặt lại mật khẩu đã hết hạn. Vui lòng yêu cầu mã mới.';
-            $resetStep = 'email';
-        } elseif (strlen($newPassword) < 6) {
-            $resetError = 'Mật khẩu mới phải có ít nhất 6 ký tự.';
-        } elseif ($newPassword !== $confirmPassword) {
-            $resetError = 'Mật khẩu xác nhận chưa trùng khớp.';
-        } else {
-            $update = db()->prepare('UPDATE NguoiDung SET MatKhau = :password_hash WHERE MaNguoiDung = :id');
-            $update->execute([
-                'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
-                'id' => $resetState['user_id'],
-            ]);
-            unset($_SESSION['password_reset']);
-            $resetStep = 'done';
-            $resetSuccess = 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.';
         }
     } else {
         $username = trim($_POST['username'] ?? '');
@@ -134,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$resetEmailValue = htmlspecialchars($_SESSION['password_reset']['email'] ?? ($_POST['reset_email'] ?? ''), ENT_QUOTES, 'UTF-8');
+$resetEmailValue = htmlspecialchars($_POST['reset_email'] ?? '', ENT_QUOTES, 'UTF-8');
 ?>
 <!doctype html>
 <html lang="vi">
@@ -206,15 +151,7 @@ $resetEmailValue = htmlspecialchars($_SESSION['password_reset']['email'] ?? ($_P
                 <div>
                     <h2 class="modal-title h5" id="forgotPasswordModalLabel">Quên mật khẩu</h2>
                     <p class="text-secondary mb-0 small">
-                        <?php if ($resetStep === 'email'): ?>
-                            Nhập email đã đăng ký để nhận mã xác minh.
-                        <?php elseif ($resetStep === 'code'): ?>
-                            Nhập mã xác minh đã được gửi về email.
-                        <?php elseif ($resetStep === 'password'): ?>
-                            Mã xác minh hợp lệ. Vui lòng tạo mật khẩu mới.
-                        <?php else: ?>
-                            Hoàn tất đặt lại mật khẩu.
-                        <?php endif; ?>
+                        <?= $resetStep === 'done' ? 'Đặt lại mật khẩu thành công.' : 'Nhập email đã đăng ký để nhận mã xác minh.' ?>
                     </p>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
@@ -229,18 +166,18 @@ $resetEmailValue = htmlspecialchars($_SESSION['password_reset']['email'] ?? ($_P
                 <?php if ($resetSuccess): ?>
                     <div class="alert alert-success">
                         <i class="bi bi-check-circle-fill me-1"></i>
-                        <?= htmlspecialchars($resetSuccess) ?>
+                        <?= $resetSuccess ?>
                     </div>
                 <?php endif; ?>
 
-                <?php if ($resetStep === 'email'): ?>
+                <?php if ($resetStep !== 'done'): ?>
                     <form action="<?= base_url('auth/login.php') ?>" method="post">
                         <input type="hidden" name="action" value="forgot_request">
                         <div class="mb-3">
                             <label class="form-label">Email đã đăng ký</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                                <input class="form-control" type="email" name="reset_email" value="<?= $resetEmailValue ?>" required>
+                                <input class="form-control" type="email" name="reset_email" value="<?= $resetEmailValue ?>" placeholder="Nhập email tài khoản" required>
                             </div>
                         </div>
                         <div class="d-flex justify-content-end gap-2">
@@ -250,60 +187,11 @@ $resetEmailValue = htmlspecialchars($_SESSION['password_reset']['email'] ?? ($_P
                             </button>
                         </div>
                     </form>
-                <?php elseif ($resetStep === 'code'): ?>
-                    <form action="<?= base_url('auth/login.php') ?>" method="post">
-                        <input type="hidden" name="action" value="verify_code">
-                        <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <input class="form-control" value="<?= $resetEmailValue ?>" disabled>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Mã xác minh</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-shield-check"></i></span>
-                                <input class="form-control verification-code-input" name="verification_code" inputmode="numeric" maxlength="6" placeholder="Nhập 6 số" required>
-                            </div>
-                            <div class="form-text">Mã xác minh có hiệu lực trong 5 phút.</div>
-                        </div>
-                        <div class="d-flex justify-content-between gap-2">
-                            <button class="btn btn-outline-secondary" type="submit" name="action" value="forgot_request">
-                                <i class="bi bi-arrow-repeat me-1"></i> Gửi lại mã
-                            </button>
-                            <button class="btn btn-primary" type="submit">
-                                <i class="bi bi-check2-circle me-1"></i> Xác minh
-                            </button>
-                        </div>
-                        <input type="hidden" name="reset_email" value="<?= $resetEmailValue ?>">
-                    </form>
-                <?php elseif ($resetStep === 'password'): ?>
-                    <form action="<?= base_url('auth/login.php') ?>" method="post">
-                        <input type="hidden" name="action" value="complete_reset">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Mật khẩu mới</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                                    <input class="form-control" type="password" name="new_password" minlength="6" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Nhập lại mật khẩu mới</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
-                                    <input class="form-control" type="password" name="confirm_password" minlength="6" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-end gap-2 mt-4">
-                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Hủy</button>
-                            <button class="btn btn-primary" type="submit">
-                                <i class="bi bi-key me-1"></i> Cập nhật mật khẩu
-                            </button>
-                        </div>
-                    </form>
                 <?php else: ?>
-                    <div class="text-end">
-                        <button class="btn btn-primary" type="button" data-bs-dismiss="modal">Quay lại đăng nhập</button>
+                    <div class="text-end mt-3">
+                        <button class="btn btn-primary" type="button" data-bs-dismiss="modal">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Quay lại đăng nhập
+                        </button>
                     </div>
                 <?php endif; ?>
             </div>
