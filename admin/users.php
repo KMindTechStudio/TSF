@@ -307,17 +307,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($id === (string) $currentUserId) {
                 throw new RuntimeException('Không thể khóa tài khoản đang đăng nhập.');
             }
-            $stmtName = $pdo->prepare('SELECT HoTen, TenDangNhap FROM NguoiDung WHERE MaNguoiDung = :id');
+            $stmtName = $pdo->prepare('SELECT HoTen, TenDangNhap, TrangThai FROM NguoiDung WHERE MaNguoiDung = :id');
             $stmtName->execute(['id' => $id]);
             $uRow = $stmtName->fetch();
-            $uName = $uRow ? ($uRow['HoTen'] . ' (' . $uRow['TenDangNhap'] . ')') : ('#' . $id);
+            if (!$uRow) {
+                throw new RuntimeException('Tài khoản không tồn tại.');
+            }
+            $uName = $uRow['HoTen'] . ' (' . $uRow['TenDangNhap'] . ')';
+            $newStatus = (int) $uRow['TrangThai'] === 1 ? 0 : 1;
 
-            $stmt = $pdo->prepare("UPDATE NguoiDung SET TrangThai = IF(TrangThai = 1, 0, 1) WHERE MaNguoiDung = :id");
-            $stmt->execute(['id' => $id]);
-            log_activity('cap_nhat_trang_thai', 'nguoi_dung', 0, $uName);
-            $success = 'Cập nhật trạng thái tài khoản thành công.';
+            $stmt = $pdo->prepare("UPDATE NguoiDung SET TrangThai = :status WHERE MaNguoiDung = :id");
+            $stmt->execute(['status' => $newStatus, 'id' => $id]);
+            $statusText = $newStatus === 1 ? 'Đang hoạt động' : 'Ngưng áp dụng';
+            log_activity('cap_nhat_trang_thai', 'nguoi_dung', 0, $uName . ' -> ' . $statusText);
+
+            $successMsg = 'Đã chuyển trạng thái tài khoản "' . $uRow['TenDangNhap'] . '" sang: ' . $statusText . '.';
+
+            if (isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                header('Content-Type: application/json; charset=utf-8');
+                $activeCount = (int) $pdo->query("SELECT COUNT(*) FROM NguoiDung WHERE TrangThai = 1")->fetchColumn();
+                echo json_encode([
+                    'success' => true,
+                    'new_status' => $newStatus,
+                    'status_text' => $statusText,
+                    'active_count' => $activeCount,
+                    'message' => $successMsg
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            $success = $successMsg;
         }
     } catch (PDOException $exception) {
+        if (isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => $exception->getMessage()], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         if ($exception->getCode() == 23000) {
             $msg = $exception->getMessage();
             if (stripos($msg, 'PRIMARY') !== false || stripos($msg, 'MaNguoiDung') !== false) {
@@ -336,6 +361,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $failedFormData = $_POST;
         }
     } catch (Throwable $exception) {
+        if (isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => $exception->getMessage()], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         $error = 'Không thể thực hiện thao tác: ' . $exception->getMessage();
         if (($action ?? '') === 'save_user') {
             $failedFormData = $_POST;
@@ -516,15 +546,45 @@ include __DIR__ . '/../includes/header.php';
                                     <span class="badge text-bg-secondary px-2.5 py-1.5"><i class="bi bi-person-fill me-1"></i>Người dùng</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="text-nowrap">
-                                <?php if ((int) $user['status_raw'] === 1): ?>
-                                    <span class="badge text-bg-success px-2.5 py-1.5"><i class="bi bi-check-circle-fill me-1"></i>Đang hoạt động</span>
+                            <td class="text-nowrap status-cell">
+                                <?php if ($user['id'] === (string) $currentUserId): ?>
+                                    <span class="badge text-bg-success px-2.5 py-1.5" title="Tài khoản của bạn (Đang đăng nhập)">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Đang hoạt động
+                                    </span>
                                 <?php else: ?>
-                                    <span class="badge text-bg-warning text-dark px-2.5 py-1.5"><i class="bi bi-dash-circle-fill me-1"></i>Ngưng áp dụng</span>
+                                    <form method="post" class="d-inline toggle-status-form">
+                                        <input type="hidden" name="action" value="toggle_user">
+                                        <input type="hidden" name="id" value="<?= htmlspecialchars($user['id']) ?>">
+                                        <button type="button" class="btn p-0 border-0 bg-transparent toggle-status-btn"
+                                                data-user-id="<?= htmlspecialchars($user['id']) ?>"
+                                                data-status="<?= (int) $user['status_raw'] ?>"
+                                                title="Bấm để <?= (int) $user['status_raw'] === 1 ? 'ngưng áp dụng tài khoản' : 'kích hoạt lại tài khoản' ?>">
+                                            <?php if ((int) $user['status_raw'] === 1): ?>
+                                                <span class="badge text-bg-success px-2.5 py-1.5 status-badge" style="cursor: pointer; transition: all 0.2s ease;">
+                                                    <i class="bi bi-check-circle-fill me-1"></i><span class="status-label">Đang hoạt động</span>
+                                                    <i class="bi bi-arrow-repeat ms-1 opacity-75 small"></i>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge text-bg-warning text-dark px-2.5 py-1.5 status-badge" style="cursor: pointer; transition: all 0.2s ease;">
+                                                    <i class="bi bi-dash-circle-fill me-1"></i><span class="status-label">Ngưng áp dụng</span>
+                                                    <i class="bi bi-arrow-repeat ms-1 opacity-75 small"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                        </button>
+                                    </form>
                                 <?php endif; ?>
                             </td>
                             <td class="text-end action-cell">
                                 <div class="action-buttons d-flex justify-content-end gap-1">
+                                    <?php if ($user['id'] !== (string) $currentUserId): ?>
+                                        <button class="btn btn-sm btn-outline-<?= (int) $user['status_raw'] === 1 ? 'warning' : 'success' ?> toggle-action-btn"
+                                                type="button"
+                                                data-user-id="<?= htmlspecialchars($user['id']) ?>"
+                                                data-status="<?= (int) $user['status_raw'] ?>"
+                                                title="<?= (int) $user['status_raw'] === 1 ? 'Khóa / Ngưng áp dụng' : 'Kích hoạt tài khoản' ?>">
+                                            <i class="bi bi-<?= (int) $user['status_raw'] === 1 ? 'lock' : 'unlock' ?>"></i>
+                                        </button>
+                                    <?php endif; ?>
                                     <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $user['id'] ?>" title="Sửa tài khoản"><i class="bi bi-pencil"></i></a>
                                     <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa người dùng này?">
                                         <input type="hidden" name="action" value="delete_user">
@@ -797,6 +857,114 @@ document.addEventListener('DOMContentLoaded', function () {
                 return false;
             }
         });
+    }
+
+    // Live AJAX status toggling
+    function handleToggleStatus(userId, btnElement) {
+        if (!userId) return;
+        if (btnElement) btnElement.disabled = true;
+
+        const formData = new FormData();
+        formData.append('action', 'toggle_user');
+        formData.append('id', userId);
+        formData.append('ajax', '1');
+
+        fetch('<?= base_url('admin/users.php') ?>', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (btnElement) btnElement.disabled = false;
+            if (data.success) {
+                // Update table row
+                const rows = document.querySelectorAll('#usersTableBody tr');
+                rows.forEach(row => {
+                    const statusBtn = row.querySelector(`.toggle-status-btn[data-user-id="${userId}"]`);
+                    const actionBtn = row.querySelector(`.toggle-action-btn[data-user-id="${userId}"]`);
+                    if (statusBtn) {
+                        statusBtn.dataset.status = data.new_status;
+                        statusBtn.title = data.new_status === 1 ? 'Bấm để ngưng áp dụng tài khoản' : 'Bấm để kích hoạt lại tài khoản';
+                        const badge = statusBtn.querySelector('.status-badge');
+                        if (badge) {
+                            if (data.new_status === 1) {
+                                badge.className = 'badge text-bg-success px-2.5 py-1.5 status-badge';
+                                badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i><span class="status-label">Đang hoạt động</span> <i class="bi bi-arrow-repeat ms-1 opacity-75 small"></i>';
+                            } else {
+                                badge.className = 'badge text-bg-warning text-dark px-2.5 py-1.5 status-badge';
+                                badge.innerHTML = '<i class="bi bi-dash-circle-fill me-1"></i><span class="status-label">Ngưng áp dụng</span> <i class="bi bi-arrow-repeat ms-1 opacity-75 small"></i>';
+                            }
+                        }
+                    }
+                    if (actionBtn) {
+                        actionBtn.dataset.status = data.new_status;
+                        actionBtn.title = data.new_status === 1 ? 'Khóa / Ngưng áp dụng' : 'Kích hoạt tài khoản';
+                        actionBtn.className = `btn btn-sm btn-outline-${data.new_status === 1 ? 'warning' : 'success'} toggle-action-btn`;
+                        actionBtn.innerHTML = `<i class="bi bi-${data.new_status === 1 ? 'lock' : 'unlock'}"></i>`;
+                    }
+                });
+
+                // Update active metric card count if present
+                const activeCard = document.querySelector('.metric-green .count-up');
+                if (activeCard && typeof data.active_count !== 'undefined') {
+                    activeCard.textContent = data.active_count;
+                    activeCard.dataset.countTo = data.active_count;
+                }
+
+                // Show toast notification
+                showStatusToast(data.message || 'Cập nhật trạng thái thành công!');
+            } else {
+                alert(data.message || 'Có lỗi xảy ra khi cập nhật trạng thái.');
+            }
+        })
+        .catch(err => {
+            if (btnElement) btnElement.disabled = false;
+            const form = btnElement?.closest('form');
+            if (form) form.submit();
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        const toggleBtn = e.target.closest('.toggle-status-btn, .toggle-action-btn');
+        if (toggleBtn) {
+            e.preventDefault();
+            const userId = toggleBtn.dataset.userId;
+            handleToggleStatus(userId, toggleBtn);
+        }
+    });
+
+    function showStatusToast(message) {
+        let toastContainer = document.getElementById('userToastContainer');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'userToastContainer';
+            toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+            toastContainer.style.zIndex = '9999';
+            document.body.appendChild(toastContainer);
+        }
+
+        const toastEl = document.createElement('div');
+        toastEl.className = 'toast align-items-center text-bg-dark border-0 show shadow';
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                    <span>${message}</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Đóng"></button>
+            </div>
+        `;
+        toastContainer.appendChild(toastEl);
+        setTimeout(() => {
+            toastEl.classList.remove('show');
+            setTimeout(() => toastEl.remove(), 400);
+        }, 3000);
     }
 });
 </script>
