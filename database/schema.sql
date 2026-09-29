@@ -12,10 +12,14 @@ DROP TABLE IF EXISTS download_logs;
 DROP TABLE IF EXISTS audit_logs;
 DROP TABLE IF EXISTS remember_tokens;
 DROP TABLE IF EXISTS MinhChung;
+DROP TABLE IF EXISTS TieuChi;
+DROP TABLE IF EXISTS TieuChuan;
 DROP TABLE IF EXISTS BoTieuChuan;
 DROP TABLE IF EXISTS NguoiDung;
+DROP TABLE IF EXISTS loaiminhchung;
+DROP TABLE IF EXISTS don_vi;
 
--- 1. Bảng NguoiDung (Quản lý Người dùng)
+-- 1. Bảng NguoiDung (Quản lý Người dùng & Quản trị viên)
 CREATE TABLE NguoiDung (
     MaNguoiDung VARCHAR(50) NOT NULL PRIMARY KEY,
     HoTen VARCHAR(150) NOT NULL,
@@ -28,9 +32,9 @@ CREATE TABLE NguoiDung (
     DuongDanAnhDaiDien VARCHAR(500) NULL,
     DangNhapCuoi DATETIME NULL,
     NgayTao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 2. Bảng remember_tokens (Ghi nhớ đăng nhập)
+-- 2. Bảng remember_tokens (Ghi nhớ phiên đăng nhập)
 CREATE TABLE remember_tokens (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     MaNguoiDung VARCHAR(50) NOT NULL,
@@ -38,9 +42,9 @@ CREATE TABLE remember_tokens (
     het_han DATETIME NOT NULL,
     ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_remember_tokens_nguoi_dung FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 3. Bảng BoTieuChuan (Quản lý Bộ Tiêu chuẩn động)
+-- 3. Bảng BoTieuChuan (Quản lý Bộ Tiêu chuẩn kiểm định)
 CREATE TABLE BoTieuChuan (
     MaBoTieuChuan VARCHAR(50) NOT NULL PRIMARY KEY,
     TenBoTieuChuan VARCHAR(255) NOT NULL,
@@ -49,9 +53,33 @@ CREATE TABLE BoTieuChuan (
     MoTa TEXT NULL,
     TrangThai TINYINT(1) NOT NULL DEFAULT 1,
     NgayTao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. Bảng MinhChung (Quản lý Minh chứng)
+-- 4. Bảng TieuChuan (Quản lý Tiêu chuẩn thuộc Bộ tiêu chuẩn)
+CREATE TABLE TieuChuan (
+    MaTieuChuan VARCHAR(50) NOT NULL PRIMARY KEY,
+    TenTieuChuan VARCHAR(255) NOT NULL,
+    MoTa TEXT NULL,
+    ThuTu INT NOT NULL DEFAULT 0,
+    MaBoTieuChuan VARCHAR(50) NULL,
+    TrangThai TINYINT(1) NOT NULL DEFAULT 1,
+    NgayTao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_tieu_chuan_bo FOREIGN KEY (MaBoTieuChuan) REFERENCES BoTieuChuan(MaBoTieuChuan) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5. Bảng TieuChi (Quản lý Tiêu chí thuộc Tiêu chuẩn)
+CREATE TABLE TieuChi (
+    MaTieuChi VARCHAR(50) NOT NULL PRIMARY KEY,
+    TenTieuChi VARCHAR(255) NOT NULL,
+    NoiDung TEXT NULL,
+    ThuTu INT NOT NULL DEFAULT 0,
+    MaTieuChuan VARCHAR(50) NULL,
+    TrangThai TINYINT(1) NOT NULL DEFAULT 1,
+    NgayTao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_tieu_chi_tieu_chuan FOREIGN KEY (MaTieuChuan) REFERENCES TieuChuan(MaTieuChuan) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 6. Bảng MinhChung (Quản lý Hồ sơ Minh chứng kiểm định)
 CREATE TABLE MinhChung (
     MaMinhChung VARCHAR(50) NOT NULL PRIMARY KEY,
     TenMinhChung VARCHAR(255) NOT NULL,
@@ -59,15 +87,17 @@ CREATE TABLE MinhChung (
     TepTin VARCHAR(500) NULL,
     NamHoc VARCHAR(50) NULL,
     TrangThai TINYINT(1) NOT NULL DEFAULT 1,
+    MaTieuChi VARCHAR(50) NULL,
     MaBoTieuChuan VARCHAR(50) NULL,
     MaNguoiDung VARCHAR(50) NULL,
     NgayCapNhat DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     NgayTao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_minh_chung_tieu_chi FOREIGN KEY (MaTieuChi) REFERENCES TieuChi(MaTieuChi) ON DELETE SET NULL,
     CONSTRAINT fk_minh_chung_bo FOREIGN KEY (MaBoTieuChuan) REFERENCES BoTieuChuan(MaBoTieuChuan) ON DELETE SET NULL,
     CONSTRAINT fk_minh_chung_nguoi_dung FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung) ON DELETE SET NULL
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. Bảng audit_logs (Nhật ký hoạt động hệ thống)
+-- 7. Bảng audit_logs (Nhật ký hoạt động hệ thống)
 CREATE TABLE audit_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     MaNguoiDung VARCHAR(50) NULL,
@@ -80,9 +110,9 @@ CREATE TABLE audit_logs (
     dia_chi_ip VARCHAR(45) NULL,
     ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_audit_logs_nguoi_dung FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung) ON DELETE SET NULL
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 6. Bảng download_logs (Nhật ký tải minh chứng)
+-- 8. Bảng download_logs (Nhật ký tải minh chứng)
 CREATE TABLE download_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     MaNguoiDung VARCHAR(50) NULL,
@@ -91,9 +121,9 @@ CREATE TABLE download_logs (
     dia_chi_ip VARCHAR(45) NULL,
     CONSTRAINT fk_download_logs_nguoi_dung FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung) ON DELETE SET NULL,
     CONSTRAINT fk_download_logs_minh_chung FOREIGN KEY (MaMinhChung) REFERENCES MinhChung(MaMinhChung) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Khởi tạo danh sách tài khoản mẫu (Mật khẩu mặc định: 123456)
+-- Khởi tạo danh sách tài khoản cơ sở (Mật khẩu mặc định: 123456)
 INSERT INTO NguoiDung (MaNguoiDung, HoTen, Email, SoDienThoai, TenDangNhap, MatKhau, VaiTro, TrangThai) VALUES
 ('ND001', 'Quản trị viên', 'admin@fbu.edu.vn', '0912345678', 'admin', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'admin', 1),
 ('ND002', 'ThS. Nguyễn Văn An', 'annv@fbu.edu.vn', '0987654321', 'nguyenvanan', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1),

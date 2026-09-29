@@ -7,8 +7,8 @@ require_once __DIR__ . '/../includes/helpers.php';
 require_login();
 require_once __DIR__ . '/../config/database.php';
 
-$evidenceId = (int) ($_GET['id'] ?? 0);
-if ($evidenceId <= 0) {
+$evidenceId = trim($_GET['id'] ?? '');
+if ($evidenceId === '') {
     header('Location: ' . base_url('user/search.php?download_error=invalid'));
     exit;
 }
@@ -39,7 +39,7 @@ if (!$absolutePath || strpos($absolutePath, $projectRoot) !== 0 || !is_file($abs
     exit;
 }
 
-log_activity('xem', 'minh_chung', $evidenceId, 'MC.' . str_pad($evidenceId, 2, '0', STR_PAD_LEFT));
+log_activity('xem', 'minh_chung', 0, $evidenceId . ' - ' . ($file['original_name'] ?? ''));
 
 $displayName = basename($absolutePath);
 $mimeType = mime_content_type($absolutePath) ?: 'application/octet-stream';

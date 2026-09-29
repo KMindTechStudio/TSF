@@ -69,8 +69,71 @@ try {
     $standardSets = [];
 }
 
+// ─── Standards (Quản lý Tiêu chuẩn) ──────────────────────────────────────────
 $standards = [];
+try {
+    $stmt = $pdo->query("
+        SELECT 
+            tc.MaTieuChuan AS id,
+            tc.TenTieuChuan AS name,
+            tc.MoTa AS description,
+            tc.ThuTu AS order_num,
+            tc.MaBoTieuChuan AS set_id,
+            tc.TrangThai AS status,
+            b.TenBoTieuChuan AS set_name
+        FROM TieuChuan tc
+        LEFT JOIN BoTieuChuan b ON b.MaBoTieuChuan = tc.MaBoTieuChuan
+        ORDER BY tc.ThuTu ASC, tc.MaTieuChuan ASC
+    ");
+    foreach ($stmt->fetchAll() as $row) {
+        $standards[] = [
+            'id'          => $row['id'],
+            'code'        => $row['id'],
+            'name'        => $row['name'],
+            'description' => $row['description'] ?? '',
+            'order'       => (int) $row['order_num'],
+            'set_id'      => $row['set_id'] ?? '',
+            'set_name'    => $row['set_name'] ?? '',
+            'status'      => (int) $row['status'] === 1 ? 'Đang hoạt động' : 'Ngưng áp dụng',
+        ];
+    }
+} catch (Throwable $e) {
+    $standards = [];
+}
+
+// ─── Criteria (Quản lý Tiêu chí) ───────────────────────────────────────────
 $criteria = [];
+try {
+    $stmt = $pdo->query("
+        SELECT 
+            c.MaTieuChi AS id,
+            c.TenTieuChi AS name,
+            c.NoiDung AS description,
+            c.ThuTu AS order_num,
+            c.MaTieuChuan AS standard_id,
+            c.TrangThai AS status,
+            tc.TenTieuChuan AS standard_name,
+            tc.MaBoTieuChuan AS set_id
+        FROM TieuChi c
+        LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = c.MaTieuChuan
+        ORDER BY c.ThuTu ASC, c.MaTieuChi ASC
+    ");
+    foreach ($stmt->fetchAll() as $row) {
+        $criteria[] = [
+            'id'            => $row['id'],
+            'code'          => $row['id'],
+            'name'          => $row['name'],
+            'description'   => $row['description'] ?? '',
+            'order'         => (int) $row['order_num'],
+            'standard_id'   => $row['standard_id'] ?? '',
+            'standard_name' => $row['standard_name'] ?? '',
+            'set_id'        => $row['set_id'] ?? '',
+            'status'        => (int) $row['status'] === 1 ? 'Đang hoạt động' : 'Ngưng áp dụng',
+        ];
+    }
+} catch (Throwable $e) {
+    $criteria = [];
+}
 
 // ─── Evidences (Quản lý Minh chứng) ──────────────────────────────────────────
 $evidences = [];
@@ -83,37 +146,49 @@ try {
             m.TepTin AS file_path,
             m.NamHoc AS academic_year,
             m.TrangThai AS status,
-            m.MaBoTieuChuan,
+            m.MaTieuChi AS criterion_id,
+            COALESCE(tc.TenTieuChi, '') AS criterion_name,
+            COALESCE(tc.MaTieuChuan, '') AS standard_id,
+            COALESCE(tch.TenTieuChuan, '') AS standard_name,
+            COALESCE(tch.MaBoTieuChuan, '') AS set_id,
+            COALESCE(b.TenBoTieuChuan, '') AS set_name,
             m.MaNguoiDung,
             DATE_FORMAT(m.NgayCapNhat, '%d/%m/%Y %H:%i') AS updated_date,
-            b.TenBoTieuChuan AS set_name,
             u.HoTen AS user_name
         FROM MinhChung m
-        LEFT JOIN BoTieuChuan b ON b.MaBoTieuChuan = m.MaBoTieuChuan
+        LEFT JOIN TieuChi tc ON tc.MaTieuChi = m.MaTieuChi
+        LEFT JOIN TieuChuan tch ON tch.MaTieuChuan = tc.MaTieuChuan
+        LEFT JOIN BoTieuChuan b ON b.MaBoTieuChuan = tch.MaBoTieuChuan
         LEFT JOIN NguoiDung u ON u.MaNguoiDung = m.MaNguoiDung
         ORDER BY m.MaMinhChung ASC
     ");
     foreach ($stmt->fetchAll() as $row) {
-        $setCode = $row['MaBoTieuChuan'] ?? 'N/A';
-        $userCode = $row['MaNguoiDung'] ?? 'N/A';
+        $setCode = $row['set_id'] ?: 'N/A';
+        $userCode = $row['MaNguoiDung'] ?: 'N/A';
 
         $evidences[] = [
-            'id'             => $row['id'],
-            'code'           => $row['id'],
-            'name'           => $row['title'],
-            'description'    => $row['description'] ?? '',
-            'file_path'      => $row['file_path'] ?? '',
-            'year'           => $row['academic_year'] ?? '',
-            'updated'        => $row['updated_date'] ?: 'Chưa cập nhật',
-            'status_raw'     => (int) $row['status'],
-            'status'         => (int) $row['status'] === 1 ? 'Đang hoạt động' : 'Ngưng áp dụng',
-            'ma_bo_tieu_chuan'=> $row['MaBoTieuChuan'],
-            'set_code'       => $setCode,
-            'set_name'       => $row['set_name'] ?? '',
-            'standard_set'   => $setCode . ($row['set_name'] ? (' - ' . $row['set_name']) : ''),
-            'ma_nguoi_dung'  => $row['MaNguoiDung'],
-            'user_code'      => $userCode,
-            'user_name'      => $row['user_name'] ?? 'Hệ thống',
+            'id'              => $row['id'],
+            'code'            => $row['id'],
+            'name'            => $row['title'],
+            'description'     => $row['description'] ?? '',
+            'file_path'       => $row['file_path'] ?? '',
+            'year'            => $row['academic_year'] ?? '',
+            'updated'         => $row['updated_date'] ?: 'Chưa cập nhật',
+            'status_raw'      => (int) $row['status'],
+            'status'          => (int) $row['status'] === 1 ? 'Đang hoạt động' : 'Ngưng áp dụng',
+            'ma_tieu_chi'     => $row['criterion_id'] ?? '',
+            'criterion_code'  => $row['criterion_id'] ?? '',
+            'criterion_name'  => $row['criterion_name'] ?? '',
+            'ma_tieu_chuan'   => $row['standard_id'] ?? '',
+            'standard_code'   => $row['standard_id'] ?? '',
+            'standard_name'   => $row['standard_name'] ?? '',
+            'ma_bo_tieu_chuan'=> $row['set_id'] ?? '',
+            'set_code'        => $setCode,
+            'set_name'        => $row['set_name'] ?? '',
+            'standard_set'    => $setCode . ($row['set_name'] ? (' - ' . $row['set_name']) : ''),
+            'ma_nguoi_dung'   => $row['MaNguoiDung'],
+            'user_code'       => $userCode,
+            'user_name'       => $row['user_name'] ?? 'Hệ thống',
         ];
     }
 } catch (Throwable $e) {

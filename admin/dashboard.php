@@ -73,13 +73,18 @@ if (empty($circularLabels)) {
     $circularData = [1, 1, 1];
 }
 
+// 1. Thống kê Người dùng
+$adminPct = $totalUsers > 0 ? round(($adminCount / $totalUsers) * 100, 1) : 0;
+$userPct  = $totalUsers > 0 ? round(($userCount / $totalUsers) * 100, 1) : 0;
+
 $pageTitle = page_title('Dashboard Thống kê');
 $heading = 'Dashboard Tổng quan';
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<!-- Load Chart.js CDN -->
+<!-- Load Chart.js & Datalabels Plugin CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 
 <style>
 /* Custom Dashboard Enhancements */
@@ -272,16 +277,42 @@ include __DIR__ . '/../includes/header.php';
 
     <!-- Chart 2: Doughnut Chart (Cơ cấu Người dùng) -->
     <div class="col-lg-4">
-        <div class="chart-panel">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="bi bi-pie-chart-fill text-info"></i>
-                    Cơ cấu Người dùng
-                </h3>
-                <span class="badge bg-light text-dark border">Vành khuyên (Doughnut)</span>
+        <div class="chart-panel d-flex flex-column justify-content-between">
+            <div>
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="bi bi-pie-chart-fill text-info"></i>
+                        Cơ cấu Người dùng
+                    </h3>
+                    <span class="badge bg-light text-dark border">Vành khuyên (Doughnut)</span>
+                </div>
+                <div class="chart-container-box" style="height: 235px;">
+                    <canvas id="doughnutUserChart"></canvas>
+                </div>
             </div>
-            <div class="chart-container-box" style="height: 290px;">
-                <canvas id="doughnutUserChart"></canvas>
+            
+            <!-- Hiển thị số lượng và tỷ lệ % chi tiết từng mảng màu -->
+            <div class="row g-2 mt-2 pt-2 border-top">
+                <div class="col-6">
+                    <div class="p-2 rounded-3 text-center border" style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.25) !important;">
+                        <small class="d-block text-danger fw-bold text-truncate mb-1">
+                            <i class="bi bi-shield-lock-fill me-1"></i>Quản trị viên
+                        </small>
+                        <div class="fw-bold fs-5 text-danger">
+                            <?= $adminCount ?> <span class="fs-7 text-secondary fw-semibold">(<?= $adminPct ?>%)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-2 rounded-3 text-center border" style="background: rgba(37, 99, 235, 0.08); border-color: rgba(37, 99, 235, 0.25) !important;">
+                        <small class="d-block text-primary fw-bold text-truncate mb-1">
+                            <i class="bi bi-person-fill me-1"></i>Người dùng
+                        </small>
+                        <div class="fw-bold fs-5 text-primary">
+                            <?= $userCount ?> <span class="fs-7 text-secondary fw-semibold">(<?= $userPct ?>%)</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -491,18 +522,54 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Tắt datalabels mặc định cho các chart khác
+    if (typeof ChartDataLabels !== 'undefined') {
+        Chart.defaults.plugins.datalabels = { display: false };
+    }
+
+    // Custom Plugin: Vẽ số đếm tổng ở giữa tâm hình Vành khuyên
+    const doughnutCenterPlugin = {
+        id: 'doughnutCenterText',
+        afterDraw: function(chart) {
+            if (chart.config.type !== 'doughnut') return;
+            const width = chart.width;
+            const height = chart.chartArea ? (chart.chartArea.top + (chart.chartArea.bottom - chart.chartArea.top) / 2) : (chart.height / 2);
+            const ctx = chart.ctx;
+            ctx.save();
+
+            const total = <?= (int)$totalUsers ?>;
+            
+            // Subtitle
+            ctx.font = '600 11px system-ui, -apple-system, sans-serif';
+            ctx.fillStyle = isDarkMode ? '#94a3b8' : '#64748b';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('TỔNG SỐ', width / 2, height - 10);
+
+            // Number
+            ctx.font = '800 20px system-ui, -apple-system, sans-serif';
+            ctx.fillStyle = isDarkMode ? '#f8fafc' : '#0f172a';
+            ctx.fillText(total.toString(), width / 2, height + 12);
+            ctx.restore();
+        }
+    };
+
     // 2. Doughnut Chart: Cơ cấu Người dùng
     const doughnutCtx = document.getElementById('doughnutUserChart');
     if (doughnutCtx) {
         new Chart(doughnutCtx, {
             type: 'doughnut',
+            plugins: [ChartDataLabels, doughnutCenterPlugin],
             data: {
-                labels: ['Quản trị viên (Admin)', 'Người dùng (User)'],
+                labels: [
+                    'Quản trị viên (Admin): <?= $adminCount ?> (<?= $adminPct ?>%)', 
+                    'Người dùng (User): <?= $userCount ?> (<?= $userPct ?>%)'
+                ],
                 datasets: [{
                     data: [<?= $adminCount ?>, <?= $userCount ?>],
                     backgroundColor: [
-                        'rgba(239, 68, 68, 0.85)',
-                        'rgba(37, 99, 235, 0.85)'
+                        'rgba(239, 68, 68, 0.9)',
+                        'rgba(37, 99, 235, 0.9)'
                     ],
                     borderColor: isDarkMode ? '#1e293b' : '#ffffff',
                     borderWidth: 2,
@@ -512,14 +579,48 @@ document.addEventListener('DOMContentLoaded', function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '70%',
+                cutout: '65%',
+                layout: {
+                    padding: 6
+                },
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
                             boxWidth: 12,
-                            padding: 15
+                            padding: 10,
+                            font: {
+                                size: 11,
+                                weight: '600'
+                            }
                         }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw || 0;
+                                const total = <?= max(1, $totalUsers) ?>;
+                                const pct = ((val / total) * 100).toFixed(1);
+                                return ` ${context.label.split(':')[0]}: ${val} tài khoản (${pct}%)`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        display: true,
+                        color: '#ffffff',
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        formatter: function(value, context) {
+                            if (!value || value === 0) return '';
+                            const total = <?= max(1, $totalUsers) ?>;
+                            const pct = ((value / total) * 100).toFixed(0);
+                            return `${value}\n(${pct}%)`;
+                        },
+                        textAlign: 'center',
+                        textShadowBlur: 4,
+                        textShadowColor: 'rgba(0, 0, 0, 0.5)'
                     }
                 }
             }
