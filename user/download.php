@@ -17,7 +17,8 @@ $stmt = db()->prepare("
     SELECT
         MaMinhChung AS id,
         TenMinhChung AS original_name,
-        TepTin AS file_path
+        TepTin AS file_path,
+        TrangThai
     FROM MinhChung
     WHERE MaMinhChung = :id
     LIMIT 1
@@ -27,6 +28,12 @@ $file = $stmt->fetch();
 
 if (!$file || empty($file['file_path'])) {
     header('Location: ' . base_url('user/search.php?download_error=not_found'));
+    exit;
+}
+
+// Kiểm tra quyền tải: Nếu minh chứng ở trạng thái không hoạt động (TrangThai = 0), chỉ Admin mới được tải
+if ((int)($file['TrangThai'] ?? 1) === 0 && current_role() !== 'admin') {
+    header('Location: ' . base_url('user/search.php?download_error=inactive'));
     exit;
 }
 

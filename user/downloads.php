@@ -40,15 +40,17 @@ include __DIR__ . '/../includes/header.php';
             </tr>
             </thead>
             <tbody>
-            <?php foreach ($downloadRows as $item): ?>
+            <?php foreach ($downloadRows as $item): 
+                $ext = !empty($item['file_path']) ? strtoupper(pathinfo($item['file_path'], PATHINFO_EXTENSION)) : 'PDF';
+            ?>
                 <tr>
                     <td><?= htmlspecialchars($item['downloaded_time']) ?></td>
-                    <td class="fw-bold"><?= htmlspecialchars($item['code']) ?></td>
-                    <td><?= htmlspecialchars($item['title']) ?></td>
-                    <td><?= htmlspecialchars($item['downloader']) ?></td>
-                    <td><span class="badge text-bg-light text-dark"><?= htmlspecialchars($item['file_type']) ?></span></td>
+                    <td class="fw-bold"><span class="badge bg-light text-dark border"><?= htmlspecialchars($item['code']) ?></span></td>
+                    <td class="fw-medium"><?= htmlspecialchars($item['title']) ?></td>
+                    <td><i class="bi bi-person text-secondary me-1"></i><?= htmlspecialchars($item['downloader']) ?></td>
+                    <td><span class="badge bg-secondary"><?= htmlspecialchars($ext) ?></span></td>
                     <td class="text-end">
-                        <a class="btn btn-sm btn-outline-success" href="<?= base_url('user/download.php?id=' . (int) $item['file_id']) ?>"><i class="bi bi-download"></i></a>
+                        <a class="btn btn-sm btn-outline-success rounded-pill px-3" href="<?= base_url('user/download.php?id=' . urlencode($item['code'])) ?>"><i class="bi bi-download me-1"></i> Tải lại</a>
                     </td>
                 </tr>
             <?php endforeach; ?>

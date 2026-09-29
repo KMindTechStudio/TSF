@@ -8,13 +8,13 @@ require_login();
 require_once __DIR__ . '/../config/database.php';
 
 $pdo = db();
-$userId = (int) $_SESSION['user_id'];
+$userId = trim((string)($_SESSION['user_id'] ?? 'ND001'));
 $success = '';
 $error = '';
 $avatarMaxMb = 100;
 $avatarMaxBytes = $avatarMaxMb * 1024 * 1024;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'update_avatar') {
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     mkdir($avatarDir, 0777, true);
                 }
 
-                $storedName = 'avatar_user_' . $userId . '_' . date('YmdHis') . '.' . $extension;
+                $storedName = 'avatar_user_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $userId) . '_' . date('YmdHis') . '.' . $extension;
                 $targetPath = rtrim($avatarDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $storedName;
 
                 if (!move_uploaded_file($avatarFile['tmp_name'], $targetPath)) {
@@ -47,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $avatarPath = 'uploads/avatars/' . $storedName;
                     $stmt = $pdo->prepare("UPDATE NguoiDung SET DuongDanAnhDaiDien = :avatar_path WHERE MaNguoiDung = :id");
                     $stmt->execute(['avatar_path' => $avatarPath, 'id' => $userId]);
+                    log_activity('cap_nhat', 'nguoi_dung', 0, 'Cập nhật ảnh đại diện tài khoản ' . $userId);
                     $success = 'Cập nhật ảnh đại diện thành công.';
                 }
             }
@@ -69,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
                 'id' => $userId,
             ]);
+            log_activity('cap_nhat', 'nguoi_dung', 0, 'Đổi mật khẩu tài khoản ' . $userId);
             $success = 'Cập nhật mật khẩu thành công.';
         }
     }
@@ -89,6 +91,18 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute(['id' => $userId]);
 $profile = $stmt->fetch();
+
+if (!$profile) {
+    $profile = [
+        'MaNguoiDung' => $userId,
+        'username'    => $currentUser['username'] ?? 'admin',
+        'full_name'   => $currentUser['name'] ?? 'Quản trị viên',
+        'Email'       => $currentUser['email'] ?? 'admin@fbu.edu.vn',
+        'role_code'   => $currentUser['role'] ?? 'admin',
+        'avatar_path' => $currentUser['avatar'] ?? null,
+        'status'      => 1
+    ];
+}
 $roleName = ($profile['role_code'] ?? 'user') === 'admin' ? 'Quản trị viên' : 'Người dùng';
 
 $pageTitle = page_title('Thông tin cá nhân');

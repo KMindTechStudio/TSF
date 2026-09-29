@@ -402,8 +402,9 @@ function user_initials(string $name): string
     return mb_strtoupper($first . $last, 'UTF-8');
 }
 
-function avatar_html(?string $avatarPath, string $name, string $class = 'avatar'): string
+function avatar_html(?string $avatarPath, ?string $name = 'User', string $class = 'avatar'): string
 {
+    $name = (string)($name ?: 'User');
     if ($avatarPath) {
         return '<span class="' . htmlspecialchars($class, ENT_QUOTES, 'UTF-8') . ' avatar-image"><img src="' . base_url($avatarPath) . '" alt="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '"></span>';
     }

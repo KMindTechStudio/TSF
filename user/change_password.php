@@ -6,11 +6,11 @@ require_once __DIR__ . '/../config/database.php';
 $success = '';
 $error = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $currentPassword = $_POST['current_password'] ?? '';
     $newPassword = $_POST['new_password'] ?? '';
     $confirmPassword = $_POST['confirm_password'] ?? '';
-    $userId = (int) $_SESSION['user_id'];
+    $userId = trim((string)($_SESSION['user_id'] ?? 'ND001'));
 
     $stmt = db()->prepare('SELECT MatKhau FROM NguoiDung WHERE MaNguoiDung = :id LIMIT 1');
     $stmt->execute(['id' => $userId]);
@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
             'id' => $userId,
         ]);
+        log_activity('cap_nhat', 'nguoi_dung', 0, 'Đổi mật khẩu tài khoản ' . $userId);
         $success = 'Cập nhật mật khẩu thành công.';
     }
 }

@@ -45,24 +45,30 @@ try {
             COALESCE(b.ThongTu, '') AS thong_tu,
             COALESCE(DATE_FORMAT(b.NgayBanHanh, '%Y-%m-%d'), '') AS ngay_ban_hanh,
             b.MoTa,
+            b.TepTinPDF,
             b.TrangThai,
+            COUNT(DISTINCT tc.MaTieuChuan) AS standard_count,
             COUNT(DISTINCT m.MaMinhChung) AS evidence_count
         FROM BoTieuChuan b
-        LEFT JOIN MinhChung m ON m.MaBoTieuChuan = b.MaBoTieuChuan
-        GROUP BY b.MaBoTieuChuan, b.TenBoTieuChuan, b.ThongTu, b.NgayBanHanh, b.MoTa, b.TrangThai
-        ORDER BY b.MaBoTieuChuan ASC
+        LEFT JOIN TieuChuan tc ON tc.MaBoTieuChuan = b.MaBoTieuChuan
+        LEFT JOIN TieuChi tchi ON tchi.MaTieuChuan = tc.MaTieuChuan
+        LEFT JOIN MinhChung m ON (m.MaBoTieuChuan = b.MaBoTieuChuan OR m.MaTieuChi = tchi.MaTieuChi)
+        GROUP BY b.MaBoTieuChuan, b.TenBoTieuChuan, b.ThongTu, b.NgayBanHanh, b.MoTa, b.TepTinPDF, b.TrangThai
+        ORDER BY b.TrangThai DESC, b.MaBoTieuChuan ASC
     ");
     foreach ($stmt->fetchAll() as $row) {
         $standardSets[] = [
-            'id'            => $row['id'],
-            'code'          => $row['id'],
-            'name'          => $row['name'],
-            'thong_tu'      => $row['thong_tu'] ?: 'Thông tư 04/2016/TT-BGDĐT',
-            'ngay_ban_hanh' => $row['ngay_ban_hanh'] ?: '',
-            'description'   => $row['MoTa'] ?? '',
-            'status_raw'    => (int) $row['TrangThai'] === 1 ? 'active' : 'inactive',
-            'status'        => (int) $row['TrangThai'] === 1 ? 'Đang hoạt động' : 'Ngưng áp dụng',
-            'evidences'     => (int) $row['evidence_count'],
+            'id'             => $row['id'],
+            'code'           => $row['id'],
+            'name'           => $row['name'],
+            'thong_tu'       => $row['thong_tu'] ?: 'Thông tư 04/2016/TT-BGDĐT',
+            'ngay_ban_hanh'  => $row['ngay_ban_hanh'] ?: '',
+            'description'    => $row['MoTa'] ?? '',
+            'tep_tin_pdf'    => $row['TepTinPDF'] ?? '',
+            'status_raw'     => (int) $row['TrangThai'] === 1 ? 'active' : 'inactive',
+            'status'         => (int) $row['TrangThai'] === 1 ? 'Đang hoạt động' : 'Ngưng áp dụng',
+            'standard_count' => (int) $row['standard_count'],
+            'evidences'      => (int) $row['evidence_count'],
         ];
     }
 } catch (Throwable $e) {
@@ -113,9 +119,11 @@ try {
             c.MaTieuChuan AS standard_id,
             c.TrangThai AS status,
             tc.TenTieuChuan AS standard_name,
-            tc.MaBoTieuChuan AS set_id
+            tc.MaBoTieuChuan AS set_id,
+            COALESCE(b.TenBoTieuChuan, '') AS set_name
         FROM TieuChi c
         LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = c.MaTieuChuan
+        LEFT JOIN BoTieuChuan b ON b.MaBoTieuChuan = tc.MaBoTieuChuan
         ORDER BY c.ThuTu ASC, c.MaTieuChi ASC
     ");
     foreach ($stmt->fetchAll() as $row) {
@@ -128,6 +136,7 @@ try {
             'standard_id'   => $row['standard_id'] ?? '',
             'standard_name' => $row['standard_name'] ?? '',
             'set_id'        => $row['set_id'] ?? '',
+            'set_name'      => $row['set_name'] ?? '',
             'status'        => (int) $row['status'] === 1 ? 'Đang hoạt động' : 'Ngưng áp dụng',
         ];
     }
@@ -142,6 +151,8 @@ try {
         SELECT
             m.MaMinhChung AS id,
             m.TenMinhChung AS title,
+            m.NgayBanHanh AS issue_date,
+            DATE_FORMAT(m.NgayBanHanh, '%d/%m/%Y') AS formatted_issue_date,
             m.MoTa AS description,
             m.TepTin AS file_path,
             m.NamHoc AS academic_year,
@@ -150,8 +161,8 @@ try {
             COALESCE(tc.TenTieuChi, '') AS criterion_name,
             COALESCE(tc.MaTieuChuan, '') AS standard_id,
             COALESCE(tch.TenTieuChuan, '') AS standard_name,
-            COALESCE(tch.MaBoTieuChuan, '') AS set_id,
-            COALESCE(b.TenBoTieuChuan, '') AS set_name,
+            COALESCE(tch.MaBoTieuChuan, m.MaBoTieuChuan, '') AS set_id,
+            COALESCE(b.TenBoTieuChuan, bm.TenBoTieuChuan, '') AS set_name,
             m.MaNguoiDung,
             DATE_FORMAT(m.NgayCapNhat, '%d/%m/%Y %H:%i') AS updated_date,
             u.HoTen AS user_name
@@ -159,6 +170,7 @@ try {
         LEFT JOIN TieuChi tc ON tc.MaTieuChi = m.MaTieuChi
         LEFT JOIN TieuChuan tch ON tch.MaTieuChuan = tc.MaTieuChuan
         LEFT JOIN BoTieuChuan b ON b.MaBoTieuChuan = tch.MaBoTieuChuan
+        LEFT JOIN BoTieuChuan bm ON bm.MaBoTieuChuan = m.MaBoTieuChuan
         LEFT JOIN NguoiDung u ON u.MaNguoiDung = m.MaNguoiDung
         ORDER BY m.MaMinhChung ASC
     ");
@@ -167,15 +179,17 @@ try {
         $userCode = $row['MaNguoiDung'] ?: 'N/A';
 
         $evidences[] = [
-            'id'              => $row['id'],
-            'code'            => $row['id'],
-            'name'            => $row['title'],
-            'description'     => $row['description'] ?? '',
-            'file_path'       => $row['file_path'] ?? '',
-            'year'            => $row['academic_year'] ?? '',
-            'updated'         => $row['updated_date'] ?: 'Chưa cập nhật',
-            'status_raw'      => (int) $row['status'],
-            'status'          => (int) $row['status'] === 1 ? 'Đang hoạt động' : 'Ngưng áp dụng',
+            'id'                  => $row['id'],
+            'code'                => $row['id'],
+            'name'                => $row['title'],
+            'issue_date'          => $row['issue_date'] ?? '',
+            'issue_date_formatted'=> $row['formatted_issue_date'] ?? '',
+            'description'         => $row['description'] ?? '',
+            'file_path'           => $row['file_path'] ?? '',
+            'year'                => $row['academic_year'] ?? '',
+            'updated'             => $row['updated_date'] ?: 'Chưa cập nhật',
+            'status_raw'          => (int) $row['status'],
+            'status'              => (int) $row['status'] === 1 ? 'Đang hoạt động' : 'Không hoạt động',
             'ma_tieu_chi'     => $row['criterion_id'] ?? '',
             'criterion_code'  => $row['criterion_id'] ?? '',
             'criterion_name'  => $row['criterion_name'] ?? '',

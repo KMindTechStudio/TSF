@@ -13,8 +13,15 @@ $selectedCriterion = trim($_GET['criterion'] ?? '');
 $selectedEvidence = trim($_GET['evidence'] ?? '');
 $downloadError  = $_GET['download_error'] ?? '';
 
+// Với tài khoản người dùng (User): chỉ hiển thị các minh chứng Đang hoạt động (TrangThai = 1).
+// Với Quản trị viên (Admin): có thể xem toàn bộ minh chứng (kể cả Không hoạt động).
+$availableEvidences = $evidences;
+if (current_role() !== 'admin') {
+    $availableEvidences = array_values(array_filter($availableEvidences, fn($item) => (int)($item['status_raw'] ?? 1) === 1));
+}
+
 // Lọc sơ bộ phía Server để đảm bảo SSR / SEO / Reload trang chuẩn xác
-$filteredEvidences = array_filter($evidences, function ($item) use ($searchKeyword, $selectedStandard, $selectedCriterion, $selectedEvidence) {
+$filteredEvidences = array_filter($availableEvidences, function ($item) use ($searchKeyword, $selectedStandard, $selectedCriterion, $selectedEvidence) {
     if ($searchKeyword !== '') {
         $found = search_contains($item['code'] ?? '', $searchKeyword) 
               || search_contains($item['name'] ?? '', $searchKeyword)
@@ -66,10 +73,10 @@ include __DIR__ . '/../includes/header.php';
         </div>
 
         <form id="filterForm" onsubmit="return false;" class="row g-3">
-            <!-- CÁCH 1: Ô NHẬP TỪ KHÓA TÌM NHANH (MÃ HOẶC TÊN MINH CHỨNG) -->
+            <!-- CÁCH 1: Ô NHẬP TỪ KHÓA TÌM KIẾM (MÃ HOẶC TÊN MINH CHỨNG) -->
             <div class="col-12 col-xl-4">
                 <label for="filterKeyword" class="form-label fw-bold small text-primary mb-1 d-flex align-items-center gap-1">
-                    <i class="bi bi-search"></i> Cách 1: Ô nhập từ khóa (Mã / Tên minh chứng)
+                    <i class="bi bi-search"></i> Cách 1: Tìm kiếm theo Mã minh chứng &amp; Tên minh chứng
                 </label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0 text-muted">
@@ -79,7 +86,7 @@ include __DIR__ . '/../includes/header.php';
                            class="form-control bg-light border-start-0 border-end-0 ps-0" 
                            id="filterKeyword" 
                            name="keyword"
-                           placeholder="Nhập mã (MC01...) hoặc tên minh chứng..." 
+                           placeholder="Nhập mã minh chứng (MC001...) hoặc tên minh chứng..." 
                            value="<?= htmlspecialchars($searchKeyword) ?>"
                            autocomplete="off">
                     <button class="btn btn-light border border-start-0 text-muted" type="button" id="btnClearKeyword" style="display: <?= $searchKeyword !== '' ? 'block' : 'none' ?>;" title="Xóa từ khóa">
@@ -91,10 +98,10 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             </div>
 
-            <!-- CÁCH 2: CỤM 3 Ô CHỌN NHANH (DROPDOWN SONG SONG & LIÊN KẾT) -->
+            <!-- CÁCH 2: CỤM Ô CHỌN NHANH (LỌC THEO CỘT TIÊU CHUẨN & TIÊU CHÍ) -->
             <div class="col-12 col-xl-8">
                 <label class="form-label fw-bold small text-primary mb-1 d-flex align-items-center gap-1">
-                    <i class="bi bi-diagram-3"></i> Cách 2: Ô chọn nhanh phân cấp (Tiêu chuẩn &rarr; Tiêu chí &rarr; Minh chứng)
+                    <i class="bi bi-diagram-3"></i> Cách 2: Lọc theo cột Tiêu chuẩn &amp; Tiêu chí
                 </label>
                 <div class="row g-2">
                     <!-- Dropdown 1: Tiêu chuẩn -->
@@ -166,7 +173,11 @@ include __DIR__ . '/../includes/header.php';
 <?php if ($downloadError): ?>
     <div class="alert alert-warning alert-dismissible fade show rounded-3" role="alert">
         <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        Không thể tải minh chứng. Vui lòng kiểm tra lại tệp đính kèm trong hệ thống.
+        <?php if ($downloadError === 'inactive' || $downloadError === 'forbidden'): ?>
+            Minh chứng này đang ở trạng thái <strong>Không hoạt động</strong> (Tạm ẩn). Bạn không có quyền xem hoặc tải minh chứng này.
+        <?php else: ?>
+            Không thể tải minh chứng. Vui lòng kiểm tra lại tệp đính kèm trong hệ thống.
+        <?php endif; ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 <?php endif; ?>
@@ -236,15 +247,21 @@ include __DIR__ . '/../includes/header.php';
                                 </small>
                             <?php endif; ?>
                         </td>
-                        <td style="min-width: 180px; max-width: 220px;">
+                        <td style="min-width: 180px; max-width: 240px;">
                             <div class="d-flex flex-column gap-1">
+                                <?php if (!empty($item['set_name']) || !empty($item['ma_bo_tieu_chuan'])): ?>
+                                    <div class="small text-secondary fw-bold d-flex align-items-center gap-1 text-truncate" style="font-size: 0.72rem;" title="Bộ tiêu chuẩn: <?= htmlspecialchars($item['set_name'] ?? '') ?>">
+                                        <i class="bi bi-collection-fill text-primary" style="font-size: 0.75rem;"></i>
+                                        <span class="text-truncate"><?= htmlspecialchars(($item['ma_bo_tieu_chuan'] ?? '') . (!empty($item['set_name']) ? (' - ' . $item['set_name']) : '')) ?></span>
+                                    </div>
+                                <?php endif; ?>
                                 <?php if (!empty($item['ma_tieu_chuan'])): ?>
                                     <span class="badge bg-primary-subtle text-primary text-truncate d-inline-block text-start w-100" title="<?= htmlspecialchars($item['standard_name'] ? ($item['ma_tieu_chuan'] . ' - ' . $item['standard_name']) : $item['ma_tieu_chuan']) ?>">
-                                        <i class="bi bi-bookmark-fill me-1"></i><?= htmlspecialchars($item['ma_tieu_chuan'] . ($item['standard_name'] ? (' - ' . $item['standard_name']) : '')) ?>
+                                        <i class="bi bi-folder2 me-1"></i><?= htmlspecialchars($item['ma_tieu_chuan'] . ($item['standard_name'] ? (' - ' . $item['standard_name']) : '')) ?>
                                     </span>
                                 <?php endif; ?>
                                 <?php if (!empty($item['ma_tieu_chi'])): ?>
-                                    <span class="badge bg-info-subtle text-dark text-truncate d-inline-block text-start w-100" title="<?= htmlspecialchars($item['criterion_name'] ? ($item['ma_tieu_chi'] . ' - ' . $item['criterion_name']) : $item['ma_tieu_chi']) ?>">
+                                    <span class="badge bg-success-subtle text-success text-truncate d-inline-block text-start w-100" title="<?= htmlspecialchars($item['criterion_name'] ? ($item['ma_tieu_chi'] . ' - ' . $item['criterion_name']) : $item['ma_tieu_chi']) ?>">
                                         <i class="bi bi-list-check me-1"></i><?= htmlspecialchars($item['ma_tieu_chi'] . ($item['criterion_name'] ? (' - ' . $item['criterion_name']) : '')) ?>
                                     </span>
                                 <?php endif; ?>
@@ -297,71 +314,79 @@ include __DIR__ . '/../includes/header.php';
 
 <!-- ======================= MODAL XEM CHI TIẾT MINH CHỨNG ======================= -->
 <div class="modal fade" id="evidenceDetailModal" tabindex="-1" aria-labelledby="evidenceDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-bottom pb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-primary-subtle text-primary p-2 rounded-3 fs-6">
-                        <i class="bi bi-file-earmark-text"></i>
-                    </span>
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-2xl rounded-4 overflow-hidden">
+            <!-- Header -->
+            <div class="modal-header border-0 bg-primary text-white py-3 px-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-2 rounded-3 bg-white bg-opacity-20 text-white">
+                        <i class="bi bi-file-earmark-text-fill fs-5"></i>
+                    </div>
                     <div>
-                        <h5 class="modal-title fw-bold mb-0" id="evidenceDetailModalLabel">Thông tin chi tiết Minh chứng</h5>
-                        <small class="text-secondary" id="modalEvidenceCodeSubtitle"></small>
+                        <div class="small text-white-50 text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Hồ sơ minh chứng kiểm định</div>
+                        <h5 class="modal-title mb-0 text-white fw-bold" id="evidenceDetailModalLabel">
+                            Thông tin chi tiết Minh chứng: <span id="modalEvidenceCodeSubtitle" class="font-monospace text-warning"></span>
+                        </h5>
                     </div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
-            <div class="modal-body p-4">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold small text-muted">Mã minh chứng</label>
-                        <input class="form-control bg-light fw-bold text-primary font-monospace" id="modalCode" readonly>
+
+            <!-- Body -->
+            <div class="modal-body p-4" style="background-color: #f8fafc;">
+                <!-- 1. Tiêu đề & Thông tin cơ bản -->
+                <div class="card border-0 shadow-sm rounded-4 mb-3 bg-white">
+                    <div class="card-body p-4">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <span class="badge bg-primary px-2 py-1 font-monospace fs-7" id="modalCode"></span>
+                            <span class="badge bg-light text-secondary border px-2 py-1 fs-7" id="modalIssueDate">
+                                <i class="bi bi-calendar3 me-1 text-primary"></i>Ngày ban hành: -
+                            </span>
+                            <span id="modalStatusWrapper">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fs-7" id="modalStatusBadge">Đang hoạt động</span>
+                            </span>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-0 lh-base" id="modalName" style="font-size: 1.15rem;"></h5>
+                        <p class="text-muted small mt-2 mb-0" id="modalDesc" style="display: none;"></p>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold small text-muted">Năm học</label>
-                        <input class="form-control bg-light" id="modalYear" readonly>
+                </div>
+
+                <!-- 2. Sơ đồ phân cấp đánh giá (Cây tiêu chuẩn) -->
+                <div class="card border-0 shadow-sm rounded-4 mb-3 bg-white">
+                    <div class="card-body p-3 p-md-4">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-diagram-3-fill text-primary fs-5"></i>
+                                <h6 class="fw-bold mb-0 text-dark">Sơ đồ phân cấp đánh giá (Cây tiêu chuẩn)</h6>
+                            </div>
+                            <span class="badge bg-primary-subtle text-primary small">4 Cấp độ kiểm định</span>
+                        </div>
+                        <div id="modalHierarchyPath">
+                            <!-- Populated dynamically with 4-card pipeline -->
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold small text-muted">Trạng thái</label>
-                        <input class="form-control bg-light fw-semibold" id="modalStatus" readonly>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-bold small text-muted">Tên minh chứng</label>
-                        <textarea class="form-control bg-light fw-semibold" id="modalName" rows="2" readonly></textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold small text-muted">Tiêu chuẩn</label>
-                        <input class="form-control bg-light" id="modalStandard" readonly>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold small text-muted">Tiêu chí</label>
-                        <input class="form-control bg-light" id="modalCriterion" readonly>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-bold small text-muted">Mô tả chi tiết</label>
-                        <textarea class="form-control bg-light" id="modalDesc" rows="3" readonly></textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold small text-muted">Ngày cập nhật</label>
-                        <input class="form-control bg-light" id="modalUpdated" readonly>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold small text-muted">Người cập nhật</label>
-                        <input class="form-control bg-light" id="modalUser" readonly>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-bold small text-muted">Tệp tin đính kèm</label>
-                        <div class="d-flex align-items-center gap-2" id="modalFileWrapper">
-                            <input class="form-control bg-light" id="modalFileName" readonly>
-                            <a id="modalDownloadBtn" class="btn btn-success text-nowrap px-3" href="#" title="Tải tệp tin về">
-                                <i class="bi bi-download me-1"></i> Tải về
-                            </a>
+                </div>
+
+                <!-- 3. Tệp tin đính kèm & Tải về -->
+                <div class="card border-0 shadow-sm rounded-4 bg-white">
+                    <div class="card-body p-3 p-md-4">
+                        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                            <i class="bi bi-paperclip text-primary fs-5"></i>
+                            <h6 class="fw-bold mb-0 text-dark">Tệp tin văn bản / Minh chứng đính kèm</h6>
+                        </div>
+                        <div id="modalFileContainer">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-top pt-3">
-                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+
+            <!-- Footer -->
+            <div class="modal-footer border-top bg-white px-4 py-3 d-flex justify-content-between">
+                <div class="text-muted small">
+                    <i class="bi bi-shield-check text-success me-1"></i>Hồ sơ minh chứng chính thức của chương trình đào tạo
+                </div>
+                <button type="button" class="btn btn-secondary px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
             </div>
         </div>
     </div>
@@ -369,7 +394,7 @@ include __DIR__ . '/../includes/header.php';
 
 <!-- ======================= CLIENT DATA & SMART FILTER ENGINE ======================= -->
 <script>
-window.EVIDENCES_DATA = <?= json_encode($evidences, JSON_UNESCAPED_UNICODE) ?>;
+window.EVIDENCES_DATA = <?= json_encode($availableEvidences, JSON_UNESCAPED_UNICODE) ?>;
 window.STANDARDS_DATA = <?= json_encode($standards, JSON_UNESCAPED_UNICODE) ?>;
 window.CRITERIA_DATA  = <?= json_encode($criteria, JSON_UNESCAPED_UNICODE) ?>;
 
@@ -569,15 +594,21 @@ window.CRITERIA_DATA  = <?= json_encode($criteria, JSON_UNESCAPED_UNICODE) ?>;
                         </div>
                         ${item.description ? `<small class="text-muted line-clamp-1 d-block mt-1" title="${escapeHtml(item.description)}">${escapeHtml(item.description)}</small>` : ''}
                     </td>
-                    <td style="min-width: 180px; max-width: 220px;">
+                    <td style="min-width: 180px; max-width: 240px;">
                         <div class="d-flex flex-column gap-1">
+                            ${(item.set_name || item.ma_bo_tieu_chuan) ? `
+                                <div class="small text-secondary fw-bold d-flex align-items-center gap-1 text-truncate" style="font-size: 0.72rem;" title="Bộ tiêu chuẩn: ${escapeHtml(item.set_name || '')}">
+                                    <i class="bi bi-collection-fill text-primary" style="font-size: 0.75rem;"></i>
+                                    <span class="text-truncate">${escapeHtml((item.ma_bo_tieu_chuan || '') + (item.set_name ? ' - ' + item.set_name : ''))}</span>
+                                </div>
+                            ` : ''}
                             ${item.ma_tieu_chuan ? `
                                 <span class="badge bg-primary-subtle text-primary text-truncate d-inline-block text-start w-100" title="${escapeHtml((item.ma_tieu_chuan + (item.standard_name ? ' - ' + item.standard_name : '')))}">
-                                    <i class="bi bi-bookmark-fill me-1"></i>${escapeHtml(item.ma_tieu_chuan + (item.standard_name ? ' - ' + item.standard_name : ''))}
+                                    <i class="bi bi-folder2 me-1"></i>${escapeHtml(item.ma_tieu_chuan + (item.standard_name ? ' - ' + item.standard_name : ''))}
                                 </span>
                             ` : ''}
                             ${item.ma_tieu_chi ? `
-                                <span class="badge bg-info-subtle text-dark text-truncate d-inline-block text-start w-100" title="${escapeHtml((item.ma_tieu_chi + (item.criterion_name ? ' - ' + item.criterion_name : '')))}">
+                                <span class="badge bg-success-subtle text-success text-truncate d-inline-block text-start w-100" title="${escapeHtml((item.ma_tieu_chi + (item.criterion_name ? ' - ' + item.criterion_name : '')))}">
                                     <i class="bi bi-list-check me-1"></i>${escapeHtml(item.ma_tieu_chi + (item.criterion_name ? ' - ' + item.criterion_name : ''))}
                                 </span>
                             ` : ''}
@@ -786,30 +817,120 @@ window.CRITERIA_DATA  = <?= json_encode($criteria, JSON_UNESCAPED_UNICODE) ?>;
                 const item = window.EVIDENCES_DATA.find(e => e.id === id || e.code === id);
                 if (!item) return;
 
-                document.getElementById('modalEvidenceCodeSubtitle').textContent = `Mã: ${item.code}`;
-                document.getElementById('modalCode').value = item.code || '';
-                document.getElementById('modalName').value = item.name || '';
-                document.getElementById('modalYear').value = item.year || '-';
-                document.getElementById('modalDesc').value = item.description || 'Chưa có mô tả chi tiết';
-                document.getElementById('modalStandard').value = item.ma_tieu_chuan ? (item.ma_tieu_chuan + (item.standard_name ? ' - ' + item.standard_name : '')) : 'Chưa phân loại';
-                document.getElementById('modalCriterion').value = item.ma_tieu_chi ? (item.ma_tieu_chi + (item.criterion_name ? ' - ' + item.criterion_name : '')) : 'Chưa phân loại';
-                document.getElementById('modalUpdated').value = item.updated || '-';
-                document.getElementById('modalUser').value = item.user_name || 'Hệ thống';
+                document.getElementById('modalEvidenceCodeSubtitle').textContent = item.code || '';
+                document.getElementById('modalCode').textContent = item.code || '';
+                document.getElementById('modalName').textContent = item.name || '';
+                
+                const issueDateEl = document.getElementById('modalIssueDate');
+                if (issueDateEl) {
+                    const d = item.issue_date_formatted || item.issue_date || '-';
+                    issueDateEl.innerHTML = `<i class="bi bi-calendar3 me-1 text-primary"></i>Ngày ban hành: ${escapeHtml(d)}`;
+                }
 
-                const statusInput = document.getElementById('modalStatus');
+                const descEl = document.getElementById('modalDesc');
+                if (descEl) {
+                    if (item.description) {
+                        descEl.style.display = 'block';
+                        descEl.textContent = item.description;
+                    } else {
+                        descEl.style.display = 'none';
+                    }
+                }
+
                 const isOnline = parseInt(item.status_raw) === 1;
-                statusInput.value = isOnline ? 'Đang hoạt động' : 'Ngưng áp dụng';
-                statusInput.className = `form-control bg-light fw-bold ${isOnline ? 'text-success' : 'text-warning'}`;
+                const statusBadge = document.getElementById('modalStatusBadge');
+                if (statusBadge) {
+                    statusBadge.className = `badge ${isOnline ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle'} px-2 py-1 fs-7`;
+                    statusBadge.innerHTML = isOnline ? '<i class="bi bi-eye-fill me-1"></i>Đang hoạt động' : '<i class="bi bi-eye-slash-fill me-1"></i>Không hoạt động';
+                }
+
+                // Render sơ đồ phân cấp (Cây tiêu chuẩn) 4 cấp độ
+                const hierarchyContainer = document.getElementById('modalHierarchyPath');
+                if (hierarchyContainer) {
+                    if (item.ma_tieu_chi || item.ma_tieu_chuan) {
+                        hierarchyContainer.innerHTML = `
+                            <div class="row g-2 align-items-stretch">
+                                <div class="col-12 col-md-6 col-xl-3">
+                                    <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #f0f7ff; border-color: #bfdbfe !important;">
+                                        <div class="d-flex align-items-center gap-2 mb-2 text-primary fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em;">
+                                            <i class="bi bi-collection-fill"></i> 1. BỘ TIÊU CHUẨN
+                                        </div>
+                                        <div class="fw-bold text-dark fs-7 flex-grow-1" title="${escapeHtml(item.set_name || '')}">
+                                            ${escapeHtml(item.set_name || item.ma_bo_tieu_chuan || 'Bộ tiêu chuẩn chung')}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6 col-xl-3">
+                                    <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #f0fdf4; border-color: #bbf7d0 !important;">
+                                        <div class="d-flex align-items-center gap-2 mb-2 text-success fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em;">
+                                            <i class="bi bi-folder2-open"></i> 2. TIÊU CHUẨN
+                                        </div>
+                                        <div class="fw-bold text-dark fs-7 flex-grow-1" title="${escapeHtml((item.ma_tieu_chuan ? item.ma_tieu_chuan + ' - ' : '') + (item.standard_name || ''))}">
+                                            ${item.ma_tieu_chuan ? `<span class="badge bg-success-subtle text-success me-1 font-monospace">${escapeHtml(item.ma_tieu_chuan)}</span>` : ''}${escapeHtml(item.standard_name || 'Chưa phân loại')}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6 col-xl-3">
+                                    <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #fdf4ff; border-color: #f5d0fe !important;">
+                                        <div class="d-flex align-items-center gap-2 mb-2 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em; color: #9333ea;">
+                                            <i class="bi bi-list-check"></i> 3. TIÊU CHÍ
+                                        </div>
+                                        <div class="fw-bold text-dark fs-7 flex-grow-1" title="${escapeHtml((item.ma_tieu_chi ? item.ma_tieu_chi + ' - ' : '') + (item.criterion_name || ''))}">
+                                            ${item.ma_tieu_chi ? `<span class="badge me-1 font-monospace" style="background: #f3e8ff; color: #9333ea;">${escapeHtml(item.ma_tieu_chi)}</span>` : ''}${escapeHtml(item.criterion_name || 'Chưa phân loại')}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6 col-xl-3">
+                                    <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #fffbeb; border-color: #fde68a !important;">
+                                        <div class="d-flex align-items-center gap-2 mb-2 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em; color: #d97706;">
+                                            <i class="bi bi-file-earmark-check-fill"></i> 4. MINH CHỨNG
+                                        </div>
+                                        <div class="fw-bold text-dark fs-7 flex-grow-1">
+                                            <span class="badge bg-warning text-dark me-1 font-monospace">${escapeHtml(item.code || '')}</span>
+                                            <span class="text-truncate d-inline-block align-middle" style="max-width: 140px;" title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        hierarchyContainer.innerHTML = '<div class="text-muted p-2 bg-light rounded-3 text-center">Chưa phân loại tiêu chuẩn / tiêu chí</div>';
+                    }
+                }
 
                 const fileName = item.file_path ? item.file_path.split('/').pop().split('\\').pop() : '';
-                document.getElementById('modalFileName').value = fileName || 'Không có tệp đính kèm';
-
-                const downloadBtn = document.getElementById('modalDownloadBtn');
-                if (item.file_path) {
-                    downloadBtn.style.display = 'inline-flex';
-                    downloadBtn.href = `<?= base_url('user/download.php?id=') ?>${encodeURIComponent(item.id)}`;
-                } else {
-                    downloadBtn.style.display = 'none';
+                const fileContainer = document.getElementById('modalFileContainer');
+                if (fileContainer) {
+                    if (item.file_path) {
+                        fileContainer.innerHTML = `
+                            <div class="p-3 rounded-3 bg-light border d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="p-3 rounded-3 bg-danger-subtle text-danger fs-3">
+                                        <i class="bi bi-file-earmark-pdf-fill"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">${escapeHtml(fileName)}</h6>
+                                        <span class="badge bg-light text-secondary border">Tệp đính kèm văn bản</span>
+                                    </div>
+                                </div>
+                                <div class="d-inline-flex gap-2">
+                                    <a class="btn btn-primary px-3 rounded-3" href="<?= base_url('user/view.php?id=') ?>${encodeURIComponent(item.id)}" target="_blank">
+                                        <i class="bi bi-eye me-1"></i> Xem trực tiếp file
+                                    </a>
+                                    <a class="btn btn-success px-3 rounded-3" href="<?= base_url('user/download.php?id=') ?>${encodeURIComponent(item.id)}" download>
+                                        <i class="bi bi-download me-1"></i> Tải về máy
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        fileContainer.innerHTML = `
+                            <div class="p-3 rounded-3 bg-light text-center text-muted border border-dashed">
+                                <i class="bi bi-file-earmark-x fs-3 d-block mb-1 text-secondary"></i>
+                                Chưa có tệp tin đính kèm cho minh chứng này.
+                            </div>
+                        `;
+                    }
                 }
 
                 if (!detailModal && window.bootstrap && window.bootstrap.Modal) {

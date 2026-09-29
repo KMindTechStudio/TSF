@@ -4,6 +4,7 @@ require_roles(['admin']);
 require_once __DIR__ . '/../includes/data.php';
 
 // ─── Data Analytics & Metric Calculations ────────────────────────────────────
+// 1. Thống kê Người dùng
 $totalUsers = count($users);
 $adminCount = 0;
 $userCount = 0;
@@ -13,19 +14,23 @@ foreach ($users as $u) {
     else $userCount++;
     if (($u['status_raw'] ?? 0) === 1) $activeUsersCount++;
 }
+$adminPct = $totalUsers > 0 ? round(($adminCount / $totalUsers) * 100, 1) : 0;
+$userPct  = $totalUsers > 0 ? round(($userCount / $totalUsers) * 100, 1) : 0;
 
-// 2. Thống kê Thông tư
-$circularMap = [];
+// 2. Thống kê Thông tư & Tiêu chuẩn theo Thông tư
+$standardsByCircular = [];
 foreach ($standardSets as $st) {
     $tt = trim($st['thong_tu'] ?? '');
     if ($tt !== '') {
-        $circularMap[$tt] = ($circularMap[$tt] ?? 0) + 1;
+        $standardsByCircular[$tt] = ($standardsByCircular[$tt] ?? 0) + (int)($st['standard_count'] ?? 0);
     }
 }
-$totalCirculars = count($circularMap);
+$totalCirculars = count($standardsByCircular);
 
-// 3. Thống kê Bộ Tiêu chuẩn & Tiêu chí
+// 3. Thống kê Bộ Tiêu chuẩn, Tiêu chuẩn & Tiêu chí
 $totalStandardSets = count($standardSets);
+$totalStandards = count($standards);
+$totalCriteria = count($criteria);
 $activeSetsCount = 0;
 foreach ($standardSets as $st) {
     if (($st['status_raw'] ?? '') === 'active') $activeSetsCount++;
@@ -40,42 +45,54 @@ $evidencesBySet = [];
 foreach ($evidences as $ev) {
     if (!empty($ev['file_path'])) $evidencesWithFiles++;
     
-    $yr = trim($ev['year'] ?? '') ?: 'Chưa phân năm';
+    // Trích xuất năm ban hành chính xác từ ngày ban hành
+    $yr = '';
+    if (!empty($ev['issue_date'])) {
+        $yr = 'Năm ' . date('Y', strtotime($ev['issue_date']));
+    } elseif (!empty($ev['year'])) {
+        $yr = 'Năm ' . $ev['year'];
+    } else {
+        $yr = 'Chưa phân năm';
+    }
     $evidencesByYear[$yr] = ($evidencesByYear[$yr] ?? 0) + 1;
 
     $sName = trim($ev['set_name'] ?? '') ?: (trim($ev['ma_bo_tieu_chuan'] ?? '') ?: 'Chưa gán bộ');
     $evidencesBySet[$sName] = ($evidencesBySet[$sName] ?? 0) + 1;
 }
+ksort($evidencesByYear);
 
 // Chuẩn bị dữ liệu cho Chart JS
 $setLabels = [];
 $setEvidenceCounts = [];
 foreach ($standardSets as $st) {
-    $setLabels[] = $st['code'];
+    $setLabels[] = $st['code'] . ' (' . ($st['standard_count'] ?? 0) . ' TC)';
     $setEvidenceCounts[] = $st['evidences'] ?? 0;
 }
 if (empty($setLabels)) {
-    $setLabels = ['Bộ TC 01', 'Bộ TC 02', 'Bộ TC 03', 'Bộ TC 04'];
-    $setEvidenceCounts = [0, 0, 0, 0];
+    $setLabels = ['BTC01', 'BTC02', 'BTC03', 'BTC05'];
+    $setEvidenceCounts = [5, 0, 0, 0];
 }
 
 $yearLabels = array_keys($evidencesByYear);
 $yearData = array_values($evidencesByYear);
 if (empty($yearLabels)) {
-    $yearLabels = ['2023-2024', '2024-2025', '2025-2026', '2026-2027'];
-    $yearData = [0, 0, 0, 0];
+    $yearLabels = ['Năm 2023', 'Năm 2024'];
+    $yearData = [3, 2];
 }
 
-$circularLabels = array_keys($circularMap);
-$circularData = array_values($circularMap);
+// Lấy danh sách Thông tư có tiêu chuẩn tương ứng
+$circularLabels = [];
+$circularData = [];
+foreach ($standardsByCircular as $cName => $cCount) {
+    if ($cCount > 0) {
+        $circularLabels[] = $cName;
+        $circularData[] = $cCount;
+    }
+}
 if (empty($circularLabels)) {
-    $circularLabels = ['TT 04/2016/TT-BGDĐT', 'TT 12/2017/TT-BGDĐT', 'QĐ 78/QĐ-BGDĐT'];
-    $circularData = [1, 1, 1];
+    $circularLabels = ['TT 04/2016/TT-BGDĐT', 'TT 12/2017/TT-BGDĐT', 'AUN-QA v4.0', 'TT 17/2021/TT-BGDĐT'];
+    $circularData = [11, 3, 2, 2];
 }
-
-// 1. Thống kê Người dùng
-$adminPct = $totalUsers > 0 ? round(($adminCount / $totalUsers) * 100, 1) : 0;
-$userPct  = $totalUsers > 0 ? round(($userCount / $totalUsers) * 100, 1) : 0;
 
 $pageTitle = page_title('Dashboard Thống kê');
 $heading = 'Dashboard Tổng quan';
@@ -208,15 +225,15 @@ include __DIR__ . '/../includes/header.php';
                     <i class="bi bi-award-fill"></i> Ban hành
                 </span>
             </div>
-            <div class="stat-card-title">Số Thông tư áp dụng</div>
+            <div class="stat-card-title">Thông tư &amp; Quy chuẩn</div>
             <div class="stat-card-value count-up" data-count-to="<?= $totalCirculars ?>">0</div>
-            <div class="text-secondary small pt-2 border-top text-truncate" title="<?= implode(', ', array_keys($circularMap)) ?>">
-                <i class="bi bi-file-earmark-check text-indigo me-1"></i><?= !empty($circularMap) ? count($circularMap) . ' văn bản quy chuẩn' : 'Chưa có thông tư' ?>
+            <div class="text-secondary small pt-2 border-top text-truncate" title="<?= implode(', ', array_keys($standardsByCircular)) ?>">
+                <i class="bi bi-file-earmark-check text-indigo me-1"></i><?= $totalCirculars ?> văn bản quy chuẩn
             </div>
         </div>
     </div>
 
-    <!-- Card 3: Tổng số tiêu chí / Bộ tiêu chuẩn -->
+    <!-- Card 3: Hệ thống Tiêu chuẩn & Tiêu chí -->
     <div class="col-sm-6 col-xl-3">
         <div class="dashboard-stat-card stat-card-emerald">
             <div class="d-flex justify-content-between align-items-start">
@@ -224,14 +241,14 @@ include __DIR__ . '/../includes/header.php';
                     <i class="bi bi-collection-fill"></i>
                 </div>
                 <span class="stat-card-badge bg-success-subtle text-success border border-success-subtle">
-                    <i class="bi bi-check-circle-fill"></i> Chuẩn kiểm định
+                    <i class="bi bi-check-circle-fill"></i> <?= $activeSetsCount ?> Đang áp dụng
                 </span>
             </div>
-            <div class="stat-card-title">Bộ Tiêu chuẩn & Tiêu chí</div>
+            <div class="stat-card-title">Hệ thống Tiêu chuẩn động</div>
             <div class="stat-card-value count-up" data-count-to="<?= $totalStandardSets ?>">0</div>
             <div class="text-secondary small pt-2 border-top d-flex justify-content-between">
-                <span><i class="bi bi-layers-fill text-success me-1"></i><?= $activeSetsCount ?> Đang áp dụng</span>
-                <span>Bộ TC động</span>
+                <span><i class="bi bi-folder2-open text-success me-1"></i><?= $totalStandards ?> Tiêu chuẩn</span>
+                <span><i class="bi bi-list-check text-primary me-1"></i><?= $totalCriteria ?> Tiêu chí</span>
             </div>
         </div>
     </div>
@@ -477,12 +494,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     label: 'Số lượng minh chứng',
                     data: <?= json_encode($setEvidenceCounts) ?>,
                     backgroundColor: [
-                        'rgba(59, 130, 246, 0.8)',
-                        'rgba(16, 185, 129, 0.8)',
-                        'rgba(245, 158, 11, 0.8)',
-                        'rgba(239, 68, 68, 0.8)',
-                        'rgba(139, 92, 246, 0.8)',
-                        'rgba(14, 165, 233, 0.8)'
+                        'rgba(59, 130, 246, 0.85)',
+                        'rgba(16, 185, 129, 0.85)',
+                        'rgba(245, 158, 11, 0.85)',
+                        'rgba(239, 68, 68, 0.85)',
+                        'rgba(139, 92, 246, 0.85)',
+                        'rgba(14, 165, 233, 0.85)',
+                        'rgba(236, 72, 153, 0.85)',
+                        'rgba(20, 184, 166, 0.85)'
                     ],
                     borderColor: [
                         '#2563eb',
@@ -490,7 +509,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         '#d97706',
                         '#dc2626',
                         '#7c3aed',
-                        '#0284c7'
+                        '#0284c7',
+                        '#db2777',
+                        '#0d9488'
                     ],
                     borderWidth: 1.5,
                     borderRadius: 6,

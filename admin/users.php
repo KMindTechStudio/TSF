@@ -104,7 +104,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'check_duplicate') {
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $action = $_POST['action'] ?? '';
 
     try {
