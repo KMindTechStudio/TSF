@@ -2,14 +2,14 @@
 -- version 5.1.3
 -- https://www.phpmyadmin.net/
 --
--- Host: localhost
--- Generation Time: Aug 31, 2026 at 04:29 PM
--- Server version: 10.4.21-MariaDB
+-- Host: 127.0.0.1
+-- Generation Time: Sep 30, 2026 at 06:27 AM
+-- Server version: 10.4.24-MariaDB
 -- PHP Version: 7.4.28
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
-SET time_zone = "+07:00";
+SET time_zone = "+00:00";
 
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -33,7 +33,7 @@ CREATE TABLE `audit_logs` (
   `hanh_dong` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `phan_he` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `ten_ban_ghi` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `id_ban_ghi` int(11) DEFAULT NULL,
+  `id_ban_ghi` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `gia_tri_cu` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`gia_tri_cu`)),
   `gia_tri_moi` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`gia_tri_moi`)),
   `dia_chi_ip` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -45,86 +45,80 @@ CREATE TABLE `audit_logs` (
 --
 
 INSERT INTO `audit_logs` (`id`, `MaNguoiDung`, `hanh_dong`, `phan_he`, `ten_ban_ghi`, `id_ban_ghi`, `gia_tri_cu`, `gia_tri_moi`, `dia_chi_ip`, `ngay_tao`) VALUES
-(1, 'ND002', 'xem', 'minh_chung', 'MC.01', 1, NULL, NULL, '::1', '2026-07-30 14:56:27');
+(1, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Kích hoạt bộ: BTC02', '0', NULL, NULL, '::1', '2026-09-29 17:20:59'),
+(2, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Kích hoạt bộ: BTC01', '0', NULL, NULL, '::1', '2026-09-29 17:21:00'),
+(3, 'ND001', 'cap_nhat', 'bo_tieu_chuan', 'BTC02 - Bộ tiêu chuẩn kiểm định chất lượng cơ sở giáo dục đại học', '0', NULL, NULL, '::1', '2026-09-29 17:21:07'),
+(4, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Kích hoạt bộ: BTC01', '0', NULL, NULL, '::1', '2026-09-29 17:21:12'),
+(5, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Kích hoạt bộ: BTC02', '0', NULL, NULL, '::1', '2026-09-29 17:21:13'),
+(6, 'ND001', 'cap_nhat', 'bo_tieu_chuan', 'BTC02 - Bộ tiêu chuẩn kiểm định chất lượng cơ sở giáo dục đại học', '0', NULL, NULL, '::1', '2026-09-29 17:25:04'),
+(7, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Kích hoạt bộ: BTC01', '0', NULL, NULL, '::1', '2026-09-29 17:25:06'),
+(8, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Kích hoạt bộ: BTC02', '0', NULL, NULL, '::1', '2026-09-29 17:25:08'),
+(9, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Kích hoạt bộ: BTC01', '0', NULL, NULL, '::1', '2026-09-29 17:25:15'),
+(10, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Kích hoạt bộ: BTC02', '0', NULL, NULL, '::1', '2026-09-29 17:25:16'),
+(11, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Kích hoạt bộ: BTC01', '0', NULL, NULL, '::1', '2026-09-29 17:25:23'),
+(12, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Kích hoạt bộ: BTC02', '0', NULL, NULL, '::1', '2026-09-29 17:25:24'),
+(13, 'ND001', 'cap_nhat', 'bo_tieu_chuan', 'BTC02 - Bộ tiêu chuẩn kiểm định chất lượng cơ sở giáo dục đại học', '0', NULL, NULL, '::1', '2026-09-29 17:27:01'),
+(14, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Đổi trạng thái bộ BTC01 sang Hoạt động', '0', NULL, NULL, '::1', '2026-09-29 17:29:01'),
+(15, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Đổi trạng thái bộ BTC03 sang Hoạt động', '0', NULL, NULL, '::1', '2026-09-29 17:29:02'),
+(16, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Đổi trạng thái bộ BTC04 sang Hoạt động', '0', NULL, NULL, '::1', '2026-09-29 17:29:03'),
+(17, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Đổi trạng thái bộ BTC05 sang Hoạt động', '0', NULL, NULL, '::1', '2026-09-29 17:29:03'),
+(18, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Đổi trạng thái bộ BTC06 sang Hoạt động', '0', NULL, NULL, '::1', '2026-09-29 17:29:06'),
+(19, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Đổi trạng thái bộ BTC07 sang Hoạt động', '0', NULL, NULL, '::1', '2026-09-29 17:29:07'),
+(20, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Đổi trạng thái bộ BTC04 sang Ngừng hoạt động', '0', NULL, NULL, '::1', '2026-09-29 17:29:11'),
+(21, 'ND001', 'xem', 'minh_chung', ' - Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo trình độ đại học', '0', NULL, NULL, '::1', '2026-09-29 17:34:29'),
+(22, 'ND001', 'sua', 'minh_chung', 'Chuyển trạng thái minh chứng MC001 sang: Không hoạt động (Ẩn khỏi Người dùng)', '0', NULL, NULL, '::1', '2026-09-29 18:06:15'),
+(23, 'ND001', 'sua', 'minh_chung', 'Chuyển trạng thái minh chứng MC001 sang: Đang hoạt động (Hiển thị cho Người dùng)', '0', NULL, NULL, '::1', '2026-09-29 18:06:16'),
+(24, 'ND001', 'sua', 'minh_chung', 'Chuyển trạng thái minh chứng MC001 sang: Không hoạt động (Ẩn khỏi Người dùng)', '0', NULL, NULL, '::1', '2026-09-29 18:06:17'),
+(25, 'ND001', 'sua', 'minh_chung', 'Chuyển trạng thái minh chứng MC001 sang: Đang hoạt động (Hiển thị cho Người dùng)', '0', NULL, NULL, '::1', '2026-09-29 18:06:17'),
+(26, 'ND001', 'them_moi', 'bo_tieu_chuan', 'BTC08 - Bộ tiêu chuẩn ITSS Nhật Bản', NULL, NULL, NULL, '127.0.0.1', '2026-09-29 18:19:07'),
+(27, 'ND001', 'cap_nhat', 'minh_chung', 'MC021 - Kết quả thi chứng chỉ FE', NULL, NULL, NULL, '127.0.0.1', '2026-09-29 18:19:07'),
+(28, 'ND002', 'tai_ve', 'minh_chung', 'MC002 - Bản Chuẩn đầu ra CTĐT CNTT', NULL, NULL, NULL, '127.0.0.1', '2026-09-29 18:19:07'),
+(29, 'ND003', 'them_moi', 'tieu_chuan', 'TC07_01 - Kiến thức cốt lõi AI & Data Science', NULL, NULL, NULL, '127.0.0.1', '2026-09-29 18:19:07'),
+(30, 'ND004', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Đổi trạng thái bộ BTC01 sang Đang hoạt động', NULL, NULL, NULL, '127.0.0.1', '2026-09-29 18:19:07'),
+(31, 'ND002', 'dang_nhap', 'he_thong', 'Đăng nhập từ IP 127.0.0.1', NULL, NULL, NULL, '127.0.0.1', '2026-09-29 18:19:07'),
+(32, 'ND001', 'cap_nhat', 'nguoi_dung', 'ND005 - ThS. Phạm Thu Trang', NULL, NULL, NULL, '127.0.0.1', '2026-09-29 18:19:07'),
+(33, 'ND001', 'dang_nhap', 'he_thong', 'Đăng nhập hệ thống', '0', NULL, NULL, '::1', '2026-09-30 01:11:15'),
+(34, 'ND001', 'xoa', 'tieu_chuan', 'TC07', '0', NULL, NULL, '::1', '2026-09-30 01:26:48'),
+(35, 'ND001', 'xoa', 'tieu_chuan', 'TC07', '0', NULL, NULL, '::1', '2026-09-30 01:33:50'),
+(36, 'ND002', 'dang_nhap', 'he_thong', 'Đăng nhập hệ thống', '0', NULL, NULL, '::1', '2026-09-30 03:02:48'),
+(37, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Đổi trạng thái bộ BTC01 sang Ngừng hoạt động', '0', NULL, NULL, '::1', '2026-09-30 03:06:02'),
+(38, 'ND001', 'cap_nhat_trang_thai', 'bo_tieu_chuan', 'Đổi trạng thái bộ BTC01 sang Hoạt động', '0', NULL, NULL, '::1', '2026-09-30 03:06:07'),
+(39, 'ND001', 'dang_nhap', 'he_thong', 'Đăng nhập hệ thống', '0', NULL, NULL, '::1', '2026-09-30 03:34:15'),
+(40, 'ND001', 'dang_nhap', 'he_thong', 'Đăng nhập hệ thống', '0', NULL, NULL, '::1', '2026-09-30 03:37:26'),
+(41, 'ND001', 'dang_nhap', 'he_thong', 'Đăng nhập hệ thống', 'ND001', NULL, NULL, '::1', '2026-09-30 04:23:24'),
+(42, 'ND001', 'dang_nhap', 'he_thong', 'Đăng nhập hệ thống', '0', NULL, NULL, '::1', '2026-09-30 04:23:44'),
+(43, 'ND001', 'dang_nhap', 'he_thong', 'Đăng nhập hệ thống', '0', NULL, NULL, '::1', '2026-09-30 04:27:25');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `BoTieuChuan`
+-- Table structure for table `botieuchuan`
 --
 
-CREATE TABLE `BoTieuChuan` (
+CREATE TABLE `botieuchuan` (
   `MaBoTieuChuan` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `TenBoTieuChuan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `ThongTu` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `NgayBanHanh` date DEFAULT NULL,
-  `CoQuanBanHanh` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `NamBanHanh` int(11) DEFAULT NULL,
   `MoTa` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `TepTinPDF` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `TrangThai` tinyint(1) NOT NULL DEFAULT 1,
   `NgayTao` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `BoTieuChuan`
+-- Dumping data for table `botieuchuan`
 --
 
-INSERT INTO `BoTieuChuan` (`MaBoTieuChuan`, `TenBoTieuChuan`, `ThongTu`, `NgayBanHanh`, `CoQuanBanHanh`, `NamBanHanh`, `MoTa`, `TrangThai`, `NgayTao`) VALUES
-('BTC01', 'Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo trình độ đại học ngành Công nghệ thông tin', 'Chuẩn kiểm định AUN-QA v4.0', '2019-06-21', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 1.', 1, '2026-08-31 12:25:35'),
-('BTC02', 'Bộ tiêu chuẩn kiểm định chất lượng cơ sở giáo dục đại học (Thông tư 12/2017/TT-BGDĐT)', 'Thông tư 17/2021/TT-BGDĐT', '2018-10-07', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 2.', 1, '2026-08-31 12:25:35'),
-('BTC03', 'Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo ngành Kỹ thuật Phần mềm (AUN-QA 4.0)', 'Thông tư 17/2021/TT-BGDĐT', '2022-04-23', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 3.', 1, '2026-08-31 12:25:35'),
-('BTC04', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành Hệ thống thông tin (ABET)', 'Thông tư 38/2013/TT-BGDĐT', '2021-09-20', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 4.', 1, '2026-08-31 12:25:35'),
-('BTC05', 'Bộ tiêu chuẩn đánh giá chất lượng CTĐT ngành Trí tuệ nhân tạo và Khoa học dữ liệu', 'Thông tư 38/2013/TT-BGDĐT', '2021-04-22', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 5.', 1, '2026-08-31 12:25:35'),
-('BTC06', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành An toàn thông tin', 'Chuẩn kiểm định ABET CAC', '2022-04-17', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 6.', 1, '2026-08-31 12:25:35'),
-('BTC07', 'Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo Thạc sĩ Công nghệ thông tin', 'Thông tư 17/2021/TT-BGDĐT', '2019-10-21', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 7.', 1, '2026-08-31 12:25:35'),
-('BTC08', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo Tiến sĩ Công nghệ thông tin', 'Chuẩn kiểm định AUN-QA v4.0', '2019-07-21', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 8.', 1, '2026-08-31 12:25:35'),
-('BTC09', 'Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo cử nhân Khoa học máy tính', 'Thông tư 04/2016/TT-BGDĐT', '2019-08-24', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 9.', 1, '2026-08-31 12:25:35'),
-('BTC10', 'Bộ tiêu chuẩn chuẩn hóa năng lực công nghệ thông tin định hướng chuẩn kỹ năng ITSS', 'Thông tư 17/2021/TT-BGDĐT', '2018-02-05', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 10.', 0, '2026-08-31 12:25:35'),
-('BTC11', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 11', 'Chuẩn kiểm định ABET CAC', '2025-02-01', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 11.', 1, '2026-08-31 12:25:35'),
-('BTC12', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 12', 'Chuẩn kiểm định ABET CAC', '2020-09-14', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 12.', 1, '2026-08-31 12:25:35'),
-('BTC13', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 13', 'Thông tư 17/2021/TT-BGDĐT', '2023-11-17', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 13.', 1, '2026-08-31 12:25:35'),
-('BTC14', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 14', 'Thông tư 12/2017/TT-BGDĐT', '2018-10-28', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 14.', 1, '2026-08-31 12:25:35'),
-('BTC15', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 15', 'Thông tư 04/2016/TT-BGDĐT', '2021-06-12', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 15.', 1, '2026-08-31 12:25:35'),
-('BTC16', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 16', 'Thông tư 12/2017/TT-BGDĐT', '2022-11-11', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 16.', 1, '2026-08-31 12:25:35'),
-('BTC17', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 17', 'Chuẩn kiểm định AUN-QA v4.0', '2020-09-15', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 17.', 1, '2026-08-31 12:25:35'),
-('BTC18', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 18', 'Thông tư 38/2013/TT-BGDĐT', '2018-01-15', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 18.', 1, '2026-08-31 12:25:35'),
-('BTC19', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 19', 'Thông tư 12/2017/TT-BGDĐT', '2019-12-23', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 19.', 1, '2026-08-31 12:25:35'),
-('BTC20', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 20', 'Chuẩn kiểm định AUN-QA v4.0', '2025-08-04', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 20.', 0, '2026-08-31 12:25:35'),
-('BTC21', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 21', 'Quyết định 78/QĐ-BGDĐT', '2018-02-10', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 21.', 1, '2026-08-31 12:25:35'),
-('BTC22', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 22', 'Thông tư 17/2021/TT-BGDĐT', '2021-03-01', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 22.', 1, '2026-08-31 12:25:35'),
-('BTC23', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 23', 'Thông tư 38/2013/TT-BGDĐT', '2024-02-26', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 23.', 1, '2026-08-31 12:25:35'),
-('BTC24', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 24', 'Thông tư 12/2017/TT-BGDĐT', '2019-07-22', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 24.', 1, '2026-08-31 12:25:35'),
-('BTC25', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 25', 'Chuẩn kiểm định AUN-QA v4.0', '2023-02-03', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 25.', 1, '2026-08-31 12:25:35'),
-('BTC26', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 26', 'Chuẩn kiểm định AUN-QA v4.0', '2023-04-25', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 26.', 1, '2026-08-31 12:25:35'),
-('BTC27', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 27', 'Thông tư 17/2021/TT-BGDĐT', '2025-12-20', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 27.', 1, '2026-08-31 12:25:35'),
-('BTC28', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 28', 'Thông tư 17/2021/TT-BGDĐT', '2019-06-03', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 28.', 1, '2026-08-31 12:25:35'),
-('BTC29', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 29', 'Chuẩn kiểm định AUN-QA v4.0', '2025-03-07', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 29.', 1, '2026-08-31 12:25:35'),
-('BTC30', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 30', 'Thông tư 12/2017/TT-BGDĐT', '2022-01-20', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 30.', 0, '2026-08-31 12:25:35'),
-('BTC31', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 31', 'Chuẩn kiểm định AUN-QA v4.0', '2023-03-18', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 31.', 1, '2026-08-31 12:25:35'),
-('BTC32', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 32', 'Thông tư 17/2021/TT-BGDĐT', '2025-11-05', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 32.', 1, '2026-08-31 12:25:35'),
-('BTC33', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 33', 'Quyết định 78/QĐ-BGDĐT', '2021-09-23', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 33.', 1, '2026-08-31 12:25:35'),
-('BTC34', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 34', 'Thông tư 04/2016/TT-BGDĐT', '2025-07-14', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 34.', 1, '2026-08-31 12:25:35'),
-('BTC35', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 35', 'Chuẩn kiểm định ABET CAC', '2022-08-26', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 35.', 1, '2026-08-31 12:25:35'),
-('BTC36', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 36', 'Thông tư 04/2016/TT-BGDĐT', '2022-11-12', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 36.', 1, '2026-08-31 12:25:35'),
-('BTC37', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 37', 'Quyết định 78/QĐ-BGDĐT', '2022-04-04', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 37.', 1, '2026-08-31 12:25:35'),
-('BTC38', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 38', 'Thông tư 12/2017/TT-BGDĐT', '2022-10-07', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 38.', 1, '2026-08-31 12:25:35'),
-('BTC39', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 39', 'Thông tư 38/2013/TT-BGDĐT', '2019-01-19', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 39.', 1, '2026-08-31 12:25:35'),
-('BTC40', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 40', 'Quyết định 78/QĐ-BGDĐT', '2019-04-19', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 40.', 0, '2026-08-31 12:25:35'),
-('BTC41', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 41', 'Chuẩn kiểm định AUN-QA v4.0', '2023-08-05', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 41.', 1, '2026-08-31 12:25:35'),
-('BTC42', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 42', 'Thông tư 04/2016/TT-BGDĐT', '2021-04-25', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 42.', 1, '2026-08-31 12:25:35'),
-('BTC43', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 43', 'Quyết định 78/QĐ-BGDĐT', '2022-03-27', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 43.', 1, '2026-08-31 12:25:35'),
-('BTC44', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 44', 'Quyết định 78/QĐ-BGDĐT', '2021-10-17', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 44.', 1, '2026-08-31 12:25:35'),
-('BTC45', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 45', 'Thông tư 04/2016/TT-BGDĐT', '2023-01-14', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 45.', 1, '2026-08-31 12:25:35'),
-('BTC46', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 46', 'Thông tư 04/2016/TT-BGDĐT', '2025-03-24', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 46.', 1, '2026-08-31 12:25:35'),
-('BTC47', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 47', 'Chuẩn kiểm định AUN-QA v4.0', '2023-07-13', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 47.', 1, '2026-08-31 12:25:35'),
-('BTC48', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 48', 'Thông tư 04/2016/TT-BGDĐT', '2024-01-16', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 48.', 1, '2026-08-31 12:25:35'),
-('BTC49', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 49', 'Thông tư 17/2021/TT-BGDĐT', '2025-08-04', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 49.', 1, '2026-08-31 12:25:35'),
-('BTC50', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 50', 'Thông tư 38/2013/TT-BGDĐT', '2022-12-13', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 50.', 0, '2026-08-31 12:25:35'),
-('BTC51', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 51', 'Quyết định 78/QĐ-BGDĐT', '2022-02-24', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 51.', 1, '2026-08-31 12:25:35'),
-('BTC52', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 52', 'Quyết định 78/QĐ-BGDĐT', '2019-10-14', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 52.', 1, '2026-08-31 12:25:35'),
-('BTC53', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 53', 'Chuẩn kiểm định ABET CAC', '2019-12-26', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 53.', 1, '2026-08-31 12:25:35'),
-('BTC54', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 54', 'Quyết định 78/QĐ-BGDĐT', '2024-03-11', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 54.', 1, '2026-08-31 12:25:35'),
-('BTC55', 'Bộ tiêu chuẩn kiểm định chất lượng chương trình đào tạo ngành CNTT bổ sung đợt 55', 'Chuẩn kiểm định AUN-QA v4.0', '2018-12-07', NULL, NULL, 'Bộ tiêu chuẩn quy định các yêu cầu kiểm định và bảo đảm chất lượng giáo dục cho ngành CNTT đợt 55.', 1, '2026-08-31 12:25:35');
+INSERT INTO `botieuchuan` (`MaBoTieuChuan`, `TenBoTieuChuan`, `ThongTu`, `NgayBanHanh`, `MoTa`, `TepTinPDF`, `TrangThai`, `NgayTao`) VALUES
+('BTC01', 'Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo trình độ đại học', 'Thông tư 04/2016/TT-BGDĐT', '2016-03-14', 'Quy định về tiêu chuẩn đánh giá chất lượng chương trình đào tạo các trình độ của giáo dục đại học (11 tiêu chuẩn, 50 tiêu chí).', 'uploads/standards/thong_tu_04_2016_tt_bgddt.pdf', 1, '2026-09-29 18:19:07'),
+('BTC02', 'Bộ tiêu chuẩn kiểm định chất lượng cơ sở giáo dục đại học', 'Thông tư 12/2017/TT-BGDĐT', '2017-05-19', 'Quy định về kiểm định chất lượng cơ sở giáo dục đại học gồm 25 tiêu chuẩn và 111 tiêu chí.', 'uploads/standards/thong_tu_12_2017_tt_bgddt.pdf', 1, '2026-09-29 18:19:07'),
+('BTC03', 'Bộ tiêu chuẩn đánh giá chất lượng chương trình đào tạo ngành CNTT (AUN-QA 4.0)', 'Chuẩn kiểm định AUN-QA v4.0', '2020-08-15', 'Bộ tiêu chuẩn bảo đảm chất lượng mạng lưới các trường đại học Đông Nam Á phiên bản 4.0.', 'uploads/standards/aun_qa_v4_standard_guide.pdf', 1, '2026-09-29 18:19:07'),
+('BTC04', 'Bộ tiêu chuẩn kiểm định chất lượng CTĐT ngành Kỹ thuật và Công nghệ (ABET)', 'Thông tư 38/2013/TT-BGDĐT', '2013-11-29', 'Quy định về quy trình và chu kỳ kiểm định chất lượng chương trình đào tạo các trường đại học theo chuẩn ABET.', 'uploads/standards/thong_tu_04_2016_tt_bgddt.pdf', 1, '2026-09-29 18:19:07'),
+('BTC05', 'Bộ tiêu chuẩn kiểm định chuẩn đầu ra ngành Kỹ thuật phần mềm', 'Thông tư 17/2021/TT-BGDĐT', '2021-06-22', 'Quy định chuẩn chương trình đào tạo các ngành kỹ thuật và công nghệ thông tin.', 'uploads/standards/thong_tu_12_2017_tt_bgddt.pdf', 1, '2026-09-29 18:19:07'),
+('BTC06', 'Bộ tiêu chuẩn đánh giá chất lượng CTĐT Thạc sĩ ngành CNTT', 'Thông tư 18/2021/TT-BGDĐT', '2021-06-28', 'Quy chế tuyển sinh và đào tạo trình độ thạc sĩ ngành Công nghệ thông tin.', 'uploads/standards/aun_qa_v4_standard_guide.pdf', 1, '2026-09-29 18:19:07'),
+('BTC07', 'Bộ tiêu chuẩn kiểm định CTĐT ngành Trí tuệ nhân tạo và Khoa học dữ liệu', 'Chuẩn ABET CAC 2024', '2024-01-10', 'Chuẩn kiểm định quốc tế của Ủy ban Kiểm định Máy tính (CAC) thuộc ABET cho các CTĐT AI và Data Science.', 'uploads/standards/aun_qa_v4_standard_guide.pdf', 1, '2026-09-29 18:19:07'),
+('BTC08', 'Bộ tiêu chuẩn đánh giá năng lực nghề nghiệp CNTT theo chuẩn ITSS Nhật Bản', 'Quyết định 78/QĐ-BGDĐT', '2022-03-15', 'Khung trình độ và chuẩn kỹ năng CNTT tương thích Hệ thống Chuẩn kỹ năng Công nghệ thông tin Nhật Bản.', 'uploads/standards/thong_tu_04_2016_tt_bgddt.pdf', 1, '2026-09-29 18:19:07');
 
 -- --------------------------------------------------------
 
@@ -145,129 +139,84 @@ CREATE TABLE `download_logs` (
 --
 
 INSERT INTO `download_logs` (`id`, `MaNguoiDung`, `MaMinhChung`, `ngay_tai`, `dia_chi_ip`) VALUES
-(2, NULL, 'MC01', '2026-08-31 14:15:31', '::1'),
-(3, NULL, 'MC01', '2026-08-31 14:15:41', '::1'),
-(4, NULL, 'MC04', '2026-08-31 14:18:16', '::1');
+(1, 'ND002', 'MC001', '2026-09-29 18:19:07', '127.0.0.1'),
+(2, 'ND003', 'MC002', '2026-09-29 18:19:07', '127.0.0.1'),
+(3, 'ND004', 'MC004', '2026-09-29 18:19:07', '127.0.0.1'),
+(4, 'ND005', 'MC009', '2026-09-29 18:19:07', '127.0.0.1'),
+(5, 'ND002', 'MC014', '2026-09-29 18:19:07', '127.0.0.1'),
+(6, 'ND001', 'MC018', '2026-09-29 18:19:07', '127.0.0.1');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `loaiminhchung`
+-- Table structure for table `minhchung`
 --
 
-CREATE TABLE `loaiminhchung` (
-  `MaLoai` int(11) NOT NULL,
-  `TenLoai` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `MoTa` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `NgayTao` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `loaiminhchung`
---
-
-INSERT INTO `loaiminhchung` (`MaLoai`, `TenLoai`, `MoTa`, `NgayTao`) VALUES
-(1, 'Minh chứng chính', 'Các văn bản, quyết định chính thức', '2026-07-30 14:39:03'),
-(2, 'Minh chứng bổ sung', 'Các hồ sơ, phụ lục đính kèm bổ sung', '2026-07-30 14:39:03'),
-(3, 'Minh chứng khảo sát', 'Phiếu thu thập ý kiến các bên liên quan', '2026-07-30 14:39:03');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `MinhChung`
---
-
-CREATE TABLE `MinhChung` (
+CREATE TABLE `minhchung` (
   `MaMinhChung` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `TenMinhChung` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `NgayBanHanh` date DEFAULT NULL,
   `MoTa` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `TepTin` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `NamHoc` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `NgayCapNhat` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `TrangThai` tinyint(1) NOT NULL DEFAULT 1,
-  `MaLoai` int(11) DEFAULT NULL,
   `MaTieuChi` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `MaBoTieuChuan` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `MaNguoiDung` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `NgayCapNhat` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `NgayTao` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `MinhChung`
+-- Dumping data for table `minhchung`
 --
 
-INSERT INTO `MinhChung` (`MaMinhChung`, `TenMinhChung`, `MoTa`, `TepTin`, `NamHoc`, `NgayCapNhat`, `TrangThai`, `MaLoai`, `MaTieuChi`, `MaNguoiDung`, `NgayTao`) VALUES
-('MC01', 'Quyết định ban hành mục tiêu và chuẩn đầu ra ngành Công nghệ thông tin - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 1.', 'uploads/evidences/MC_04_01_02.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC30', 'ND002', '2026-08-31 12:25:35'),
-('MC02', 'Bản mô tả chương trình đào tạo ngành Công nghệ thông tin năm 2025 - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 2.', 'uploads/evidences/KeHoach_CaiTien_ChatLuong.pdf', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC02', 'ND003', '2026-08-31 12:25:35'),
-('MC03', 'Đề cương chi tiết các học phần chuyên ngành Công nghệ phần mềm - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 3.', 'uploads/evidences/MC_01_01_01.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC15', 'ND001', '2026-08-31 12:25:35'),
-('MC04', 'Kế hoạch đổi mới phương pháp dạy và học định hướng ứng dụng thực tiễn - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 4.', 'uploads/evidences/MC_01_01_01.pdf', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC19', 'ND002', '2026-08-31 12:25:35'),
-('MC05', 'Quy chế đánh giá học phần và ma trận kiểm tra đánh giá CĐR - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 5.', 'uploads/evidences/KhaoSat_DoanhNghiep_2025.docx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC35', 'ND003', '2026-08-31 12:25:35'),
-('MC06', 'Biên bản rà soát và cập nhật chương trình đào tạo định kỳ năm 2025 - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 6.', 'uploads/evidences/MC_01_01_01.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC14', 'ND001', '2026-08-31 12:25:35'),
-('MC07', 'Phiếu khảo sát ý kiến doanh nghiệp về chất lượng sinh viên tốt nghiệp - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 7.', 'uploads/evidences/KeHoach_CaiTien_ChatLuong.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC56', 'ND002', '2026-08-31 12:25:35'),
-('MC08', 'Báo cáo tự đánh giá chất lượng chương trình đào tạo CNTT - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 8.', 'uploads/evidences/MC_01_01_01.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC41', 'ND003', '2026-08-31 12:25:35'),
-('MC09', 'Danh sách công trình nghiên cứu khoa học và bài báo của giảng viên - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 9.', 'uploads/evidences/MC_02_01_03.docx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC07', 'ND001', '2026-08-31 12:25:35'),
-('MC11', 'Báo cáo tổng kết công tác tuyển sinh và phân tích chất lượng đầu vào - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 11.', 'uploads/evidences/MC_01_01_01.pdf', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC41', 'ND003', '2026-08-31 12:25:35'),
-('MC12', 'Sổ tay hướng dẫn thực tập tốt nghiệp và đồ án khóa luận - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 12.', 'uploads/evidences/MC_02_01_03.docx', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC08', 'ND001', '2026-08-31 12:25:35'),
-('MC13', 'Biên bản nghiệm thu nâng cấp hệ thống phòng máy tính thực hành - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 13.', 'uploads/evidences/MC_02_01_03.docx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC52', 'ND002', '2026-08-31 12:25:35'),
-('MC14', 'Quyết định khen thưởng sinh viên có thành tích xuất sắc trong học tập - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 14.', 'uploads/evidences/KeHoach_CaiTien_ChatLuong.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC37', 'ND003', '2026-08-31 12:25:35'),
-('MC15', 'Báo cáo tình hình việc làm của sinh viên sau 1 năm tốt nghiệp - Tập 1', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 15.', 'uploads/evidences/QuyDuyet_CTDT_2025.pdf', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC49', 'ND001', '2026-08-31 12:25:35'),
-('MC16', 'Quyết định ban hành mục tiêu và chuẩn đầu ra ngành Công nghệ thông tin - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 16.', 'uploads/evidences/KeHoach_CaiTien_ChatLuong.pdf', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC42', 'ND002', '2026-08-31 12:25:35'),
-('MC17', 'Bản mô tả chương trình đào tạo ngành Công nghệ thông tin năm 2025 - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 17.', 'uploads/evidences/BaoCao_TuDanhGia_CNTT.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC60', 'ND003', '2026-08-31 12:25:35'),
-('MC18', 'Đề cương chi tiết các học phần chuyên ngành Công nghệ phần mềm - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 18.', 'uploads/evidences/MC_01_01_01.pdf', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC57', 'ND001', '2026-08-31 12:25:35'),
-('MC19', 'Kế hoạch đổi mới phương pháp dạy và học định hướng ứng dụng thực tiễn - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 19.', 'uploads/evidences/QuyChe_DanhGia_HocPhan.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC09', 'ND002', '2026-08-31 12:25:35'),
-('MC20', 'Quy chế đánh giá học phần và ma trận kiểm tra đánh giá CĐR - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 20.', 'uploads/evidences/KeHoach_CaiTien_ChatLuong.pdf', '2023-2024', '2026-08-31 21:14:26', 0, NULL, 'TC23', 'ND003', '2026-08-31 12:25:35'),
-('MC21', 'Biên bản rà soát và cập nhật chương trình đào tạo định kỳ năm 2025 - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 21.', 'uploads/evidences/QuyChe_DanhGia_HocPhan.pdf', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC38', 'ND001', '2026-08-31 12:25:35'),
-('MC22', 'Phiếu khảo sát ý kiến doanh nghiệp về chất lượng sinh viên tốt nghiệp - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 22.', 'uploads/evidences/BaoCao_TuDanhGia_CNTT.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC33', 'ND002', '2026-08-31 12:25:35'),
-('MC23', 'Báo cáo tự đánh giá chất lượng chương trình đào tạo CNTT - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 23.', 'uploads/evidences/MC_05_03_05.xlsx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC59', 'ND003', '2026-08-31 12:25:35'),
-('MC24', 'Danh sách công trình nghiên cứu khoa học và bài báo của giảng viên - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 24.', 'uploads/evidences/MC_03_02_04.zip', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC19', 'ND001', '2026-08-31 12:25:35'),
-('MC25', 'Quyết định thành lập Hội đồng kiểm định chất lượng giáo dục - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 25.', 'uploads/evidences/BienBan_Hop_Rasoat_CDR.docx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC50', 'ND002', '2026-08-31 12:25:35'),
-('MC26', 'Báo cáo tổng kết công tác tuyển sinh và phân tích chất lượng đầu vào - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 26.', 'uploads/evidences/MC_05_03_05.xlsx', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC58', 'ND003', '2026-08-31 12:25:35'),
-('MC27', 'Sổ tay hướng dẫn thực tập tốt nghiệp và đồ án khóa luận - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 27.', 'uploads/evidences/QuyChe_DanhGia_HocPhan.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC43', 'ND001', '2026-08-31 12:25:35'),
-('MC28', 'Biên bản nghiệm thu nâng cấp hệ thống phòng máy tính thực hành - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 28.', 'uploads/evidences/QuyChe_DanhGia_HocPhan.pdf', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC10', 'ND002', '2026-08-31 12:25:35'),
-('MC29', 'Quyết định khen thưởng sinh viên có thành tích xuất sắc trong học tập - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 29.', 'uploads/evidences/BaoCao_TuDanhGia_CNTT.pdf', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC09', 'ND003', '2026-08-31 12:25:35'),
-('MC30', 'Báo cáo tình hình việc làm của sinh viên sau 1 năm tốt nghiệp - Tập 2', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 30.', 'uploads/evidences/MC_05_03_05.xlsx', '2025-2026', '2026-08-31 21:14:26', 0, NULL, 'TC12', 'ND001', '2026-08-31 12:25:35'),
-('MC31', 'Quyết định ban hành mục tiêu và chuẩn đầu ra ngành Công nghệ thông tin - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 31.', 'uploads/evidences/DanhSach_GiangVien_2025.xlsx', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC03', 'ND002', '2026-08-31 12:25:35'),
-('MC32', 'Bản mô tả chương trình đào tạo ngành Công nghệ thông tin năm 2025 - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 32.', 'uploads/evidences/MC_02_01_03.docx', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC50', 'ND003', '2026-08-31 12:25:35'),
-('MC33', 'Đề cương chi tiết các học phần chuyên ngành Công nghệ phần mềm - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 33.', 'uploads/evidences/DanhSach_GiangVien_2025.xlsx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC25', 'ND001', '2026-08-31 12:25:35'),
-('MC34', 'Kế hoạch đổi mới phương pháp dạy và học định hướng ứng dụng thực tiễn - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 34.', 'uploads/evidences/QuyChe_DanhGia_HocPhan.pdf', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC14', 'ND002', '2026-08-31 12:25:35'),
-('MC35', 'Quy chế đánh giá học phần và ma trận kiểm tra đánh giá CĐR - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 35.', 'uploads/evidences/MC_02_01_03.docx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC25', 'ND003', '2026-08-31 12:25:35'),
-('MC36', 'Biên bản rà soát và cập nhật chương trình đào tạo định kỳ năm 2025 - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 36.', 'uploads/evidences/MC_04_01_02.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC51', 'ND001', '2026-08-31 12:25:35'),
-('MC37', 'Phiếu khảo sát ý kiến doanh nghiệp về chất lượng sinh viên tốt nghiệp - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 37.', 'uploads/evidences/QuyDuyet_CTDT_2025.pdf', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC37', 'ND002', '2026-08-31 12:25:35'),
-('MC38', 'Báo cáo tự đánh giá chất lượng chương trình đào tạo CNTT - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 38.', 'uploads/evidences/QuyDuyet_CTDT_2025.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC04', 'ND003', '2026-08-31 12:25:35'),
-('MC39', 'Danh sách công trình nghiên cứu khoa học và bài báo của giảng viên - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 39.', 'uploads/evidences/KhaoSat_DoanhNghiep_2025.docx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC57', 'ND001', '2026-08-31 12:25:35'),
-('MC40', 'Quyết định thành lập Hội đồng kiểm định chất lượng giáo dục - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 40.', 'uploads/evidences/KhaoSat_DoanhNghiep_2025.docx', '2024-2025', '2026-08-31 21:14:26', 0, NULL, 'TC57', 'ND002', '2026-08-31 12:25:35'),
-('MC41', 'Báo cáo tổng kết công tác tuyển sinh và phân tích chất lượng đầu vào - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 41.', 'uploads/evidences/MC_03_02_04.zip', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC55', 'ND003', '2026-08-31 12:25:35'),
-('MC42', 'Sổ tay hướng dẫn thực tập tốt nghiệp và đồ án khóa luận - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 42.', 'uploads/evidences/MC_01_01_01.pdf', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC24', 'ND001', '2026-08-31 12:25:35'),
-('MC43', 'Biên bản nghiệm thu nâng cấp hệ thống phòng máy tính thực hành - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 43.', 'uploads/evidences/MC_04_01_02.pdf', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC06', 'ND002', '2026-08-31 12:25:35'),
-('MC44', 'Quyết định khen thưởng sinh viên có thành tích xuất sắc trong học tập - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 44.', 'uploads/evidences/MC_05_03_05.xlsx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC49', 'ND003', '2026-08-31 12:25:35'),
-('MC45', 'Báo cáo tình hình việc làm của sinh viên sau 1 năm tốt nghiệp - Tập 3', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 45.', 'uploads/evidences/QuyDuyet_CTDT_2025.pdf', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC17', 'ND001', '2026-08-31 12:25:35'),
-('MC46', 'Quyết định ban hành mục tiêu và chuẩn đầu ra ngành Công nghệ thông tin - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 46.', 'uploads/evidences/MC_02_01_03.docx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC13', 'ND002', '2026-08-31 12:25:35'),
-('MC47', 'Bản mô tả chương trình đào tạo ngành Công nghệ thông tin năm 2025 - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 47.', 'uploads/evidences/MC_05_03_05.xlsx', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC14', 'ND003', '2026-08-31 12:25:35'),
-('MC48', 'Đề cương chi tiết các học phần chuyên ngành Công nghệ phần mềm - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 48.', 'uploads/evidences/QuyChe_DanhGia_HocPhan.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC43', 'ND001', '2026-08-31 12:25:35'),
-('MC49', 'Kế hoạch đổi mới phương pháp dạy và học định hướng ứng dụng thực tiễn - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 49.', 'uploads/evidences/MC_03_02_04.zip', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC53', 'ND002', '2026-08-31 12:25:35'),
-('MC50', 'Quy chế đánh giá học phần và ma trận kiểm tra đánh giá CĐR - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 50.', 'uploads/evidences/MC_03_02_04.zip', '2023-2024', '2026-08-31 21:14:26', 0, NULL, 'TC30', 'ND003', '2026-08-31 12:25:35'),
-('MC51', 'Biên bản rà soát và cập nhật chương trình đào tạo định kỳ năm 2025 - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 51.', 'uploads/evidences/MC_05_03_05.xlsx', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC45', 'ND001', '2026-08-31 12:25:35'),
-('MC52', 'Phiếu khảo sát ý kiến doanh nghiệp về chất lượng sinh viên tốt nghiệp - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 52.', 'uploads/evidences/BienBan_Hop_Rasoat_CDR.docx', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC22', 'ND002', '2026-08-31 12:25:35'),
-('MC53', 'Báo cáo tự đánh giá chất lượng chương trình đào tạo CNTT - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 53.', 'uploads/evidences/KhaoSat_DoanhNghiep_2025.docx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC31', 'ND003', '2026-08-31 12:25:35'),
-('MC54', 'Danh sách công trình nghiên cứu khoa học và bài báo của giảng viên - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 54.', 'uploads/evidences/DanhSach_GiangVien_2025.xlsx', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC05', 'ND001', '2026-08-31 12:25:35'),
-('MC55', 'Quyết định thành lập Hội đồng kiểm định chất lượng giáo dục - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 55.', 'uploads/evidences/QuyChe_DanhGia_HocPhan.pdf', '2024-2025', '2026-08-31 21:14:26', 1, NULL, 'TC09', 'ND002', '2026-08-31 12:25:35'),
-('MC56', 'Báo cáo tổng kết công tác tuyển sinh và phân tích chất lượng đầu vào - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 56.', 'uploads/evidences/BaoCao_TuDanhGia_CNTT.pdf', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC44', 'ND003', '2026-08-31 12:25:35'),
-('MC57', 'Sổ tay hướng dẫn thực tập tốt nghiệp và đồ án khóa luận - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 57.', 'uploads/evidences/QuyChe_DanhGia_HocPhan.pdf', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC55', 'ND001', '2026-08-31 12:25:35'),
-('MC58', 'Biên bản nghiệm thu nâng cấp hệ thống phòng máy tính thực hành - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 58.', 'uploads/evidences/MC_05_03_05.xlsx', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC07', 'ND002', '2026-08-31 12:25:35'),
-('MC59', 'Quyết định khen thưởng sinh viên có thành tích xuất sắc trong học tập - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 59.', 'uploads/evidences/QuyChe_DanhGia_HocPhan.pdf', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC24', 'ND003', '2026-08-31 12:25:35'),
-('MC60', 'Báo cáo tình hình việc làm của sinh viên sau 1 năm tốt nghiệp - Tập 4', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 60.', 'uploads/evidences/KeHoach_CaiTien_ChatLuong.pdf', '2024-2025', '2026-08-31 21:14:26', 0, NULL, 'TC30', 'ND001', '2026-08-31 12:25:35'),
-('MC61', 'Quyết định ban hành mục tiêu và chuẩn đầu ra ngành Công nghệ thông tin - Tập 5', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 61.', 'uploads/evidences/QuyChe_DanhGia_HocPhan.pdf', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC23', 'ND002', '2026-08-31 12:25:35'),
-('MC62', 'Bản mô tả chương trình đào tạo ngành Công nghệ thông tin năm 2025 - Tập 5', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 62.', 'uploads/evidences/BienBan_Hop_Rasoat_CDR.docx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC13', 'ND003', '2026-08-31 12:25:35'),
-('MC63', 'Đề cương chi tiết các học phần chuyên ngành Công nghệ phần mềm - Tập 5', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 63.', 'uploads/evidences/BienBan_Hop_Rasoat_CDR.docx', '2025-2026', '2026-08-31 21:14:26', 1, NULL, 'TC21', 'ND001', '2026-08-31 12:25:35'),
-('MC64', 'Kế hoạch đổi mới phương pháp dạy và học định hướng ứng dụng thực tiễn - Tập 5', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 64.', 'uploads/evidences/BienBan_Hop_Rasoat_CDR.docx', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC30', 'ND002', '2026-08-31 12:25:35'),
-('MC65', 'Quy chế đánh giá học phần và ma trận kiểm tra đánh giá CĐR - Tập 5', 'Hồ sơ minh chứng chính thức phục vụ công tác kiểm định chất lượng giáo dục đợt 65.', 'uploads/evidences/DanhSach_GiangVien_2025.xlsx', '2023-2024', '2026-08-31 21:14:26', 1, NULL, 'TC59', 'ND003', '2026-08-31 12:25:35');
+INSERT INTO `minhchung` (`MaMinhChung`, `TenMinhChung`, `NgayBanHanh`, `MoTa`, `TepTin`, `NamHoc`, `TrangThai`, `MaTieuChi`, `MaBoTieuChuan`, `MaNguoiDung`, `NgayCapNhat`, `NgayTao`) VALUES
+('MC001', 'Quyết định ban hành Sứ mạng, Tầm nhìn Trường ĐH Tài chính - Ngân hàng Hà Nội', '2023-01-15', 'Quyết định công bố sứ mạng, tầm nhìn chiến lược phát triển Trường giai đoạn 2023-2030.', 'uploads/evidences/qd_ban_hanh_su_mang_fbu.pdf', '2023-2024', 1, 'TChi01.1', 'BTC01', 'ND001', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC002', 'Bản Chuẩn đầu ra Chương trình đào tạo ngành Công nghệ thông tin', '2023-06-20', 'Bản mô tả chuẩn đầu ra trình độ cử nhân ngành Công nghệ thông tin (135 tín chỉ).', 'uploads/evidences/chuan_dau_ra_cntt_2022.pdf', '2023-2024', 1, 'TChi01.2', 'BTC01', 'ND002', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC003', 'Biên bản hội thảo lấy ý kiến doanh nghiệp và chuyên gia về chuẩn đầu ra CTĐT CNTT', '2023-09-10', 'Biên bản tổng hợp ý kiến đóng góp của đại diện các doanh nghiệp công nghệ phần mềm.', 'uploads/evidences/bien_ban_hoi_thao_cdr.pdf', '2023-2024', 1, 'TChi01.3', 'BTC01', 'ND003', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC004', 'Quyết định phê duyệt CTĐT ngành Công nghệ thông tin trình độ Đại học', '2024-03-05', 'Quyết định phê duyệt điều chỉnh chương trình đào tạo áp dụng từ khóa tuyển sinh 2024.', 'uploads/evidences/ctdt_cntt_fbu_135tc.pdf', '2024-2025', 1, 'TChi02.1', 'BTC01', 'ND001', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC005', 'Tập Đề cương chi tiết học phần khối ngành Công nghệ thông tin', '2024-08-15', 'Đề cương chi tiết các học phần cơ sở ngành và chuyên ngành Kỹ thuật phần mềm, Mạng máy tính.', 'uploads/evidences/tap_de_cuong_chi_tiet_cntt.pdf', '2024-2025', 1, 'TChi02.2', 'BTC01', 'ND004', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC006', 'Chiến lược phát triển Trường ĐH Tài chính - Ngân hàng Hà Nội giai đoạn 2021-2030', '2021-12-10', 'Nghị quyết và kế hoạch chiến lược phát triển toàn diện của Nhà trường.', 'uploads/evidences/qd_ban_hanh_su_mang_fbu.pdf', '2021-2022', 1, 'TChi12_01.1', 'BTC02', 'ND001', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC007', 'Báo cáo tự đánh giá chất lượng cơ sở giáo dục đại học năm 2023', '2023-11-20', 'Báo cáo tự đánh giá nội bộ toàn diện theo 25 tiêu chuẩn kiểm định TT 12/2017.', 'uploads/evidences/ctdt_cntt_fbu_135tc.pdf', '2023-2024', 1, 'TChi12_03.1', 'BTC02', 'ND003', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC008', 'Báo cáo kiểm kê tài sản và cơ sở vật chất phục vụ đào tạo năm học 2023-2024', '2024-05-18', 'Danh mục thống kê phòng học lý thuyết, giảng đường đa năng và trang thiết bị thực hành.', 'uploads/evidences/tap_de_cuong_chi_tiet_cntt.pdf', '2023-2024', 1, 'TChi12_04.1', 'BTC02', 'ND005', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC009', 'AUN-QA Self-Assessment Report (SAR) - Computer Science Programme', '2022-10-15', 'Báo cáo tự đánh giá chất lượng chuẩn quốc tế AUN-QA v4.0 ngành CNTT.', 'uploads/evidences/chuan_dau_ra_cntt_2022.pdf', '2022-2023', 1, 'TChi_AUN01.1', 'BTC03', 'ND002', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC010', 'Course Mapping Matrix & Learning Outcomes Alignment Table', '2023-04-12', 'Bảng ma trận tương thích giữa các học phần và chuẩn đầu ra chương trình AUN-QA.', 'uploads/evidences/bien_ban_hoi_thao_cdr.pdf', '2022-2023', 1, 'TChi_AUN02.1', 'BTC03', 'ND004', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC011', 'Rubric đánh giá đồ án tốt nghiệp và kết quả học tập chuẩn AUN-QA', '2024-01-20', 'Bộ tiêu chí và thang đo Rubrics đánh giá năng lực thực hiện khóa luận tốt nghiệp.', 'uploads/evidences/tap_de_cuong_chi_tiet_cntt.pdf', '2023-2024', 1, 'TChi_AUN03.1', 'BTC03', 'ND001', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC012', 'Báo cáo đánh giá mức độ đạt Chuẩn đầu ra ABET ngành Kỹ thuật phần mềm', '2023-12-05', 'Kết quả đo lường và đánh giá mức độ đạt chuẩn Student Outcomes (SOs 1-6) theo chuẩn ABET.', 'uploads/evidences/chuan_dau_ra_cntt_2022.pdf', '2023-2024', 1, 'TChi_ABET01.1', 'BTC04', 'ND002', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC013', 'Kế hoạch đo lường và cải tiến liên tục (Continuous Improvement Plan)', '2024-04-10', 'Kế hoạch hành động và cải tiến định kỳ chất lượng giảng dạy và học tập.', 'uploads/evidences/bien_ban_hoi_thao_cdr.pdf', '2023-2024', 1, 'TChi_ABET02.1', 'BTC04', 'ND003', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC014', 'Khung chương trình đào tạo chuẩn đầu ra Kỹ sư Phần mềm theo TT 17/2021', '2022-08-30', 'Khung chương trình chi tiết định hướng chuyên ngành Kỹ thuật phần mềm và hệ thống thông tin.', 'uploads/evidences/ctdt_cntt_fbu_135tc.pdf', '2022-2023', 1, 'TChi05_01.1', 'BTC05', 'ND001', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC015', 'Thỏa thuận hợp tác đào tạo và thực tập doanh nghiệp CNTT (MOU)', '2024-02-15', 'Biên bản ghi nhớ hợp tác tiếp nhận sinh viên thực tập và tuyển dụng cùng các tập đoàn CNTT.', 'uploads/evidences/bien_ban_hoi_thao_cdr.pdf', '2023-2024', 1, 'TChi05_02.1', 'BTC05', 'ND005', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC016', 'Quy định đào tạo trình độ Thạc sĩ ngành Khoa học máy tính & CNTT', '2022-09-12', 'Quy định về thời gian đào tạo, bảo vệ luận văn và tiêu chuẩn người hướng dẫn cao học.', 'uploads/evidences/qd_ban_hanh_su_mang_fbu.pdf', '2022-2023', 1, 'TChi06_01.1', 'BTC06', 'ND002', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC017', 'Danh mục đề tài luận văn thạc sĩ và bài báo Scopus/ISI ngành CNTT', '2024-06-25', 'Tổng hợp danh sách các công trình công bố khoa học quốc tế của học viên cao học và giảng viên.', 'uploads/evidences/ctdt_cntt_fbu_135tc.pdf', '2023-2024', 1, 'TChi06_02.1', 'BTC06', 'ND003', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC018', 'Đề án mở ngành đào tạo Trí tuệ nhân tạo và Khoa học dữ liệu', '2024-04-02', 'Hồ sơ đề án khả thi mở ngành đào tạo đại học Trí tuệ nhân tạo và Khoa học dữ liệu.', 'uploads/evidences/chuan_dau_ra_cntt_2022.pdf', '2023-2024', 1, 'TChi07_01.1', 'BTC07', 'ND001', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC019', 'Biên bản nghiệm thu phòng lab AI GPU Server phục vụ nghiên cứu', '2024-07-18', 'Biên bản bàn giao và kiểm định cấu hình máy chủ GPU NVIDIA RTX phục vụ huấn luyện mô hình học sâu.', 'uploads/evidences/tap_de_cuong_chi_tiet_cntt.pdf', '2023-2024', 1, 'TChi07_02.1', 'BTC07', 'ND004', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC020', 'Bảng đối sánh chuẩn đầu ra CTĐT CNTT với khung kỹ năng ITSS Nhật Bản', '2023-05-14', 'Phân tích ma trận tương thích giữa khối kiến thức chuyên ngành với bài thi FE/AP ITSS.', 'uploads/evidences/bien_ban_hoi_thao_cdr.pdf', '2022-2023', 1, 'TChi08_01.1', 'BTC08', 'ND002', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC021', 'Kết quả thi chứng chỉ Kỹ sư CNTT cơ bản (FE) của sinh viên khóa 2020-2024', '2024-05-30', 'Danh sách sinh viên ngành CNTT đạt chứng chỉ FE do Cơ quan Xúc tiến CNTT Nhật Bản (IPA) cấp.', 'uploads/evidences/ctdt_cntt_fbu_135tc.pdf', '2023-2024', 1, 'TChi08_02.1', 'BTC08', 'ND005', '2026-09-30 01:19:07', '2026-09-29 18:19:07'),
+('MC022', 'Báo cáo tổng kết hoạt động phục vụ cộng đồng và tập huấn tin học cho trường phổ thông', '2024-03-20', 'Chương trình tập huấn chuyển đổi số và lập trình Python miễn phí cho học sinh THPT trên địa bàn Hà Nội.', 'uploads/evidences/ctdt_cntt_fbu_135tc.pdf', '2023-2024', 1, 'TChi12.1', 'BTC01', 'ND002', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC023', 'Quyết định ban hành Quy chế hỗ trợ sinh viên NCKH và Khởi nghiệp đổi mới sáng tạo', '2024-09-05', 'Quy định chính sách tài trợ kinh phí cho các đề tài nghiên cứu khoa học và dự án startup tiềm năng của sinh viên.', 'uploads/evidences/qd_ban_hanh_su_mang_fbu.pdf', '2024-2025', 1, 'TChi12.1', 'BTC01', 'ND001', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC024', 'Quy hoạch phát triển đội ngũ giảng viên có trình độ Tiến sĩ giai đoạn 2021-2026', '2022-04-15', 'Kế hoạch đào tạo và chính sách đãi ngộ, thu hút chuyên gia đầu ngành trong lĩnh vực CNTT và Kinh tế số.', 'uploads/evidences/tap_de_cuong_chi_tiet_cntt.pdf', '2021-2022', 1, 'TChi12_05.1', 'BTC02', 'ND003', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC025', 'Danh mục công trình Nghiên cứu khoa học và bài báo quốc tế của Trường năm 2023', '2023-12-28', 'Thống kê các bài báo thuộc danh mục ISI, Scopus và đề tài NCKH cấp Bộ của giảng viên Nhà trường.', 'uploads/evidences/bien_ban_hoi_thao_cdr.pdf', '2023-2024', 1, 'TChi12_06.1', 'BTC02', 'ND004', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC026', 'AUN-QA Student Assessment Alignment Report & Rubrics Matrix', '2023-08-10', 'Báo cáo ma trận đánh giá kết quả học tập và thang đo chuẩn đầu ra tích hợp cho tất cả các môn học CNTT.', 'uploads/evidences/chuan_dau_ra_cntt_2022.pdf', '2023-2024', 1, 'TChi_AUN04.1', 'BTC03', 'ND002', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC027', 'Faculty Competency Profile & Continuous Professional Development Plan (CPD)', '2024-02-22', 'Hồ sơ năng lực giảng viên và kế hoạch đào tạo bồi dưỡng phương pháp sư phạm hiện đại chuẩn AUN-QA.', 'uploads/evidences/ctdt_cntt_fbu_135tc.pdf', '2023-2024', 1, 'TChi_AUN05.1', 'BTC03', 'ND005', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC028', 'Direct Assessment Results and Attainment Analysis of ABET Student Outcomes (1-6)', '2024-05-15', 'Tổng hợp điểm số và phân tích mức độ đạt chuẩn kỹ năng kỹ thuật, giải quyết vấn đề của sinh viên tốt nghiệp.', 'uploads/evidences/chuan_dau_ra_cntt_2022.pdf', '2023-2024', 1, 'TChi_ABET03.1', 'BTC04', 'ND003', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC029', 'Annual ABET Program Continuous Improvement Actions & Curriculum Refinement', '2024-08-30', 'Biên bản họp Hội đồng khoa học và kế hoạch cập nhật học phần kiến trúc hệ thống và an ninh mạng.', 'uploads/evidences/bien_ban_hoi_thao_cdr.pdf', '2024-2025', 1, 'TChi_ABET04.1', 'BTC04', 'ND001', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC030', 'Biên bản nghiệm thu phòng Lab thực hành Cloud Computing & Hệ thống CI/CD', '2023-10-18', 'Hệ thống hạ tầng máy chủ ảo hóa đám mây phục vụ môn học Kiến trúc phần mềm và Kiểm thử tự động.', 'uploads/evidences/tap_de_cuong_chi_tiet_cntt.pdf', '2023-2024', 1, 'TChi05_03.1', 'BTC05', 'ND004', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC031', 'Bảng tổng hợp chứng chỉ Tiếng Anh quốc tế (TOEIC/IELTS) của sinh viên ngành KTPM', '2024-06-10', 'Danh sách kiểm tra điều kiện tốt nghiệp về năng lực ngoại ngữ chuyên ngành công nghệ phần mềm.', 'uploads/evidences/ctdt_cntt_fbu_135tc.pdf', '2023-2024', 1, 'TChi05_04.1', 'BTC05', 'ND005', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC032', 'Quyết định thành lập Hội đồng đánh giá luận văn Thạc sĩ ngành CNTT đợt 1 năm 2024', '2024-04-12', 'Danh sách các giáo sư, tiến sĩ tham gia phản biện và chấm luận văn tốt nghiệp cao học.', 'uploads/evidences/qd_ban_hanh_su_mang_fbu.pdf', '2023-2024', 1, 'TChi06_03.1', 'BTC06', 'ND001', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC033', 'Hợp đồng bản quyền cơ sở dữ liệu số IEEE Xplore và ScienceDirect cho sau đại học', '2024-01-10', 'Hồ sơ bản quyền thư viện điện tử cung cấp tài khoản truy cập hơn 5 triệu bài báo nghiên cứu quốc tế.', 'uploads/evidences/tap_de_cuong_chi_tiet_cntt.pdf', '2023-2024', 1, 'TChi06_04.1', 'BTC06', 'ND002', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC034', 'Khung nguyên tắc đạo đức AI và Quy định bảo vệ an toàn dữ liệu trong nghiên cứu', '2024-03-15', 'Quy định về bảo mật dữ liệu người dùng, tính minh bạch mô hình và tránh thiên lệch thuật toán AI.', 'uploads/evidences/chuan_dau_ra_cntt_2022.pdf', '2023-2024', 1, 'TChi07_03.1', 'BTC07', 'ND003', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC035', 'Tổng kết đánh giá đồ án Capstone AI ngành Trí tuệ nhân tạo và Khoa học dữ liệu', '2024-07-25', 'Báo cáo nghiệm thu sản phẩm ứng dụng AI: Nhận diện bất thường trong giao dịch tài chính và Y tế số.', 'uploads/evidences/ctdt_cntt_fbu_135tc.pdf', '2023-2024', 1, 'TChi07_04.1', 'BTC07', 'ND004', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC036', 'Danh sách sinh viên đạt chứng chỉ Kỹ sư CNTT ứng dụng (AP) chuẩn ITSS Nhật Bản', '2024-06-30', 'Kết quả kỳ thi sát hạch Kỹ sư CNTT trình độ cao (Level 3 ITSS) do IPA Nhật Bản công nhận.', 'uploads/evidences/bien_ban_hoi_thao_cdr.pdf', '2023-2024', 1, 'TChi08_03.1', 'BTC08', 'ND002', '2026-09-30 01:22:46', '2026-09-29 18:22:46'),
+('MC037', 'Chương trình đào tạo Kỹ sư Cầu nối (BrSE) và chứng chỉ tiếng Nhật JLPT N2/N3', '2024-08-12', 'Báo cáo kết quả khóa đào tạo chuyên sâu văn hóa doanh nghiệp Nhật và phân tích yêu cầu B-spec.', 'uploads/evidences/tap_de_cuong_chi_tiet_cntt.pdf', '2024-2025', 1, 'TChi08_04.1', 'BTC08', 'ND005', '2026-09-30 01:22:46', '2026-09-29 18:22:46');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `NguoiDung`
+-- Table structure for table `nguoidung`
 --
 
-CREATE TABLE `NguoiDung` (
+CREATE TABLE `nguoidung` (
   `MaNguoiDung` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `HoTen` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `Email` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -282,13 +231,18 @@ CREATE TABLE `NguoiDung` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `NguoiDung`
+-- Dumping data for table `nguoidung`
 --
 
-INSERT INTO `NguoiDung` (`MaNguoiDung`, `HoTen`, `Email`, `SoDienThoai`, `TenDangNhap`, `MatKhau`, `VaiTro`, `TrangThai`, `DuongDanAnhDaiDien`, `DangNhapCuoi`, `NgayTao`) VALUES
-('ND001', 'Quản trị viên', 'admin@fbu.edu.vn', '0912345678', 'admin', '$2y$10$epbVeUHJztDc/l95cLcWlu/.bkc9SsQ/IQqRVKbEXqLVUtjVn3u36', 'admin', 1, NULL, NULL, '2026-08-31 13:46:14'),
-('ND002', 'Nguyễn Văn A', 'user01@fbu.edu.vn', '0987654321', 'kiemdinhtt', '$2y$10$epbVeUHJztDc/l95cLcWlu/.bkc9SsQ/IQqRVKbEXqLVUtjVn3u36', 'user', 1, NULL, NULL, '2026-08-31 13:46:14'),
-('ND003', 'Trần Thị B', 'user02@fbu.edu.vn', '0911223344', 'viewer01', '$2y$10$epbVeUHJztDc/l95cLcWlu/.bkc9SsQ/IQqRVKbEXqLVUtjVn3u36', 'user', 1, NULL, NULL, '2026-08-31 13:46:14');
+INSERT INTO `nguoidung` (`MaNguoiDung`, `HoTen`, `Email`, `SoDienThoai`, `TenDangNhap`, `MatKhau`, `VaiTro`, `TrangThai`, `DuongDanAnhDaiDien`, `DangNhapCuoi`, `NgayTao`) VALUES
+('ND001', 'Quản trị viên', 'admin@fbu.edu.vn', '0912345678', 'admin', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'admin', 1, NULL, '2026-09-30 11:27:25', '2026-09-29 17:02:28'),
+('ND002', 'ThS. Nguyễn Văn An', 'annv@fbu.edu.vn', '0987654321', 'nguyenvanan', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1, NULL, '2026-09-30 10:02:48', '2026-09-29 17:02:28'),
+('ND003', 'TS. Trần Thị Bích', 'bich.tt@fbu.edu.vn', '0911223344', 'tranthibich', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'admin', 1, NULL, NULL, '2026-09-29 17:02:28'),
+('ND004', 'PGS.TS. Lê Hoàng Nam', 'namlh@fbu.edu.vn', '0903112233', 'lehoangnam', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1, NULL, NULL, '2026-09-29 17:02:28'),
+('ND005', 'ThS. Phạm Thu Trang', 'trangpt@fbu.edu.vn', '0978998877', 'phamthutrang', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1, NULL, NULL, '2026-09-29 17:02:28'),
+('ND006', 'KS. Vũ Đình Trọng', 'trongvd@fbu.edu.vn', '0934556677', 'vudinhtrong', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1, NULL, NULL, '2026-09-29 17:02:28'),
+('ND007', 'ThS. Hoàng Minh Đức', 'duchm@fbu.edu.vn', '0945667788', 'hoangminhduc', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 0, NULL, NULL, '2026-09-29 17:02:28'),
+('ND008', 'Người dùng thử nghiệm', 'user@fbu.edu.vn', '0966889900', 'user', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'user', 1, NULL, NULL, '2026-09-29 17:02:28');
 
 -- --------------------------------------------------------
 
@@ -309,168 +263,142 @@ CREATE TABLE `remember_tokens` (
 --
 
 INSERT INTO `remember_tokens` (`id`, `MaNguoiDung`, `ma_token`, `het_han`, `ngay_tao`) VALUES
-(2, 'ND001', '038f20bd8b36e1eb5e68ddd0c944d321b0002759252946ef6b0f55477749f794', '2026-08-06 17:00:34', '2026-07-30 15:00:34'),
-(3, 'ND001', '59864149bff596f0d9255b820b77f8a98919c02b3ae6b3c89dcf9daa7a859b3b', '2026-09-07 13:58:34', '2026-08-31 11:58:34'),
-(4, 'ND002', '06526a07eed7ede0593cee2d52cf52068a05ea9ac5fdbfa2d650a5fa74c7176a', '2026-09-07 14:04:37', '2026-08-31 12:04:37');
+(1, 'ND001', 'fb5effd4aeb874420f43a583f5ba6ee2c2dc188162bd2c53c18badf359fc811e', '2026-10-07 08:11:15', '2026-09-30 01:11:15'),
+(2, 'ND002', '979fce990eb5585242e07f20075e9f605d31a6cabde01ed14fe94f7f7606616e', '2026-10-07 10:02:48', '2026-09-30 03:02:48'),
+(3, 'ND001', '80740fc96a4d3958b4a2b5c86ba4c7fed359f4ba35fe748320cd5935ae30eb75', '2026-10-07 10:34:15', '2026-09-30 03:34:15'),
+(4, 'ND001', '1bacb41b989794c996e4bdc54d0a5daff8d43a9d1f84c63120bdf87a4284eeda', '2026-10-07 10:37:26', '2026-09-30 03:37:26'),
+(5, 'ND001', '6a335bc3793a95c48ba54f049a7fc7f8c2f2c55a926022ee866c3020974c27be', '2026-10-07 11:23:44', '2026-09-30 04:23:44'),
+(6, 'ND001', '36c77c70b2186e3048dce6cbb4b155f5f556955f72b5b96ed43c8b5ff301b5b0', '2026-10-07 11:27:25', '2026-09-30 04:27:25');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `TieuChi`
+-- Table structure for table `tieuchi`
 --
 
-CREATE TABLE `TieuChi` (
+CREATE TABLE `tieuchi` (
   `MaTieuChi` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `TenTieuChi` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `NoiDung` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `ThuTu` int(11) NOT NULL DEFAULT 0,
-  `MaTieuChuan` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `MaTieuChuan` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `TrangThai` tinyint(1) NOT NULL DEFAULT 1,
   `NgayTao` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `TieuChi`
+-- Dumping data for table `tieuchi`
 --
 
-INSERT INTO `TieuChi` (`MaTieuChi`, `TenTieuChi`, `NoiDung`, `ThuTu`, `MaTieuChuan`, `TrangThai`, `NgayTao`) VALUES
-('TC01', 'Mục tiêu của CTĐT được xác định rõ ràng, phù hợp với sứ mạng và tầm nhìn (TC01)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 1, 'TC45', 1, '2026-08-31 12:25:35'),
-('TC02', 'Chuẩn đầu ra phản ánh yêu cầu của các bên liên quan và được rà soát định kỳ (TC02)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 2, 'TC36', 1, '2026-08-31 12:25:35'),
-('TC03', 'Bản mô tả CTĐT đầy đủ thông tin cần thiết, rõ ràng và công khai minh bạch (TC03)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 3, 'TC31', 1, '2026-08-31 12:25:35'),
-('TC04', 'Cấu trúc chương trình học có tính logic, tích hợp và cập nhật xu hướng công nghệ (TC04)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 4, 'TC06', 1, '2026-08-31 12:25:35'),
-('TC05', 'Đề cương chi tiết học phần được cập nhật hằng năm và được phê duyệt chính thức (TC05)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 5, 'TC22', 1, '2026-08-31 12:25:35'),
-('TC06', 'Phương pháp dạy học thúc đẩy năng lực tự học, tư duy phản biện và sáng tạo (TC06)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 6, 'TC29', 1, '2026-08-31 12:25:35'),
-('TC07', 'Phương pháp đánh giá đa dạng, công bằng, bám sát chuẩn đầu ra học phần (TC07)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 7, 'TC21', 1, '2026-08-31 12:25:35'),
-('TC08', 'Quy trình tuyển sinh minh bạch, đúng quy định và đảm bảo chất lượng đầu vào (TC08)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 8, 'TC39', 1, '2026-08-31 12:25:35'),
-('TC09', 'Hoạt động tư vấn học tập, hướng nghiệp và hỗ trợ tâm lý sinh viên hiệu quả (TC09)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 9, 'TC12', 1, '2026-08-31 12:25:35'),
-('TC10', 'Trình độ chuyên môn và kỹ năng sư phạm của giảng viên đáp ứng tốt yêu cầu (TC10)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 10, 'TC24', 1, '2026-08-31 12:25:35'),
-('TC11', 'Giáo trình, tài liệu tham khảo và học liệu số đầy đủ và cập nhật (TC11)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 11, 'TC27', 1, '2026-08-31 12:25:35'),
-('TC12', 'Hệ thống phòng thí nghiệm, phòng máy tính đáp ứng tốt yêu cầu thực hành (TC12)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 12, 'TC04', 0, '2026-08-31 12:25:35'),
-('TC13', 'Kết quả đánh giá sự hài lòng của nhà tuyển dụng đối với sinh viên tốt nghiệp (TC13)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 13, 'TC29', 1, '2026-08-31 12:25:35'),
-('TC14', 'Quy trình bảo đảm chất lượng nội bộ được vận hành thường xuyên và hiệu quả (TC14)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 14, 'TC11', 1, '2026-08-31 12:25:35'),
-('TC15', 'Mục tiêu của CTĐT được xác định rõ ràng, phù hợp với sứ mạng và tầm nhìn (TC15)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 15, 'TC17', 1, '2026-08-31 12:25:35'),
-('TC16', 'Chuẩn đầu ra phản ánh yêu cầu của các bên liên quan và được rà soát định kỳ (TC16)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 16, 'TC35', 1, '2026-08-31 12:25:35'),
-('TC17', 'Bản mô tả CTĐT đầy đủ thông tin cần thiết, rõ ràng và công khai minh bạch (TC17)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 17, 'TC06', 1, '2026-08-31 12:25:35'),
-('TC18', 'Cấu trúc chương trình học có tính logic, tích hợp và cập nhật xu hướng công nghệ (TC18)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 18, 'TC43', 1, '2026-08-31 12:25:35'),
-('TC19', 'Đề cương chi tiết học phần được cập nhật hằng năm và được phê duyệt chính thức (TC19)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 19, 'TC43', 1, '2026-08-31 12:25:35'),
-('TC20', 'Phương pháp dạy học thúc đẩy năng lực tự học, tư duy phản biện và sáng tạo (TC20)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 20, 'TC10', 1, '2026-08-31 12:25:35'),
-('TC21', 'Phương pháp đánh giá đa dạng, công bằng, bám sát chuẩn đầu ra học phần (TC21)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 21, 'TC33', 1, '2026-08-31 12:25:35'),
-('TC22', 'Quy trình tuyển sinh minh bạch, đúng quy định và đảm bảo chất lượng đầu vào (TC22)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 22, 'TC47', 1, '2026-08-31 12:25:35'),
-('TC23', 'Hoạt động tư vấn học tập, hướng nghiệp và hỗ trợ tâm lý sinh viên hiệu quả (TC23)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 23, 'TC31', 1, '2026-08-31 12:25:35'),
-('TC24', 'Trình độ chuyên môn và kỹ năng sư phạm của giảng viên đáp ứng tốt yêu cầu (TC24)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 24, 'TC06', 0, '2026-08-31 12:25:35'),
-('TC25', 'Giáo trình, tài liệu tham khảo và học liệu số đầy đủ và cập nhật (TC25)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 25, 'TC33', 1, '2026-08-31 12:25:35'),
-('TC26', 'Hệ thống phòng thí nghiệm, phòng máy tính đáp ứng tốt yêu cầu thực hành (TC26)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 26, 'TC06', 1, '2026-08-31 12:25:35'),
-('TC27', 'Kết quả đánh giá sự hài lòng của nhà tuyển dụng đối với sinh viên tốt nghiệp (TC27)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 27, 'TC22', 1, '2026-08-31 12:25:35'),
-('TC28', 'Quy trình bảo đảm chất lượng nội bộ được vận hành thường xuyên và hiệu quả (TC28)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 28, 'TC42', 1, '2026-08-31 12:25:35'),
-('TC29', 'Mục tiêu của CTĐT được xác định rõ ràng, phù hợp với sứ mạng và tầm nhìn (TC29)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 29, 'TC13', 1, '2026-08-31 12:25:35'),
-('TC30', 'Chuẩn đầu ra phản ánh yêu cầu của các bên liên quan và được rà soát định kỳ (TC30)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 30, 'TC13', 1, '2026-08-31 12:25:35'),
-('TC31', 'Bản mô tả CTĐT đầy đủ thông tin cần thiết, rõ ràng và công khai minh bạch (TC31)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 31, 'TC42', 1, '2026-08-31 12:25:35'),
-('TC32', 'Cấu trúc chương trình học có tính logic, tích hợp và cập nhật xu hướng công nghệ (TC32)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 32, 'TC28', 1, '2026-08-31 12:25:35'),
-('TC33', 'Đề cương chi tiết học phần được cập nhật hằng năm và được phê duyệt chính thức (TC33)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 33, 'TC02', 1, '2026-08-31 12:25:35'),
-('TC34', 'Phương pháp dạy học thúc đẩy năng lực tự học, tư duy phản biện và sáng tạo (TC34)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 34, 'TC45', 1, '2026-08-31 12:25:35'),
-('TC35', 'Phương pháp đánh giá đa dạng, công bằng, bám sát chuẩn đầu ra học phần (TC35)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 35, 'TC23', 1, '2026-08-31 12:25:35'),
-('TC36', 'Quy trình tuyển sinh minh bạch, đúng quy định và đảm bảo chất lượng đầu vào (TC36)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 36, 'TC52', 0, '2026-08-31 12:25:35'),
-('TC37', 'Hoạt động tư vấn học tập, hướng nghiệp và hỗ trợ tâm lý sinh viên hiệu quả (TC37)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 37, 'TC53', 1, '2026-08-31 12:25:35'),
-('TC38', 'Trình độ chuyên môn và kỹ năng sư phạm của giảng viên đáp ứng tốt yêu cầu (TC38)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 38, 'TC38', 1, '2026-08-31 12:25:35'),
-('TC39', 'Giáo trình, tài liệu tham khảo và học liệu số đầy đủ và cập nhật (TC39)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 39, 'TC34', 1, '2026-08-31 12:25:35'),
-('TC40', 'Hệ thống phòng thí nghiệm, phòng máy tính đáp ứng tốt yêu cầu thực hành (TC40)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 40, 'TC19', 1, '2026-08-31 12:25:35'),
-('TC41', 'Kết quả đánh giá sự hài lòng của nhà tuyển dụng đối với sinh viên tốt nghiệp (TC41)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 41, 'TC01', 1, '2026-08-31 12:25:35'),
-('TC42', 'Quy trình bảo đảm chất lượng nội bộ được vận hành thường xuyên và hiệu quả (TC42)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 42, 'TC13', 1, '2026-08-31 12:25:35'),
-('TC43', 'Mục tiêu của CTĐT được xác định rõ ràng, phù hợp với sứ mạng và tầm nhìn (TC43)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 43, 'TC55', 1, '2026-08-31 12:25:35'),
-('TC44', 'Chuẩn đầu ra phản ánh yêu cầu của các bên liên quan và được rà soát định kỳ (TC44)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 44, 'TC53', 1, '2026-08-31 12:25:35'),
-('TC45', 'Bản mô tả CTĐT đầy đủ thông tin cần thiết, rõ ràng và công khai minh bạch (TC45)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 45, 'TC24', 1, '2026-08-31 12:25:35'),
-('TC46', 'Cấu trúc chương trình học có tính logic, tích hợp và cập nhật xu hướng công nghệ (TC46)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 46, 'TC38', 1, '2026-08-31 12:25:35'),
-('TC47', 'Đề cương chi tiết học phần được cập nhật hằng năm và được phê duyệt chính thức (TC47)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 47, 'TC43', 1, '2026-08-31 12:25:35'),
-('TC48', 'Phương pháp dạy học thúc đẩy năng lực tự học, tư duy phản biện và sáng tạo (TC48)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 48, 'TC08', 0, '2026-08-31 12:25:35'),
-('TC49', 'Phương pháp đánh giá đa dạng, công bằng, bám sát chuẩn đầu ra học phần (TC49)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 49, 'TC21', 1, '2026-08-31 12:25:35'),
-('TC50', 'Quy trình tuyển sinh minh bạch, đúng quy định và đảm bảo chất lượng đầu vào (TC50)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 50, 'TC36', 1, '2026-08-31 12:25:35'),
-('TC51', 'Hoạt động tư vấn học tập, hướng nghiệp và hỗ trợ tâm lý sinh viên hiệu quả (TC51)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 51, 'TC25', 1, '2026-08-31 12:25:35'),
-('TC52', 'Trình độ chuyên môn và kỹ năng sư phạm của giảng viên đáp ứng tốt yêu cầu (TC52)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 52, 'TC53', 1, '2026-08-31 12:25:35'),
-('TC53', 'Giáo trình, tài liệu tham khảo và học liệu số đầy đủ và cập nhật (TC53)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 53, 'TC21', 1, '2026-08-31 12:25:35'),
-('TC54', 'Hệ thống phòng thí nghiệm, phòng máy tính đáp ứng tốt yêu cầu thực hành (TC54)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 54, 'TC28', 1, '2026-08-31 12:25:35'),
-('TC55', 'Kết quả đánh giá sự hài lòng của nhà tuyển dụng đối với sinh viên tốt nghiệp (TC55)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 55, 'TC29', 1, '2026-08-31 12:25:35'),
-('TC56', 'Quy trình bảo đảm chất lượng nội bộ được vận hành thường xuyên và hiệu quả (TC56)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 56, 'TC22', 1, '2026-08-31 12:25:35'),
-('TC57', 'Mục tiêu của CTĐT được xác định rõ ràng, phù hợp với sứ mạng và tầm nhìn (TC57)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 57, 'TC03', 1, '2026-08-31 12:25:35'),
-('TC58', 'Chuẩn đầu ra phản ánh yêu cầu của các bên liên quan và được rà soát định kỳ (TC58)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 58, 'TC25', 1, '2026-08-31 12:25:35'),
-('TC59', 'Bản mô tả CTĐT đầy đủ thông tin cần thiết, rõ ràng và công khai minh bạch (TC59)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 59, 'TC17', 1, '2026-08-31 12:25:35'),
-('TC60', 'Cấu trúc chương trình học có tính logic, tích hợp và cập nhật xu hướng công nghệ (TC60)', 'Nội dung chi tiết tiêu chí đánh giá mức độ đạt được chuẩn đầu ra và minh chứng đi kèm.', 60, 'TC21', 0, '2026-08-31 12:25:35');
+INSERT INTO `tieuchi` (`MaTieuChi`, `TenTieuChi`, `NoiDung`, `ThuTu`, `MaTieuChuan`, `TrangThai`, `NgayTao`) VALUES
+('TChi_ABET01.1', 'Criterion 1.1: Quá trình theo dõi và hỗ trợ sinh viên', 'Quy trình tư vấn học vụ và theo dõi tiến độ học tập của sinh viên', 1, 'TC_ABET01', 1, '2026-09-29 18:19:07'),
+('TChi_ABET02.1', 'Criterion 2.1: Mục tiêu giáo dục chương trình đào tạo (PEOs)', 'Xác định các mục tiêu PEOs dựa trên nhu cầu của doanh nghiệp', 1, 'TC_ABET02', 1, '2026-09-29 18:19:07'),
+('TChi_ABET03.1', 'Criterion 3.1: Student Outcomes Assessment & Attainment', 'Systematic evaluation demonstrating graduates achieve all required student outcomes', 1, 'TC_ABET03', 1, '2026-09-29 18:22:46'),
+('TChi_ABET04.1', 'Criterion 4.1: Continuous Improvement Action Plans', 'Documented improvements in curriculum, laboratories, and instruction based on assessment feedback', 1, 'TC_ABET04', 1, '2026-09-29 18:22:46'),
+('TChi_AUN01.1', 'Criterion 1.1: ELOs formulation and alignment with university vision', 'Expected learning outcomes are clearly defined and aligned with institutional vision', 1, 'TC_AUN01', 1, '2026-09-29 18:19:07'),
+('TChi_AUN01.2', 'Criterion 1.2: Generic and programme-specific learning outcomes', 'ELOs encompass both generic soft skills and specific technical skills', 2, 'TC_AUN01', 1, '2026-09-29 18:19:07'),
+('TChi_AUN02.1', 'Criterion 2.1: Curriculum design and course mapping matrix', 'Curriculum matrix maps each course to corresponding programme learning outcomes', 1, 'TC_AUN02', 1, '2026-09-29 18:19:07'),
+('TChi_AUN03.1', 'Criterion 3.1: Constructive alignment in teaching and active learning', 'Teaching approaches promote active, collaborative and project-based learning', 1, 'TC_AUN03', 1, '2026-09-29 18:19:07'),
+('TChi_AUN04.1', 'Criterion 4.1: Constructive Alignment in Student Assessment', 'Formative and summative assessment methods measure the achievement of expected learning outcomes', 1, 'TC_AUN04', 1, '2026-09-29 18:22:46'),
+('TChi_AUN05.1', 'Criterion 5.1: Academic Staff Competencies and Development', 'Adequate academic staff with appropriate qualifications, continuous training and development', 1, 'TC_AUN05', 1, '2026-09-29 18:22:46'),
+('TChi01.1', 'Tiêu chí 1.1: Mục tiêu của CTĐT được xác định rõ ràng', 'Mục tiêu CTĐT phản ánh đúng định hướng của Nhà trường và nhu cầu xã hội', 1, 'TC01', 1, '2026-09-29 18:19:07'),
+('TChi01.2', 'Tiêu chí 1.2: Chuẩn đầu ra được xác định rõ ràng', 'Chuẩn đầu ra bao quát kiến thức, kỹ năng, mức độ tự chủ và trách nhiệm', 2, 'TC01', 1, '2026-09-29 18:19:07'),
+('TChi01.3', 'Tiêu chí 1.3: Chuẩn đầu ra được rà soát và công bố công khai', 'Định kỳ rà soát, lấy ý kiến các bên liên quan và công bố trên website', 3, 'TC01', 1, '2026-09-29 18:19:07'),
+('TChi02.1', 'Tiêu chí 2.1: Bản mô tả CTĐT đầy đủ thông tin', 'Bản mô tả cung cấp đầy đủ thông tin về mục tiêu, CĐR, cấu trúc chương trình', 1, 'TC02', 1, '2026-09-29 18:19:07'),
+('TChi02.2', 'Tiêu chí 2.2: Đề cương chi tiết học phần được công bố', 'Đề cương nêu rõ mục tiêu, chuẩn đầu ra học phần và phương pháp đánh giá', 2, 'TC02', 1, '2026-09-29 18:19:07'),
+('TChi03.1', 'Tiêu chí 3.1: CTĐT được thiết kế theo định hướng ứng dụng', 'Cấu trúc các học phần logic, tăng cường kỹ năng thực hành và đồ án', 1, 'TC03', 1, '2026-09-29 18:19:07'),
+('TChi03.2', 'Tiêu chí 3.2: Đóng góp của các khối kiến thức vào CĐR', 'Ma trận tương thích giữa học phần và chuẩn đầu ra CTĐT', 2, 'TC03', 1, '2026-09-29 18:19:07'),
+('TChi04.1', 'Tiêu chí 4.1: Phương pháp dạy học đa dạng', 'Kết hợp thuyết trình, thảo luận nhóm, giải quyết vấn đề và học qua dự án', 1, 'TC04', 1, '2026-09-29 18:19:07'),
+('TChi05_01.1', 'Tiêu chí 1.1: Chuẩn năng lực phát triển phần mềm', 'Sinh viên đạt chuẩn kiến trúc, kiểm thử và quản lý dự án phần mềm', 1, 'TC05_01', 1, '2026-09-29 18:19:07'),
+('TChi05_02.1', 'Tiêu chí 2.1: Giảng viên hướng dẫn đồ án thực tế doanh nghiệp', 'Giảng viên có kinh nghiệm thực chiến và chủ trì các dự án CNTT', 1, 'TC05_02', 1, '2026-09-29 18:19:07'),
+('TChi05_03.1', 'Tiêu chí 3.1: Hệ thống thực hành CI/CD và Cloud Computing', 'Sinh viên được tiếp cận môi trường phát triển Docker, Kubernetes, AWS/Azure thực hành', 1, 'TC05_03', 1, '2026-09-29 18:22:46'),
+('TChi05_04.1', 'Tiêu chí 4.1: Chuẩn tiếng Anh giao tiếp kỹ thuật phần mềm', 'Yêu cầu đạt chuẩn TOEIC/IELTS và đọc hiểu tài liệu đặc tả kỹ thuật quốc tế', 1, 'TC05_04', 1, '2026-09-29 18:22:46'),
+('TChi05.1', 'Tiêu chí 5.1: Đánh giá quá trình và tổng kết', 'Đánh giá học phần theo trọng số điểm quá trình và điểm thi kết thúc học phần', 1, 'TC05', 1, '2026-09-29 18:19:07'),
+('TChi06_01.1', 'Tiêu chí 1.1: Tiêu chuẩn tuyển sinh thạc sĩ CNTT', 'Quy chế xét tuyển và yêu cầu văn bằng đại học đúng ngành', 1, 'TC06_01', 1, '2026-09-29 18:19:07'),
+('TChi06_02.1', 'Tiêu chí 2.1: Luận văn thạc sĩ và công bố khoa học', 'Yêu cầu công bố bài báo khoa học trên các tạp chí chuyên ngành uy tín', 1, 'TC06_02', 1, '2026-09-29 18:19:07'),
+('TChi06_03.1', 'Tiêu chí 3.1: Tiêu chuẩn người hướng dẫn khoa học luận văn thạc sĩ', 'Giảng viên hướng dẫn có các công trình nghiên cứu uy tín thuộc đúng hướng đề tài học viên', 1, 'TC06_03', 1, '2026-09-29 18:22:46'),
+('TChi06_04.1', 'Tiêu chí 4.1: Nguồn học liệu số và cơ sở dữ liệu nghiên cứu', 'Cung cấp tài khoản truy cập cơ sở dữ liệu trực tuyến phục vụ nghiên cứu luận văn cao học', 1, 'TC06_04', 1, '2026-09-29 18:22:46'),
+('TChi06.1', 'Tiêu chí 6.1: Đội ngũ giảng viên cơ hữu', 'Giảng viên có trình độ thạc sĩ, tiến sĩ đúng chuyên ngành CNTT', 1, 'TC06', 1, '2026-09-29 18:19:07'),
+('TChi07_01.1', 'Tiêu chí 1.1: Khối kiến thức Học máy và Khoa học dữ liệu', 'Chương trình bao quát toán giải tích, đại số tuyến tính và thuật toán AI', 1, NULL, 1, '2026-09-29 18:19:07'),
+('TChi07_02.1', 'Tiêu chí 2.1: Phòng thí nghiệm AI GPU Server', 'Trang bị máy chủ chuyên dụng tính toán song song CUDA phục vụ đào tạo', 1, NULL, 1, '2026-09-29 18:19:07'),
+('TChi07_03.1', 'Tiêu chí 3.1: Nguyên tắc đạo đức AI và bảo vệ quyền riêng tư dữ liệu', 'Quy chuẩn kiểm định thuật toán, giảm thiểu thiên vị (bias) và bảo đảm tính minh bạch mô hình', 1, 'TC07_03', 1, '2026-09-29 18:22:46'),
+('TChi07_04.1', 'Tiêu chí 4.1: Đồ án Capstone AI thực chiến cùng doanh nghiệp', 'Đồ án giải quyết bài toán thực tế như nhận diện khuôn mặt, chatbot thông minh, chẩn đoán y tế', 1, 'TC07_04', 1, '2026-09-29 18:22:46'),
+('TChi08_01.1', 'Tiêu chí 1.1: Chuẩn kỹ năng FE (Fundamental IT Engineer)', 'Chuẩn kiến thức phần cứng, mạng, thuật toán và bảo mật theo ITSS', 1, 'TC08_01', 1, '2026-09-29 18:19:07'),
+('TChi08_02.1', 'Tiêu chí 2.1: Năng lực tiếng Nhật IT và làm việc nhóm', 'Chuẩn tiếng Nhật chuyên ngành công nghệ thông tin và văn hóa doanh nghiệp', 1, 'TC08_02', 1, '2026-09-29 18:19:07'),
+('TChi08_03.1', 'Tiêu chí 3.1: Chuẩn kỹ năng AP (Applied Information Technology Engineer)', 'Năng lực thiết kế kiến trúc hệ thống, an ninh thông tin và tối ưu hiệu năng phần mềm', 1, 'TC08_03', 1, '2026-09-29 18:22:46'),
+('TChi08_04.1', 'Tiêu chí 4.1: Tiếng Nhật IT và quy trình dự án chuẩn Nhật Bản', 'Đạt chứng chỉ năng lực tiếng Nhật JLPT N3 trở lên và thành thạo quy trình giao việc B-spec', 1, 'TC08_04', 1, '2026-09-29 18:22:46'),
+('TChi09.1', 'Tiêu chí 9.1: Phòng thực hành máy tính và phòng lab', 'Hệ thống phòng máy tính có cấu hình cao, kết nối Internet tốc độ cao', 1, 'TC09', 1, '2026-09-29 18:19:07'),
+('TChi11.1', 'Tiêu chí 11.1: Tỷ lệ sinh viên có việc làm sau tốt nghiệp', 'Khảo sát tình hình việc làm của sinh viên tốt nghiệp trong vòng 12 tháng', 1, 'TC11', 1, '2026-09-29 18:19:07'),
+('TChi12_01.1', 'Tiêu chí 1.1: Sứ mạng và tầm nhìn nhà trường', 'Sứ mạng, tầm nhìn được định kỳ rà soát và công bố rộng rãi', 1, 'TC12_01', 1, '2026-09-29 18:19:07'),
+('TChi12_01.2', 'Tiêu chí 1.2: Văn hóa tổ chức và liêm chính học thuật', 'Xây dựng môi trường học thuật chuyên nghiệp và tôn trọng bản quyền', 2, 'TC12_01', 1, '2026-09-29 18:19:07'),
+('TChi12_02.1', 'Tiêu chí 2.1: Cơ cấu tổ chức và phân cấp quản lý', 'Quy chế tổ chức và hoạt động phân định rõ chức năng, nhiệm vụ', 1, 'TC12_02', 1, '2026-09-29 18:19:07'),
+('TChi12_03.1', 'Tiêu chí 3.1: Hệ thống bảo đảm chất lượng bên trong', 'Đơn vị chuyên trách ĐBCL hoạt động hiệu quả và có quy trình giám sát', 1, 'TC12_03', 1, '2026-09-29 18:19:07'),
+('TChi12_04.1', 'Tiêu chí 4.1: Quy hoạch và phát triển cơ sở vật chất', 'Cơ sở vật chất, giảng đường đáp ứng quy mô đào tạo của Nhà trường', 1, 'TC12_04', 1, '2026-09-29 18:19:07'),
+('TChi12_05.1', 'Tiêu chí 5.1: Quy hoạch và phát triển đội ngũ cán bộ, giảng viên', 'Tỷ lệ giảng viên có học vị tiến sĩ, chức danh giáo sư, phó giáo sư đạt chuẩn quốc gia', 1, 'TC12_05', 1, '2026-09-29 18:22:46'),
+('TChi12_06.1', 'Tiêu chí 6.1: Kết quả nghiên cứu khoa học và công bố quốc tế', 'Số lượng bài báo đăng tải trên tạp chí ISI/Scopus và đề tài khoa học được nghiệm thu', 1, 'TC12_06', 1, '2026-09-29 18:22:46'),
+('TChi12.1', 'Tiêu chí 12.1: Hoạt động phục vụ cộng đồng và phong trào đổi mới sáng tạo', 'Nhà trường và Khoa tổ chức các chương trình hỗ trợ cộng đồng, TechFest và cuộc thi sáng tạo', 1, 'TC12', 1, '2026-09-29 18:22:46');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `TieuChuan`
+-- Table structure for table `tieuchuan`
 --
 
-CREATE TABLE `TieuChuan` (
+CREATE TABLE `tieuchuan` (
   `MaTieuChuan` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `TenTieuChuan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `MoTa` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `ThuTu` int(11) NOT NULL DEFAULT 0,
-  `MaBoTieuChuan` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `MaBoTieuChuan` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `TrangThai` tinyint(1) NOT NULL DEFAULT 1,
   `NgayTao` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `TieuChuan`
+-- Dumping data for table `tieuchuan`
 --
 
-INSERT INTO `TieuChuan` (`MaTieuChuan`, `TenTieuChuan`, `MoTa`, `ThuTu`, `MaBoTieuChuan`, `TrangThai`, `NgayTao`) VALUES
-('TC01', 'Mục tiêu và chuẩn đầu ra của chương trình đào tạo (Tiêu chuẩn 1)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 1, 'BTC52', 1, '2026-08-31 12:25:35'),
-('TC02', 'Bản mô tả chương trình đào tạo và cấu trúc khóa học (Tiêu chuẩn 2)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 2, 'BTC24', 1, '2026-08-31 12:25:35'),
-('TC03', 'Cấu trúc và nội dung chương trình dạy học (Tiêu chuẩn 3)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 3, 'BTC50', 1, '2026-08-31 12:25:35'),
-('TC04', 'Phương pháp tiếp cận trong dạy và học (Tiêu chuẩn 4)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 4, 'BTC35', 1, '2026-08-31 12:25:35'),
-('TC05', 'Đánh giá kết quả học tập của người học (Tiêu chuẩn 5)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 5, 'BTC21', 1, '2026-08-31 12:25:35'),
-('TC06', 'Đội ngũ giảng viên và nghiên cứu viên (Tiêu chuẩn 6)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 6, 'BTC42', 1, '2026-08-31 12:25:35'),
-('TC07', 'Đội ngũ nhân viên hành chính và hỗ trợ kỹ thuật (Tiêu chuẩn 7)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 7, 'BTC47', 1, '2026-08-31 12:25:35'),
-('TC08', 'Người học và các dịch vụ hỗ trợ người học (Tiêu chuẩn 8)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 8, 'BTC51', 1, '2026-08-31 12:25:35'),
-('TC09', 'Cơ sở vật chất, phòng máy tính và trang thiết bị (Tiêu chuẩn 9)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 9, 'BTC08', 1, '2026-08-31 12:25:35'),
-('TC10', 'Nâng cao chất lượng liên tục và rà soát định kỳ (Tiêu chuẩn 10)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 10, 'BTC22', 1, '2026-08-31 12:25:35'),
-('TC11', 'Kết quả đầu ra của người học và tỷ lệ có việc làm (Tiêu chuẩn 11)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 11, 'BTC22', 1, '2026-08-31 12:25:35'),
-('TC12', 'Hoạt động nghiên cứu khoa học và chuyển giao công nghệ (Tiêu chuẩn 12)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 12, 'BTC33', 1, '2026-08-31 12:25:35'),
-('TC13', 'Tương tác giữa nhà trường, doanh nghiệp và xã hội (Tiêu chuẩn 13)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 13, 'BTC11', 1, '2026-08-31 12:25:35'),
-('TC14', 'Công tác quản lý tài chính và nguồn lực phát triển (Tiêu chuẩn 14)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 14, 'BTC12', 1, '2026-08-31 12:25:35'),
-('TC15', 'Hệ thống đảm bảo chất lượng nội bộ (Tiêu chuẩn 15)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 15, 'BTC37', 0, '2026-08-31 12:25:35'),
-('TC16', 'Mục tiêu và chuẩn đầu ra của chương trình đào tạo (Tiêu chuẩn 16)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 16, 'BTC11', 1, '2026-08-31 12:25:35'),
-('TC17', 'Bản mô tả chương trình đào tạo và cấu trúc khóa học (Tiêu chuẩn 17)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 17, 'BTC15', 1, '2026-08-31 12:25:35'),
-('TC18', 'Cấu trúc và nội dung chương trình dạy học (Tiêu chuẩn 18)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 18, 'BTC07', 1, '2026-08-31 12:25:35'),
-('TC19', 'Phương pháp tiếp cận trong dạy và học (Tiêu chuẩn 19)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 19, 'BTC14', 1, '2026-08-31 12:25:35'),
-('TC20', 'Đánh giá kết quả học tập của người học (Tiêu chuẩn 20)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 20, 'BTC14', 1, '2026-08-31 12:25:35'),
-('TC21', 'Đội ngũ giảng viên và nghiên cứu viên (Tiêu chuẩn 21)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 21, 'BTC22', 1, '2026-08-31 12:25:35'),
-('TC22', 'Đội ngũ nhân viên hành chính và hỗ trợ kỹ thuật (Tiêu chuẩn 22)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 22, 'BTC11', 1, '2026-08-31 12:25:35'),
-('TC23', 'Người học và các dịch vụ hỗ trợ người học (Tiêu chuẩn 23)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 23, 'BTC40', 1, '2026-08-31 12:25:35'),
-('TC24', 'Cơ sở vật chất, phòng máy tính và trang thiết bị (Tiêu chuẩn 24)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 24, 'BTC53', 1, '2026-08-31 12:25:35'),
-('TC25', 'Nâng cao chất lượng liên tục và rà soát định kỳ (Tiêu chuẩn 25)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 25, 'BTC39', 1, '2026-08-31 12:25:35'),
-('TC26', 'Kết quả đầu ra của người học và tỷ lệ có việc làm (Tiêu chuẩn 26)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 26, 'BTC35', 1, '2026-08-31 12:25:35'),
-('TC27', 'Hoạt động nghiên cứu khoa học và chuyển giao công nghệ (Tiêu chuẩn 27)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 27, 'BTC34', 1, '2026-08-31 12:25:35'),
-('TC28', 'Tương tác giữa nhà trường, doanh nghiệp và xã hội (Tiêu chuẩn 28)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 28, 'BTC47', 1, '2026-08-31 12:25:35'),
-('TC29', 'Công tác quản lý tài chính và nguồn lực phát triển (Tiêu chuẩn 29)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 29, 'BTC31', 1, '2026-08-31 12:25:35'),
-('TC30', 'Hệ thống đảm bảo chất lượng nội bộ (Tiêu chuẩn 30)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 30, 'BTC02', 0, '2026-08-31 12:25:35'),
-('TC31', 'Mục tiêu và chuẩn đầu ra của chương trình đào tạo (Tiêu chuẩn 31)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 31, 'BTC07', 1, '2026-08-31 12:25:35'),
-('TC32', 'Bản mô tả chương trình đào tạo và cấu trúc khóa học (Tiêu chuẩn 32)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 32, 'BTC47', 1, '2026-08-31 12:25:35'),
-('TC33', 'Cấu trúc và nội dung chương trình dạy học (Tiêu chuẩn 33)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 33, 'BTC24', 1, '2026-08-31 12:25:35'),
-('TC34', 'Phương pháp tiếp cận trong dạy và học (Tiêu chuẩn 34)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 34, 'BTC54', 1, '2026-08-31 12:25:35'),
-('TC35', 'Đánh giá kết quả học tập của người học (Tiêu chuẩn 35)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 35, 'BTC23', 1, '2026-08-31 12:25:35'),
-('TC36', 'Đội ngũ giảng viên và nghiên cứu viên (Tiêu chuẩn 36)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 36, 'BTC38', 1, '2026-08-31 12:25:35'),
-('TC37', 'Đội ngũ nhân viên hành chính và hỗ trợ kỹ thuật (Tiêu chuẩn 37)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 37, 'BTC42', 1, '2026-08-31 12:25:35'),
-('TC38', 'Người học và các dịch vụ hỗ trợ người học (Tiêu chuẩn 38)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 38, 'BTC06', 1, '2026-08-31 12:25:35'),
-('TC39', 'Cơ sở vật chất, phòng máy tính và trang thiết bị (Tiêu chuẩn 39)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 39, 'BTC23', 1, '2026-08-31 12:25:35'),
-('TC40', 'Nâng cao chất lượng liên tục và rà soát định kỳ (Tiêu chuẩn 40)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 40, 'BTC14', 1, '2026-08-31 12:25:35'),
-('TC41', 'Kết quả đầu ra của người học và tỷ lệ có việc làm (Tiêu chuẩn 41)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 41, 'BTC54', 1, '2026-08-31 12:25:35'),
-('TC42', 'Hoạt động nghiên cứu khoa học và chuyển giao công nghệ (Tiêu chuẩn 42)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 42, 'BTC52', 1, '2026-08-31 12:25:35'),
-('TC43', 'Tương tác giữa nhà trường, doanh nghiệp và xã hội (Tiêu chuẩn 43)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 43, 'BTC43', 1, '2026-08-31 12:25:35'),
-('TC44', 'Công tác quản lý tài chính và nguồn lực phát triển (Tiêu chuẩn 44)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 44, 'BTC02', 1, '2026-08-31 12:25:35'),
-('TC45', 'Hệ thống đảm bảo chất lượng nội bộ (Tiêu chuẩn 45)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 45, 'BTC17', 0, '2026-08-31 12:25:35'),
-('TC46', 'Mục tiêu và chuẩn đầu ra của chương trình đào tạo (Tiêu chuẩn 46)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 46, 'BTC21', 1, '2026-08-31 12:25:35'),
-('TC47', 'Bản mô tả chương trình đào tạo và cấu trúc khóa học (Tiêu chuẩn 47)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 47, 'BTC17', 1, '2026-08-31 12:25:35'),
-('TC48', 'Cấu trúc và nội dung chương trình dạy học (Tiêu chuẩn 48)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 48, 'BTC38', 1, '2026-08-31 12:25:35'),
-('TC49', 'Phương pháp tiếp cận trong dạy và học (Tiêu chuẩn 49)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 49, 'BTC05', 1, '2026-08-31 12:25:35'),
-('TC50', 'Đánh giá kết quả học tập của người học (Tiêu chuẩn 50)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 50, 'BTC11', 1, '2026-08-31 12:25:35'),
-('TC51', 'Đội ngũ giảng viên và nghiên cứu viên (Tiêu chuẩn 51)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 51, 'BTC05', 1, '2026-08-31 12:25:35'),
-('TC52', 'Đội ngũ nhân viên hành chính và hỗ trợ kỹ thuật (Tiêu chuẩn 52)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 52, 'BTC09', 1, '2026-08-31 12:25:35'),
-('TC53', 'Người học và các dịch vụ hỗ trợ người học (Tiêu chuẩn 53)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 53, 'BTC18', 1, '2026-08-31 12:25:35'),
-('TC54', 'Cơ sở vật chất, phòng máy tính và trang thiết bị (Tiêu chuẩn 54)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 54, 'BTC13', 1, '2026-08-31 12:25:35'),
-('TC55', 'Nâng cao chất lượng liên tục và rà soát định kỳ (Tiêu chuẩn 55)', 'Tiêu chuẩn đánh giá chi tiết yêu cầu thuộc bộ tiêu chuẩn kiểm định ngành CNTT.', 55, 'BTC55', 1, '2026-08-31 12:25:35');
+INSERT INTO `tieuchuan` (`MaTieuChuan`, `TenTieuChuan`, `MoTa`, `ThuTu`, `MaBoTieuChuan`, `TrangThai`, `NgayTao`) VALUES
+('TC_ABET01', 'Criterion 1: Students Performance & Monitoring', 'Student admission, advising, and career guidance processes', 1, 'BTC04', 1, '2026-09-29 18:19:07'),
+('TC_ABET02', 'Criterion 2: Program Educational Objectives', 'Documented and published program educational objectives', 2, 'BTC04', 1, '2026-09-29 18:19:07'),
+('TC_ABET03', 'Criterion 3: Student Outcomes', 'Measurement and evaluation of student technical and professional competencies', 3, 'BTC04', 1, '2026-09-29 18:22:46'),
+('TC_ABET04', 'Criterion 4: Continuous Improvement', 'Documented process of using assessment results to improve curriculum and teaching', 4, 'BTC04', 1, '2026-09-29 18:22:46'),
+('TC_AUN01', 'Criterion 1: Expected Learning Outcomes', 'Formulation, alignment, and communication of expected learning outcomes', 1, 'BTC03', 1, '2026-09-29 18:19:07'),
+('TC_AUN02', 'Criterion 2: Programme Structure and Content', 'Curriculum design, course alignment, and academic progression', 2, 'BTC03', 1, '2026-09-29 18:19:07'),
+('TC_AUN03', 'Criterion 3: Teaching and Learning Approach', 'Constructive alignment, active learning, and student-centred approach', 3, 'BTC03', 1, '2026-09-29 18:19:07'),
+('TC_AUN04', 'Criterion 4: Student Assessment', 'Assessment rubrics, constructive alignment, appeals process and academic integrity', 4, 'BTC03', 1, '2026-09-29 18:22:46'),
+('TC_AUN05', 'Criterion 5: Academic Staff Quality', 'Staff recruitment, retention, competencies development and performance evaluation', 5, 'BTC03', 1, '2026-09-29 18:22:46'),
+('TC01', 'Tiêu chuẩn 1: Mục tiêu và chuẩn đầu ra của chương trình đào tạo', 'Mục tiêu và CĐR được xác định rõ ràng, phù hợp sứ mạng nhà trường', 1, 'BTC01', 1, '2026-09-29 18:19:07'),
+('TC02', 'Tiêu chuẩn 2: Bản mô tả chương trình đào tạo', 'Bản mô tả CTĐT và đề cương chi tiết học phần đầy đủ, công khai', 2, 'BTC01', 1, '2026-09-29 18:19:07'),
+('TC03', 'Tiêu chuẩn 3: Cấu trúc và nội dung chương trình dạy học', 'Cấu trúc khối kiến thức logic, cân đối lý thuyết và thực hành', 3, 'BTC01', 1, '2026-09-29 18:19:07'),
+('TC04', 'Tiêu chuẩn 4: Phương pháp tiếp cận trong dạy và học', 'Áp dụng phương pháp dạy học tích cực, lấy người học làm trung tâm', 4, 'BTC01', 1, '2026-09-29 18:19:07'),
+('TC05', 'Tiêu chuẩn 5: Đánh giá kết quả học tập của người học', 'Phương pháp đánh giá đa dạng, đảm bảo tính khách quan và đo lường CĐR', 5, 'BTC01', 1, '2026-09-29 18:19:07'),
+('TC05_01', 'Tiêu chuẩn 1: Mục tiêu và Chuẩn đầu ra ngành KTPM', 'Chuẩn năng lực kỹ thuật phần mềm, thiết kế hệ thống và kiểm thử', 1, 'BTC05', 1, '2026-09-29 18:19:07'),
+('TC05_02', 'Tiêu chuẩn 2: Đội ngũ giảng viên hướng dẫn đồ án KTPM', 'Năng lực thực tế công nghiệp và hướng dẫn đồ án tốt nghiệp', 2, 'BTC05', 1, '2026-09-29 18:19:07'),
+('TC05_03', 'Tiêu chuẩn 3: Môi trường thực hành phần mềm và công cụ DevOps', 'Trang bị nền tảng CI/CD, máy chủ thử nghiệm đám mây và công cụ phát triển hiện đại', 3, 'BTC05', 1, '2026-09-29 18:22:46'),
+('TC05_04', 'Tiêu chuẩn 4: Chuẩn đầu ra ngoại ngữ và kỹ năng hội nhập', 'Chuẩn tiếng Anh chuyên ngành công nghệ thông tin và năng lực làm việc đa văn hóa', 4, 'BTC05', 1, '2026-09-29 18:22:46'),
+('TC06', 'Tiêu chuẩn 6: Đội ngũ giảng viên, nghiên cứu viên', 'Quy mô, cơ cấu và trình độ của giảng viên đáp ứng yêu cầu CTĐT', 6, 'BTC01', 1, '2026-09-29 18:19:07'),
+('TC06_01', 'Tiêu chuẩn 1: Tuyển sinh và định hướng đào tạo Thạc sĩ CNTT', 'Yêu cầu đầu vào và định hướng nghiên cứu chuyên sâu CNTT', 1, 'BTC06', 1, '2026-09-29 18:19:07'),
+('TC06_02', 'Tiêu chuẩn 2: Luận văn thạc sĩ và Nghiên cứu khoa học', 'Quy trình giao đề tài, thẩm định và đánh giá luận văn thạc sĩ', 2, 'BTC06', 1, '2026-09-29 18:19:07'),
+('TC06_03', 'Tiêu chuẩn 3: Giảng viên cơ hữu và Hội đồng bảo vệ luận văn', 'Hội đồng chấm luận văn thạc sĩ đúng chuyên ngành và quy trình phản biện nghiêm ngặt', 3, 'BTC06', 1, '2026-09-29 18:22:46'),
+('TC06_04', 'Tiêu chuẩn 4: Cơ sở dữ liệu khoa học số và Thư viện chuyên ngành', 'Hệ thống truy cập cơ sở dữ liệu số IEEE Xplore, ScienceDirect, Springer cho học viên cao học', 4, 'BTC06', 1, '2026-09-29 18:22:46'),
+('TC07_03', 'Tiêu chuẩn 3: Đạo đức AI và Bảo mật dữ liệu lớn', 'Nguyên tắc phát triển trí tuệ nhân tạo có trách nhiệm, liêm chính dữ liệu và an toàn thông tin', 3, 'BTC07', 1, '2026-09-29 18:22:46'),
+('TC07_04', 'Tiêu chuẩn 4: Dự án tốt nghiệp Capstone AI thực tế doanh nghiệp', 'Sinh viên giải quyết bài toán thị giác máy tính, xử lý ngôn ngữ tự nhiên từ doanh nghiệp', 4, 'BTC07', 1, '2026-09-29 18:22:46'),
+('TC08', 'Tiêu chuẩn 8: Người học và hoạt động hỗ trợ người học', 'Chính sách tuyển sinh, tư vấn học tập và hỗ trợ việc làm cho sinh viên', 8, 'BTC01', 1, '2026-09-29 18:19:07'),
+('TC08_01', 'Tiêu chuẩn 1: Chuẩn kỹ năng công nghệ thông tin ITSS Level 2-3', 'Khung năng lực lập trình, phân tích yêu cầu theo chuẩn Nhật Bản', 1, 'BTC08', 1, '2026-09-29 18:19:07'),
+('TC08_02', 'Tiêu chuẩn 2: Năng lực tiếng Nhật IT và quy trình phần mềm', 'Kỹ năng giao tiếp tiếng Nhật chuyên ngành IT và quy trình Scrum/Agile', 2, 'BTC08', 1, '2026-09-29 18:19:07'),
+('TC08_03', 'Tiêu chuẩn 3: Chuẩn kỹ sư ứng dụng AP (Applied IT Engineer)', 'Kiến thức chuyên sâu về thiết kế hệ thống, giải thuật tối ưu và cơ sở dữ liệu lớn', 3, 'BTC08', 1, '2026-09-29 18:22:46'),
+('TC08_04', 'Tiêu chuẩn 4: Văn hóa doanh nghiệp và phong cách làm việc BrSE', 'Kỹ năng làm việc vị trí Kỹ sư cầu nối (Bridge System Engineer), quy trình quản trị dự án', 4, 'BTC08', 1, '2026-09-29 18:22:46'),
+('TC09', 'Tiêu chuẩn 9: Cơ sở vật chất và trang thiết bị', 'Phòng học, phòng thực hành máy tính và thư viện đáp ứng nhu cầu', 9, 'BTC01', 1, '2026-09-29 18:19:07'),
+('TC10', 'Tiêu chuẩn 10: Nâng cao chất lượng', 'Quy trình rà soát, đánh giá định kỳ và cải tiến chất lượng CTĐT', 10, 'BTC01', 1, '2026-09-29 18:19:07'),
+('TC11', 'Tiêu chuẩn 11: Kết quả đầu ra', 'Tỷ lệ tốt nghiệp, việc làm đúng ngành và sự hài lòng của doanh nghiệp', 11, 'BTC01', 1, '2026-09-29 18:19:07'),
+('TC12', 'Tiêu chuẩn 12: Đóng góp cho cộng đồng và khởi nghiệp sáng tạo', 'Các hoạt động phục vụ cộng đồng, chuyển giao công nghệ và hỗ trợ sinh viên khởi nghiệp', 12, 'BTC01', 1, '2026-09-29 18:22:46'),
+('TC12_01', 'Tiêu chuẩn 1: Tầm nhìn, sứ mạng và văn hóa', 'Tầm nhìn, sứ mạng và giá trị cốt lõi của cơ sở giáo dục đại học', 1, 'BTC02', 1, '2026-09-29 18:19:07'),
+('TC12_02', 'Tiêu chuẩn 2: Quản trị và quản lý', 'Hệ thống quản trị, bộ máy tổ chức và quy chế hoạt động', 2, 'BTC02', 1, '2026-09-29 18:19:07'),
+('TC12_03', 'Tiêu chuẩn 3: Đào tạo và bảo đảm chất lượng', 'Hệ thống bảo đảm chất lượng bên trong và quản lý đào tạo', 3, 'BTC02', 1, '2026-09-29 18:19:07'),
+('TC12_04', 'Tiêu chuẩn 4: Cơ sở vật chất và tài chính', 'Nguồn lực tài chính bền vững và cơ sở vật chất đồng bộ', 4, 'BTC02', 1, '2026-09-29 18:19:07'),
+('TC12_05', 'Tiêu chuẩn 5: Đội ngũ giảng viên và cán bộ quản lý', 'Quy hoạch phát triển đội ngũ giảng viên, chính sách thu hút nhân tài và bồi dưỡng chuyên môn', 5, 'BTC02', 1, '2026-09-29 18:22:46'),
+('TC12_06', 'Tiêu chuẩn 6: Nghiên cứu khoa học và chuyển giao công nghệ', 'Chiến lược NCKH, các đề tài nghiên cứu cấp bộ, nhà nước và hợp tác quốc tế', 6, 'BTC02', 1, '2026-09-29 18:22:46');
 
 --
 -- Indexes for dumped tables
@@ -484,9 +412,9 @@ ALTER TABLE `audit_logs`
   ADD KEY `fk_audit_logs_nguoi_dung` (`MaNguoiDung`);
 
 --
--- Indexes for table `BoTieuChuan`
+-- Indexes for table `botieuchuan`
 --
-ALTER TABLE `BoTieuChuan`
+ALTER TABLE `botieuchuan`
   ADD PRIMARY KEY (`MaBoTieuChuan`);
 
 --
@@ -498,24 +426,18 @@ ALTER TABLE `download_logs`
   ADD KEY `fk_download_logs_minh_chung` (`MaMinhChung`);
 
 --
--- Indexes for table `loaiminhchung`
+-- Indexes for table `minhchung`
 --
-ALTER TABLE `loaiminhchung`
-  ADD PRIMARY KEY (`MaLoai`);
-
---
--- Indexes for table `MinhChung`
---
-ALTER TABLE `MinhChung`
+ALTER TABLE `minhchung`
   ADD PRIMARY KEY (`MaMinhChung`),
-  ADD KEY `fk_minh_chung_loai` (`MaLoai`),
   ADD KEY `fk_minh_chung_tieu_chi` (`MaTieuChi`),
+  ADD KEY `fk_minh_chung_bo` (`MaBoTieuChuan`),
   ADD KEY `fk_minh_chung_nguoi_dung` (`MaNguoiDung`);
 
 --
--- Indexes for table `NguoiDung`
+-- Indexes for table `nguoidung`
 --
-ALTER TABLE `NguoiDung`
+ALTER TABLE `nguoidung`
   ADD PRIMARY KEY (`MaNguoiDung`),
   ADD UNIQUE KEY `Email` (`Email`),
   ADD UNIQUE KEY `TenDangNhap` (`TenDangNhap`);
@@ -529,16 +451,16 @@ ALTER TABLE `remember_tokens`
   ADD KEY `fk_remember_tokens_nguoi_dung` (`MaNguoiDung`);
 
 --
--- Indexes for table `TieuChi`
+-- Indexes for table `tieuchi`
 --
-ALTER TABLE `TieuChi`
+ALTER TABLE `tieuchi`
   ADD PRIMARY KEY (`MaTieuChi`),
-  ADD KEY `fk_tieu_chi_chuan` (`MaTieuChuan`);
+  ADD KEY `fk_tieu_chi_tieu_chuan` (`MaTieuChuan`);
 
 --
--- Indexes for table `TieuChuan`
+-- Indexes for table `tieuchuan`
 --
-ALTER TABLE `TieuChuan`
+ALTER TABLE `tieuchuan`
   ADD PRIMARY KEY (`MaTieuChuan`),
   ADD KEY `fk_tieu_chuan_bo` (`MaBoTieuChuan`);
 
@@ -550,25 +472,19 @@ ALTER TABLE `TieuChuan`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `download_logs`
 --
 ALTER TABLE `download_logs`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
---
--- AUTO_INCREMENT for table `loaiminhchung`
---
-ALTER TABLE `loaiminhchung`
-  MODIFY `MaLoai` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `remember_tokens`
 --
 ALTER TABLE `remember_tokens`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- Constraints for dumped tables
@@ -588,22 +504,30 @@ ALTER TABLE `download_logs`
   ADD CONSTRAINT `fk_download_logs_nguoi_dung` FOREIGN KEY (`MaNguoiDung`) REFERENCES `nguoidung` (`MaNguoiDung`) ON DELETE SET NULL;
 
 --
--- Constraints for table `MinhChung`
+-- Constraints for table `minhchung`
 --
-ALTER TABLE `MinhChung`
-  ADD CONSTRAINT `fk_minh_chung_loai` FOREIGN KEY (`MaLoai`) REFERENCES `loaiminhchung` (`MaLoai`) ON DELETE SET NULL;
+ALTER TABLE `minhchung`
+  ADD CONSTRAINT `fk_minh_chung_bo` FOREIGN KEY (`MaBoTieuChuan`) REFERENCES `botieuchuan` (`MaBoTieuChuan`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_minh_chung_nguoi_dung` FOREIGN KEY (`MaNguoiDung`) REFERENCES `nguoidung` (`MaNguoiDung`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_minh_chung_tieu_chi` FOREIGN KEY (`MaTieuChi`) REFERENCES `tieuchi` (`MaTieuChi`) ON DELETE SET NULL;
 
 --
--- Constraints for table `TieuChi`
+-- Constraints for table `remember_tokens`
 --
-ALTER TABLE `TieuChi`
-  ADD CONSTRAINT `fk_tieu_chi_chuan` FOREIGN KEY (`MaTieuChuan`) REFERENCES `tieuchuan` (`MaTieuChuan`) ON DELETE CASCADE;
+ALTER TABLE `remember_tokens`
+  ADD CONSTRAINT `fk_remember_tokens_nguoi_dung` FOREIGN KEY (`MaNguoiDung`) REFERENCES `nguoidung` (`MaNguoiDung`) ON DELETE CASCADE;
 
 --
--- Constraints for table `TieuChuan`
+-- Constraints for table `tieuchi`
 --
-ALTER TABLE `TieuChuan`
-  ADD CONSTRAINT `fk_tieu_chuan_bo` FOREIGN KEY (`MaBoTieuChuan`) REFERENCES `botieuchuan` (`MaBoTieuChuan`) ON DELETE CASCADE;
+ALTER TABLE `tieuchi`
+  ADD CONSTRAINT `fk_tieu_chi_tieu_chuan` FOREIGN KEY (`MaTieuChuan`) REFERENCES `tieuchuan` (`MaTieuChuan`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `tieuchuan`
+--
+ALTER TABLE `tieuchuan`
+  ADD CONSTRAINT `fk_tieu_chuan_bo` FOREIGN KEY (`MaBoTieuChuan`) REFERENCES `botieuchuan` (`MaBoTieuChuan`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
