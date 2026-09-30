@@ -263,11 +263,44 @@ html[data-theme="dark"] .kpi-card:hover {
 .kpi-icon-purple  { background: rgba(124, 58, 237, 0.12); color: #7c3aed; }
 .kpi-icon-emerald { background: rgba(16, 185, 129, 0.12); color: #10b981; }
 .kpi-icon-amber   { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+.kpi-icon-cyan    { background: rgba(6, 182, 212, 0.12); color: #0891b2; }
 
 html[data-theme="dark"] .kpi-icon-blue    { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
 html[data-theme="dark"] .kpi-icon-purple  { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
 html[data-theme="dark"] .kpi-icon-emerald { background: rgba(16, 185, 129, 0.2); color: #34d399; }
 html[data-theme="dark"] .kpi-icon-amber   { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+html[data-theme="dark"] .kpi-icon-cyan    { background: rgba(6, 182, 212, 0.2); color: #22d3ee; }
+
+.kpi-clickable-card {
+    text-decoration: none !important;
+    color: inherit !important;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.kpi-clickable-card:hover .kpi-card {
+    transform: translateY(-5px);
+    box-shadow: 0 14px 28px rgba(18, 48, 95, 0.12);
+    border-color: #2563eb;
+}
+.kpi-clickable-card:hover .kpi-title {
+    color: #2563eb !important;
+}
+html[data-theme="dark"] .kpi-clickable-card:hover .kpi-card {
+    border-color: #60a5fa;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .kpi-clickable-card:hover .kpi-title {
+    color: #60a5fa !important;
+}
+
+@media (min-width: 1200px) {
+    .row-cols-xl-5 > * {
+        flex: 0 0 auto;
+        width: 20%;
+    }
+}
 
 .kpi-value {
     font-size: 2.1rem;
@@ -451,94 +484,141 @@ html[data-theme="dark"] .line-toggle-btn:not(.active) {
     </div>
 </div>
 
-<!-- ─── 2. KEY METRIC STATS CARDS (KPIs) ──────────────────────────────────── -->
-<div class="row g-3 mb-4">
+<!-- ─── 2. KEY METRIC STATS CARDS (5 KPIs VỚI LIÊN KẾT ĐIỀU HƯỚNG TRỰC TIẾP) ─── -->
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-5 g-3 mb-4">
     <!-- Card 1: Người dùng -->
-    <div class="col-12 col-sm-6 col-xl-3 anim-fade-up delay-1">
-        <div class="kpi-card">
-            <div>
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="kpi-icon-wrapper kpi-icon-blue">
-                        <i class="bi bi-people-fill"></i>
+    <div class="col anim-fade-up delay-1">
+        <a href="<?= base_url('admin/users.php') ?>" class="kpi-clickable-card" title="Bấm để mở trang Quản lý Người dùng">
+            <div class="kpi-card">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="kpi-icon-wrapper kpi-icon-blue">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                            <i class="bi bi-arrow-right-short"></i><?= $activeUsersCount ?> Online
+                        </span>
                     </div>
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-semibold">
-                        <i class="bi bi-check-circle-fill me-1"></i><?= $activeUsersCount ?> hoạt động
-                    </span>
+                    <div class="kpi-title d-flex justify-content-between align-items-center">
+                        <span>Tổng số người dùng</span>
+                        <i class="bi bi-box-arrow-up-right small text-muted"></i>
+                    </div>
+                    <div class="kpi-value count-up mb-2" data-count-to="<?= $totalUsers ?>">0</div>
                 </div>
-                <div class="kpi-title">Tổng số người dùng</div>
-                <div class="kpi-value count-up mb-2" data-count-to="<?= $totalUsers ?>">0</div>
+                <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
+                    <span><i class="bi bi-shield-lock-fill text-danger me-1"></i><strong><?= $adminCount ?></strong> Admin</span>
+                    <span><i class="bi bi-person-badge-fill text-primary me-1"></i><strong><?= $userCount ?></strong> User</span>
+                </div>
             </div>
-            <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
-                <span><i class="bi bi-shield-lock-fill text-danger me-1"></i><strong><?= $adminCount ?></strong> Admin</span>
-                <span><i class="bi bi-person-badge-fill text-primary me-1"></i><strong><?= $userCount ?></strong> User</span>
-            </div>
-        </div>
+        </a>
     </div>
 
-    <!-- Card 2: Thông tư & Quy chuẩn -->
-    <div class="col-12 col-sm-6 col-xl-3 anim-fade-up delay-2">
-        <div class="kpi-card">
-            <div>
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="kpi-icon-wrapper kpi-icon-purple">
-                        <i class="bi bi-journal-bookmark-fill"></i>
+    <!-- Card 2: Bộ Tiêu chuẩn động -->
+    <div class="col anim-fade-up delay-2">
+        <a href="<?= base_url('admin/standard_sets.php') ?>" class="kpi-clickable-card" title="Bấm để mở trang Quản lý Bộ tiêu chuẩn">
+            <div class="kpi-card">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="kpi-icon-wrapper kpi-icon-emerald">
+                            <i class="bi bi-collection-fill"></i>
+                        </div>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                            <i class="bi bi-toggle-on me-1"></i><?= $activeSetsCount ?> Áp dụng
+                        </span>
                     </div>
-                    <span class="badge bg-purple-subtle text-purple border border-purple-subtle rounded-pill px-2.5 py-1 small fw-semibold" style="background-color: rgba(124, 58, 237, 0.1); color: #7c3aed; border-color: rgba(124, 58, 237, 0.2) !important;">
-                        <i class="bi bi-award-fill me-1"></i>Quy chuẩn
-                    </span>
+                    <div class="kpi-title d-flex justify-content-between align-items-center">
+                        <span>Bộ tiêu chuẩn động</span>
+                        <i class="bi bi-box-arrow-up-right small text-muted"></i>
+                    </div>
+                    <div class="kpi-value count-up mb-2" data-count-to="<?= $totalStandardSets ?>">0</div>
                 </div>
-                <div class="kpi-title">Thông tư &amp; Quy chuẩn</div>
-                <div class="kpi-value count-up mb-2" data-count-to="<?= $totalCirculars ?>">0</div>
+                <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
+                    <span><i class="bi bi-file-earmark-ruled text-success me-1"></i>Căn cứ</span>
+                    <span><strong><?= $totalCirculars ?></strong> Quy chuẩn</span>
+                </div>
             </div>
-            <div class="pt-2 border-top text-secondary small text-truncate" title="<?= implode(', ', array_keys($standardsByCircular)) ?>">
-                <i class="bi bi-file-earmark-ruled text-primary me-1"></i>
-                <span><?= $totalCirculars ?> văn bản áp dụng</span>
-            </div>
-        </div>
+        </a>
     </div>
 
-    <!-- Card 3: Hệ thống Tiêu chuẩn -->
-    <div class="col-12 col-sm-6 col-xl-3 anim-fade-up delay-3">
-        <div class="kpi-card">
-            <div>
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="kpi-icon-wrapper kpi-icon-emerald">
-                        <i class="bi bi-collection-fill"></i>
+    <!-- Card 3: Tổng số Tiêu chuẩn -->
+    <div class="col anim-fade-up delay-3">
+        <a href="<?= base_url('admin/standard_sets.php') ?>" class="kpi-clickable-card" title="Bấm để xem danh sách Tiêu chuẩn trong các bộ">
+            <div class="kpi-card">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="kpi-icon-wrapper kpi-icon-cyan">
+                            <i class="bi bi-folder2-open"></i>
+                        </div>
+                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                            <i class="bi bi-layers-fill me-1"></i>Cấp 2
+                        </span>
                     </div>
-                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small fw-semibold">
-                        <i class="bi bi-toggle-on me-1"></i><?= $activeSetsCount ?> Đang áp dụng
-                    </span>
+                    <div class="kpi-title d-flex justify-content-between align-items-center">
+                        <span>Tổng số tiêu chuẩn</span>
+                        <i class="bi bi-box-arrow-up-right small text-muted"></i>
+                    </div>
+                    <div class="kpi-value count-up mb-2" data-count-to="<?= $totalStandards ?>">0</div>
                 </div>
-                <div class="kpi-title">Bộ tiêu chuẩn động</div>
-                <div class="kpi-value count-up mb-2" data-count-to="<?= $totalStandardSets ?>">0</div>
+                <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
+                    <span><i class="bi bi-collection text-info me-1"></i>Phân bổ</span>
+                    <span><strong><?= $totalStandardSets ?></strong> Bộ tiêu chuẩn</span>
+                </div>
             </div>
-            <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
-                <span><i class="bi bi-folder2-open text-success me-1"></i><strong><?= $totalStandards ?></strong> Tiêu chuẩn</span>
-                <span><i class="bi bi-list-check text-primary me-1"></i><strong><?= $totalCriteria ?></strong> Tiêu chí</span>
-            </div>
-        </div>
+        </a>
     </div>
 
-    <!-- Card 4: Tổng số minh chứng -->
-    <div class="col-12 col-sm-6 col-xl-3 anim-fade-up delay-4">
-        <div class="kpi-card">
-            <div>
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="kpi-icon-wrapper kpi-icon-amber">
-                        <i class="bi bi-folder-check"></i>
+    <!-- Card 4: Tổng số Tiêu chí -->
+    <div class="col anim-fade-up delay-4">
+        <a href="<?= base_url('admin/standard_sets.php') ?>" class="kpi-clickable-card" title="Bấm để xem danh sách Tiêu chí đánh giá">
+            <div class="kpi-card">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="kpi-icon-wrapper kpi-icon-purple">
+                            <i class="bi bi-list-check"></i>
+                        </div>
+                        <span class="badge bg-purple-subtle text-purple border border-purple-subtle rounded-pill px-2.5 py-1 small fw-semibold" style="background-color: rgba(124, 58, 237, 0.1); color: #7c3aed; border-color: rgba(124, 58, 237, 0.2) !important;">
+                            <i class="bi bi-check2-all me-1"></i>Cấp 3
+                        </span>
                     </div>
-                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small fw-semibold">
-                        <i class="bi bi-file-earmark-arrow-up-fill me-1"></i><?= $evidencesWithFiles ?> có tệp
-                    </span>
+                    <div class="kpi-title d-flex justify-content-between align-items-center">
+                        <span>Tổng số tiêu chí</span>
+                        <i class="bi bi-box-arrow-up-right small text-muted"></i>
+                    </div>
+                    <div class="kpi-value count-up mb-2" data-count-to="<?= $totalCriteria ?>">0</div>
                 </div>
-                <div class="kpi-title">Tổng số minh chứng</div>
-                <div class="kpi-value count-up mb-2" data-count-to="<?= $totalEvidences ?>">0</div>
+                <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
+                    <span><i class="bi bi-diagram-3 me-1" style="color: #7c3aed !important;"></i>Trực thuộc</span>
+                    <span><strong><?= $totalStandards ?></strong> Tiêu chuẩn</span>
+                </div>
             </div>
-            <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
-                <span><i class="bi bi-database-check text-warning me-1"></i>Kho CSDL</span>
-                <span class="text-success fw-bold"><?= $totalEvidences > 0 ? round(($evidencesWithFiles / $totalEvidences) * 100) : 0 ?>% Đầy đủ tệp</span>
+        </a>
+    </div>
+
+    <!-- Card 5: Tổng số Minh chứng -->
+    <div class="col anim-fade-up delay-5">
+        <a href="<?= base_url('user/search.php') ?>" class="kpi-clickable-card" title="Bấm để tra cứu Kho CSDL Minh chứng">
+            <div class="kpi-card">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="kpi-icon-wrapper kpi-icon-amber">
+                            <i class="bi bi-folder-check"></i>
+                        </div>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                            <i class="bi bi-file-earmark-arrow-up-fill me-1"></i><?= $evidencesWithFiles ?> có tệp
+                        </span>
+                    </div>
+                    <div class="kpi-title d-flex justify-content-between align-items-center">
+                        <span>Tổng số minh chứng</span>
+                        <i class="bi bi-box-arrow-up-right small text-muted"></i>
+                    </div>
+                    <div class="kpi-value count-up mb-2" data-count-to="<?= $totalEvidences ?>">0</div>
+                </div>
+                <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
+                    <span><i class="bi bi-database-check text-warning me-1"></i>Kho CSDL</span>
+                    <span class="text-success fw-bold"><?= $totalEvidences > 0 ? round(($evidencesWithFiles / $totalEvidences) * 100) : 0 ?>% Đầy đủ</span>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -592,7 +672,7 @@ html[data-theme="dark"] .line-toggle-btn:not(.active) {
                     </h3>
                     <p class="text-muted small mb-0 mt-0.5">Phân bổ tỷ trọng vai trò tài khoản</p>
                 </div>
-                <span class="chart-type-pill"><i class="bi bi-circle me-1"></i>Vành khuyên</span>
+
             </div>
             <div class="chart-body-box panel-child-anim stagger-2" style="height: 215px;">
                 <canvas id="doughnutUserChart"></canvas>
@@ -638,7 +718,6 @@ html[data-theme="dark"] .line-toggle-btn:not(.active) {
                     </h3>
                     <p class="text-muted small mb-0 mt-0.5">Tiến độ và số lượng tài liệu qua các niên khóa</p>
                 </div>
-                <span class="chart-type-pill"><i class="bi bi-activity me-1"></i>Miền sóng (Area)</span>
             </div>
             <div class="chart-body-box panel-child-anim stagger-2" style="height: 275px;">
                 <canvas id="areaTrendChart"></canvas>
@@ -657,7 +736,6 @@ html[data-theme="dark"] .line-toggle-btn:not(.active) {
                     </h3>
                     <p class="text-muted small mb-0 mt-0.5">Số lượng tiêu chuẩn trực thuộc các thông tư quy định</p>
                 </div>
-                <span class="chart-type-pill"><i class="bi bi-compass me-1"></i>Đa giác cực</span>
             </div>
             <div class="chart-body-box panel-child-anim stagger-2" style="height: 275px;">
                 <canvas id="polarCircularChart"></canvas>

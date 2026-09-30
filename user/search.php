@@ -219,14 +219,368 @@ foreach ($stmtAllMC->fetchAll(PDO::FETCH_ASSOC) as $mc) {
 }
 
 $pageTitle = page_title('Quản lý CSDL Minh chứng');
+$totalSetsCount = count($allSetsForFilter);
+$totalStandardsCount = count($allStandardsForFilter);
+$totalCriteriaCount = count($allCriteriaForFilter);
+$totalEvidencesCount = count($allEvidencesForFilter);
+$uniqueCirculars = [];
+foreach ($allSetsForFilter as $st) {
+    $tt = trim($st['ThongTu'] ?? '');
+    if ($tt !== '') $uniqueCirculars[$tt] = true;
+}
+$totalCircularsCount = count($uniqueCirculars);
+$totalEvidencesWithFiles = 0;
+foreach ($allEvidencesByCriterion as $mArr) {
+    foreach ($mArr as $mItem) {
+        if (!empty($mItem['TepTin'])) $totalEvidencesWithFiles++;
+    }
+}
 $heading   = 'Quản lý CSDL Minh chứng';
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <style>
+/* Entrance Animations */
+@keyframes userFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.99);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+.anim-fade-up {
+    opacity: 0;
+    animation: userFadeInUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.delay-0 { animation-delay: 0.04s; }
+.delay-1 { animation-delay: 0.10s; }
+.delay-2 { animation-delay: 0.16s; }
+.delay-3 { animation-delay: 0.22s; }
+.delay-4 { animation-delay: 0.28s; }
+
+/* User Welcome Banner */
+.user-welcome-banner {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
+    border-radius: 18px;
+    padding: 24px 28px;
+    color: #ffffff;
+    box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.25);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+.user-welcome-banner::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 380px;
+    height: 380px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.user-welcome-banner::after {
+    content: '';
+    position: absolute;
+    bottom: -60%;
+    right: 15%;
+    width: 260px;
+    height: 260px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+html[data-theme="dark"] .user-welcome-banner {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+/* Live Time Hero Widget */
+.live-time-hero-widget {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.07) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 18px;
+    padding: 12px 18px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    min-width: 250px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.live-time-hero-widget:hover {
+    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+}
+.live-pulse-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 10px;
+    height: 10px;
+}
+.live-pulse-core {
+    width: 8px;
+    height: 8px;
+    background-color: #22c55e;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #22c55e;
+}
+.live-pulse-ring {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: rgba(34, 197, 94, 0.5);
+    animation: livePulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes livePulseGlow {
+    0% { transform: scale(0.6); opacity: 1; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+
+.live-location-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #ffffff !important;
+    background: rgba(15, 23, 42, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    letter-spacing: 0.3px;
+}
+
+.live-digit-box {
+    background: rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 3px 8px;
+    font-size: 1.55rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', 'SF Pro Display', ui-monospace, monospace;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 2px 5px rgba(0,0,0,0.1);
+    min-width: 44px;
+    text-align: center;
+    display: inline-block;
+    line-height: 1.2;
+}
+.live-digit-sec {
+    color: #fde047 !important;
+    background: rgba(202, 138, 4, 0.3) !important;
+    border-color: rgba(250, 204, 21, 0.45) !important;
+}
+.live-digit-colon {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.75);
+    margin: 0 1px;
+    animation: colonBlink 1s ease-in-out infinite;
+    line-height: 1;
+}
+@keyframes colonBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Metric KPI Cards */
+.kpi-card {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.85);
+    border-radius: 16px;
+    padding: 20px 22px;
+    box-shadow: 0 4px 20px rgba(18, 48, 95, 0.04);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 28px rgba(18, 48, 95, 0.09);
+    border-color: rgba(37, 99, 235, 0.3);
+}
+html[data-theme="dark"] .kpi-card {
+    background: #132744;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+html[data-theme="dark"] .kpi-card:hover {
+    border-color: rgba(88, 183, 230, 0.4);
+}
+
+.kpi-clickable-card {
+    text-decoration: none !important;
+    color: inherit !important;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.kpi-clickable-card:hover .kpi-card {
+    transform: translateY(-5px);
+    box-shadow: 0 14px 28px rgba(18, 48, 95, 0.12);
+    border-color: #2563eb;
+}
+.kpi-clickable-card:hover .kpi-title {
+    color: #2563eb !important;
+}
+html[data-theme="dark"] .kpi-clickable-card:hover .kpi-card {
+    border-color: #60a5fa;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .kpi-clickable-card:hover .kpi-title {
+    color: #60a5fa !important;
+}
+
+.kpi-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+.kpi-icon-blue    { background: rgba(37, 99, 235, 0.12); color: #2563eb; }
+.kpi-icon-purple  { background: rgba(124, 58, 237, 0.12); color: #7c3aed; }
+.kpi-icon-emerald { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.kpi-icon-amber   { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+
+html[data-theme="dark"] .kpi-icon-blue    { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+html[data-theme="dark"] .kpi-icon-purple  { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+html[data-theme="dark"] .kpi-icon-emerald { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+html[data-theme="dark"] .kpi-icon-amber   { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+.kpi-value {
+    font-size: 2.1rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--ink, #0f172a);
+    letter-spacing: -0.02em;
+}
+html[data-theme="dark"] .kpi-value {
+    color: #f8fafc;
+}
+
+.kpi-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+}
+html[data-theme="dark"] .kpi-title {
+    color: #94a3b8;
+}
 /* ==============================================
    PREMIUM MODERN DESIGN SYSTEM FOR CSDL MINH CHỨNG
 ================================================= */
+/* Enhanced Modern Filter Panel */
+.filter-panel-card {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.85) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 4px 20px rgba(18, 48, 95, 0.04) !important;
+    transition: all 0.25s ease;
+}
+html[data-theme="dark"] .filter-panel-card {
+    background: #172a46 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+}
+
+.custom-filter-input-group .input-group-text {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #64748b;
+    border-radius: 12px 0 0 12px;
+}
+.custom-filter-input-group .form-control {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    font-size: 0.88rem;
+    height: 42px;
+}
+.custom-filter-input-group .form-control:focus {
+    background: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.custom-filter-input-group .btn-filter-search {
+    height: 42px;
+    border-radius: 0 12px 12px 0;
+    padding: 0 18px;
+    font-weight: 600;
+}
+
+.custom-filter-select-group .input-group-text {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #64748b;
+    border-radius: 12px 0 0 12px;
+}
+.custom-filter-select-group .form-select {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+    font-size: 0.85rem;
+    height: 42px;
+    border-radius: 0 12px 12px 0;
+    font-weight: 500;
+    color: #1e293b;
+}
+.custom-filter-select-group .form-select:focus {
+    background-color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.btn-filter-apply-hierarchical {
+    height: 42px;
+    border-radius: 12px;
+    font-weight: 600;
+    padding: 0 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+html[data-theme="dark"] .custom-filter-input-group .input-group-text,
+html[data-theme="dark"] .custom-filter-select-group .input-group-text {
+    background: #1e3557;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+}
+html[data-theme="dark"] .custom-filter-input-group .form-control,
+html[data-theme="dark"] .custom-filter-select-group .form-select {
+    background-color: #1e3557;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f8fafc;
+}
+html[data-theme="dark"] .custom-filter-input-group .form-control:focus,
+html[data-theme="dark"] .custom-filter-select-group .form-select:focus {
+    background-color: #132744;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+
 .standards-card {
     background: #ffffff;
     border: 1px solid rgba(226, 232, 240, 0.8);
@@ -602,6 +956,164 @@ html[data-theme="dark"] .badge-matched-locator {
 
 </style>
 
+<!-- ─── 1. TOP WELCOME & OVERVIEW BANNER ───────────────────────────────────── -->
+<div class="user-welcome-banner anim-fade-up delay-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 position-relative" style="z-index: 1;">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-white text-primary rounded-pill fw-bold px-3 py-1 shadow-xs" style="font-size: 0.78rem;">
+                    <i class="bi bi-folder2-open me-1"></i>Khai thác dữ liệu
+                </span>
+                <span class="text-white-50 small">•</span>
+                <span class="text-white-50 small"><?= date('d/m/Y') ?></span>
+            </div>
+            <h1 class="h4 fw-bold mb-1 text-white">
+                Chào mừng trở lại, <?= htmlspecialchars($currentUser['name'] ?? $_SESSION['user_name'] ?? 'Người dùng') ?> 👋
+            </h1>
+            <p class="text-white-50 small mb-0">
+                Tổng quan thống kê dữ liệu minh chứng kiểm định chất lượng chương trình đào tạo FBU.
+            </p>
+        </div>
+        <div class="d-flex align-items-center">
+            <div class="live-time-hero-widget">
+                <div class="d-flex align-items-center justify-content-center gap-2 mb-1.5">
+                    <span class="live-pulse-badge" title="Đang đồng bộ thời gian thực">
+                        <span class="live-pulse-ring"></span>
+                        <span class="live-pulse-core"></span>
+                    </span>
+                    <span class="live-location-badge">
+                        <i class="bi bi-geo-alt-fill text-warning me-1"></i>Hà Nội
+                    </span>
+                </div>
+                
+                <div class="d-flex align-items-center justify-content-center gap-1 my-1">
+                    <span class="live-digit-box" id="clockHours">--</span>
+                    <span class="live-digit-colon">:</span>
+                    <span class="live-digit-box" id="clockMinutes">--</span>
+                    <span class="live-digit-colon">:</span>
+                    <span class="live-digit-box live-digit-sec" id="clockSeconds">--</span>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-center gap-1.5 text-white-50 mt-1" style="font-size: 0.78rem;">
+                    <i class="bi bi-calendar3 text-warning"></i>
+                    <span class="text-white fw-semibold" id="clockDateString">Đang tải...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── 2. KEY METRIC STATS CARDS (KPIs VỚI ĐIỀU HƯỚNG TRỰC TIẾP TỚI BỘ LỌC) ─── -->
+<div class="row g-3 mb-4">
+    <!-- Card 1: Bộ Tiêu chuẩn động -->
+    <div class="col-12 col-sm-6 col-xl-3 anim-fade-up delay-1">
+        <a href="#filterForm" class="kpi-clickable-card" onclick="document.getElementById('filterKeyword')?.focus();" title="Bấm để cuộn xuống Bảng CSDL Bộ tiêu chuẩn">
+            <div class="kpi-card">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="kpi-icon-wrapper kpi-icon-emerald">
+                            <i class="bi bi-collection-fill"></i>
+                        </div>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                            <i class="bi bi-toggle-on me-1"></i><?= $totalSetsCount ?> Đang áp dụng
+                        </span>
+                    </div>
+                    <div class="kpi-title d-flex justify-content-between align-items-center">
+                        <span>Bộ tiêu chuẩn động</span>
+                        <i class="bi bi-arrow-down-circle small text-muted"></i>
+                    </div>
+                    <div class="kpi-value count-up mb-2" data-count-to="<?= $totalSetsCount ?>">0</div>
+                </div>
+                <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
+                    <span><i class="bi bi-file-earmark-ruled text-primary me-1"></i>Văn bản</span>
+                    <span><strong><?= $totalCircularsCount ?></strong> Thông tư/Quy chuẩn</span>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Card 2: Tổng số Tiêu chuẩn -->
+    <div class="col-12 col-sm-6 col-xl-3 anim-fade-up delay-2">
+        <a href="#filterStandard" class="kpi-clickable-card" onclick="setTimeout(() => document.getElementById('filterStandard')?.focus(), 150);" title="Bấm để lọc theo Tiêu chuẩn">
+            <div class="kpi-card">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="kpi-icon-wrapper kpi-icon-blue">
+                            <i class="bi bi-folder2-open"></i>
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                            <i class="bi bi-award-fill me-1"></i>Quy chuẩn
+                        </span>
+                    </div>
+                    <div class="kpi-title d-flex justify-content-between align-items-center">
+                        <span>Tổng số tiêu chuẩn</span>
+                        <i class="bi bi-arrow-down-circle small text-muted"></i>
+                    </div>
+                    <div class="kpi-value count-up mb-2" data-count-to="<?= $totalStandardsCount ?>">0</div>
+                </div>
+                <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
+                    <span><i class="bi bi-layers text-primary me-1"></i>Phân bổ</span>
+                    <span><strong><?= $totalSetsCount ?></strong> Bộ tiêu chuẩn</span>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Card 3: Tổng số Tiêu chí -->
+    <div class="col-12 col-sm-6 col-xl-3 anim-fade-up delay-3">
+        <a href="#filterCriterion" class="kpi-clickable-card" onclick="setTimeout(() => document.getElementById('filterCriterion')?.focus(), 150);" title="Bấm để lọc theo Tiêu chí">
+            <div class="kpi-card">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="kpi-icon-wrapper kpi-icon-purple">
+                            <i class="bi bi-list-check"></i>
+                        </div>
+                        <span class="badge bg-purple-subtle text-purple border border-purple-subtle rounded-pill px-2.5 py-1 small fw-semibold" style="background-color: rgba(124, 58, 237, 0.1); color: #7c3aed; border-color: rgba(124, 58, 237, 0.2) !important;">
+                            <i class="bi bi-check2-all me-1"></i>Chỉ số
+                        </span>
+                    </div>
+                    <div class="kpi-title d-flex justify-content-between align-items-center">
+                        <span>Tổng số tiêu chí</span>
+                        <i class="bi bi-arrow-down-circle small text-muted"></i>
+                    </div>
+                    <div class="kpi-value count-up mb-2" data-count-to="<?= $totalCriteriaCount ?>">0</div>
+                </div>
+                <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
+                    <span><i class="bi bi-diagram-3 me-1" style="color: #7c3aed !important;"></i>Trực thuộc</span>
+                    <span><strong><?= $totalStandardsCount ?></strong> Tiêu chuẩn</span>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Card 4: Tổng số Minh chứng -->
+    <div class="col-12 col-sm-6 col-xl-3 anim-fade-up delay-4">
+        <a href="#filterEvidence" class="kpi-clickable-card" onclick="setTimeout(() => document.getElementById('filterEvidence')?.focus(), 150);" title="Bấm để lọc theo Minh chứng">
+            <div class="kpi-card">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="kpi-icon-wrapper kpi-icon-amber">
+                            <i class="bi bi-folder-check"></i>
+                        </div>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                            <i class="bi bi-file-earmark-arrow-up-fill me-1"></i><?= $totalEvidencesWithFiles ?> có tệp
+                        </span>
+                    </div>
+                    <div class="kpi-title d-flex justify-content-between align-items-center">
+                        <span>Tổng số minh chứng</span>
+                        <i class="bi bi-arrow-down-circle small text-muted"></i>
+                    </div>
+                    <div class="kpi-value count-up mb-2" data-count-to="<?= $totalEvidencesCount ?>">0</div>
+                </div>
+                <div class="pt-2 border-top d-flex justify-content-between text-secondary small">
+                    <span><i class="bi bi-database-check text-warning me-1"></i>Kho CSDL</span>
+                    <span class="text-success fw-bold"><?= $totalEvidencesCount > 0 ? round(($totalEvidencesWithFiles / $totalEvidencesCount) * 100) : 0 ?>% Đầy đủ</span>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
 <div class="row g-4">
     <div class="col-12">
         <div class="standards-card">
@@ -653,7 +1165,7 @@ html[data-theme="dark"] .badge-matched-locator {
                             <label for="filterKeyword" class="form-label fw-bold small text-primary mb-1 d-flex align-items-center gap-1">
                                 <i class="bi bi-search"></i> Tìm kiếm
                             </label>
-                            <div class="input-group">
+                            <div class="input-group custom-filter-input-group shadow-xs">
                                 <span class="input-group-text bg-light border-end-0 text-muted">
                                     <i class="bi bi-search"></i>
                                 </span>
@@ -667,7 +1179,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                 <button class="btn btn-light border border-start-0 text-muted" type="button" id="btnClearKeyword" style="display: <?= $searchKeyword !== '' ? 'block' : 'none' ?>;" title="Xóa từ khóa">
                                     <i class="bi bi-x-circle-fill"></i>
                                 </button>
-                                <button class="btn btn-primary d-inline-flex align-items-center gap-1" type="submit" title="Tìm kiếm theo từ khóa">
+                                <button class="btn btn-primary btn-filter-search d-inline-flex align-items-center gap-1.5 shadow-sm" type="submit" title="Tìm kiếm theo từ khóa">
                                     <i class="bi bi-search"></i> Lọc
                                 </button>
                             </div>
@@ -684,9 +1196,9 @@ html[data-theme="dark"] .badge-matched-locator {
                             <div class="row g-2 align-items-center">
                                 <!-- Dropdown 1: Tiêu chuẩn -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl">
-                                    <div class="input-group input-group-sm">
+                                    <div class="input-group custom-filter-select-group shadow-xs">
                                         <span class="input-group-text bg-light text-muted" title="Lọc theo Tiêu chuẩn"><i class="bi bi-folder2"></i></span>
-                                        <select class="form-select form-select-sm" id="filterStandard" name="standard">
+                                        <select class="form-select" id="filterStandard" name="standard">
                                             <option value="">-- Tất cả Tiêu chuẩn (<?= count($allStandardsForFilter) ?>) --</option>
                                             <?php foreach ($allStandardsForFilter as $tc): ?>
                                                 <option value="<?= htmlspecialchars($tc['MaTieuChuan']) ?>" 
@@ -702,9 +1214,9 @@ html[data-theme="dark"] .badge-matched-locator {
 
                                 <!-- Dropdown 2: Tiêu chí -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl">
-                                    <div class="input-group input-group-sm">
+                                    <div class="input-group custom-filter-select-group shadow-xs">
                                         <span class="input-group-text bg-light text-muted" title="Lọc theo Tiêu chí"><i class="bi bi-list-task"></i></span>
-                                        <select class="form-select form-select-sm" id="filterCriterion" name="criterion">
+                                        <select class="form-select" id="filterCriterion" name="criterion">
                                             <option value="">-- Tất cả Tiêu chí (<?= count($allCriteriaForFilter) ?>) --</option>
                                             <?php foreach ($allCriteriaForFilter as $cri): ?>
                                                 <option value="<?= htmlspecialchars($cri['MaTieuChi']) ?>" 
@@ -721,9 +1233,9 @@ html[data-theme="dark"] .badge-matched-locator {
 
                                 <!-- Dropdown 3: Minh chứng -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl">
-                                    <div class="input-group input-group-sm">
+                                    <div class="input-group custom-filter-select-group shadow-xs">
                                         <span class="input-group-text bg-light text-muted" title="Lọc theo Minh chứng"><i class="bi bi-file-earmark-text"></i></span>
-                                        <select class="form-select form-select-sm" id="filterEvidence" name="evidence">
+                                        <select class="form-select" id="filterEvidence" name="evidence">
                                             <option value="">-- Tất cả Minh chứng (<?= count($allEvidencesForFilter) ?>) --</option>
                                             <?php foreach ($allEvidencesForFilter as $ev): ?>
                                                 <option value="<?= htmlspecialchars($ev['MaMinhChung']) ?>" 
@@ -741,9 +1253,9 @@ html[data-theme="dark"] .badge-matched-locator {
 
                                 <!-- Dropdown 4: Trạng thái -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl">
-                                    <div class="input-group input-group-sm">
+                                    <div class="input-group custom-filter-select-group shadow-xs">
                                         <span class="input-group-text bg-light text-muted" title="Lọc theo Trạng thái"><i class="bi bi-toggle-on"></i></span>
-                                        <select class="form-select form-select-sm" id="filterStatus" name="status">
+                                        <select class="form-select" id="filterStatus" name="status">
                                             <option value="">-- Tất cả Trạng thái --</option>
                                             <option value="1" <?= $selectedStatus === 1 ? 'selected' : '' ?>>Hoạt động</option>
                                             <option value="0" <?= $selectedStatus === 0 ? 'selected' : '' ?>>Ngừng hoạt động</option>
@@ -753,7 +1265,7 @@ html[data-theme="dark"] .badge-matched-locator {
 
                                 <!-- Nút Lọc kết quả -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl-auto">
-                                    <button type="submit" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center justify-content-center gap-1 shadow-sm w-100" style="height: 31px;" id="btnApplyFilter" title="Áp dụng lọc">
+                                    <button type="submit" class="btn btn-primary btn-filter-apply-hierarchical shadow-sm w-100" id="btnApplyFilter" title="Áp dụng lọc">
                                         <i class="bi bi-funnel-fill"></i> Lọc
                                     </button>
                                 </div>
@@ -2329,6 +2841,63 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     });
+    // 7. Hiệu ứng đếm số mượt mà (Count-Up Animation cho KPI Cards)
+    function animateUserCountUp(el) {
+        if (el.classList.contains('counted')) return;
+        el.classList.add('counted');
+        const target = parseInt(el.dataset.countTo || el.textContent || '0', 10);
+        if (isNaN(target) || target === 0) {
+            el.textContent = '0';
+            return;
+        }
+        let start = 0;
+        const duration = 1000;
+        const startTime = performance.now();
+        function updateCount(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const currentVal = Math.round(start + (target - start) * easeOut);
+            el.textContent = currentVal;
+            if (progress < 1) {
+                requestAnimationFrame(updateCount);
+            } else {
+                el.textContent = target;
+            }
+        }
+        requestAnimationFrame(updateCount);
+    }
+    document.querySelectorAll('.count-up').forEach(el => animateUserCountUp(el));
+
+    // 8. Đồng hồ thời gian thực cao cấp (Live Real-time Digital Clock & Calendar)
+    function initUserLiveClock() {
+        const hEl = document.getElementById('clockHours');
+        const mEl = document.getElementById('clockMinutes');
+        const sEl = document.getElementById('clockSeconds');
+        const dateEl = document.getElementById('clockDateString');
+        if (!hEl || !mEl || !sEl) return;
+
+        const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+
+        function update() {
+            const now = new Date();
+            hEl.textContent = String(now.getHours()).padStart(2, '0');
+            mEl.textContent = String(now.getMinutes()).padStart(2, '0');
+            sEl.textContent = String(now.getSeconds()).padStart(2, '0');
+
+            if (dateEl) {
+                const dayName = days[now.getDay()];
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = now.getFullYear();
+                dateEl.textContent = `${dayName}, ${day}/${month}/${year}`;
+            }
+        }
+
+        update();
+        setInterval(update, 1000);
+    }
+    initUserLiveClock();
 });
 </script>
 
