@@ -270,7 +270,7 @@ function buildPaginationItems(currentPage, totalPages) {
 
 function initTablePagination() {
     document.querySelectorAll('.table-responsive > table.table').forEach((table) => {
-        if (table.dataset.paginated === 'true' || table.dataset.noAutoPaginate === 'true' || table.closest('.nested-container') || table.closest('.collapse')) {
+        if (table.dataset.paginated === 'true' || table.dataset.noAutoPaginate === 'true' || table.closest('.nested-container') || table.closest('.collapse') || table.closest('.modal') || table.closest('.modal-body')) {
             return;
         }
 

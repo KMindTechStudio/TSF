@@ -9,77 +9,22 @@ require_once __DIR__ . '/../config/database.php';
 
 $pdo = db();
 
-// ==========================================
-// EXPORT EXCEL
-// ==========================================
+// =========================================================================
+// 1. XỬ LÝ XUẤT EXCEL ĐA CẤP (HIERARCHICAL EXCEL EXPORT WITH OUTLINE / GROUPING)
+// Sổ ra / gập vào 4 cấp: Bộ tiêu chuẩn -> Tiêu chuẩn -> Tiêu chí -> Minh chứng
+// =========================================================================
 if (($_GET['export'] ?? '') === 'excel') {
-    $searchExport   = trim($_GET['q'] ?? $_GET['keyword'] ?? $_GET['search'] ?? '');
-    $setExport      = trim($_GET['standard_set'] ?? $_GET['set'] ?? '');
-    $stdExport      = trim($_GET['standard'] ?? '');
-    $criExport      = trim($_GET['criterion'] ?? '');
-    $evExport       = trim($_GET['evidence'] ?? '');
-    $statusExport   = isset($_GET['status']) && $_GET['status'] !== '' ? (int)$_GET['status'] : null;
-
-    $exportClauses = [];
-    $exportParams  = [];
-
-    if ($searchExport !== '') {
-        $exportClauses[] = "(b.MaBoTieuChuan LIKE :k1 OR b.TenBoTieuChuan LIKE :k2 OR b.ThongTu LIKE :k3)";
-        $exportParams['k1'] = "%$searchExport%";
-        $exportParams['k2'] = "%$searchExport%";
-        $exportParams['k3'] = "%$searchExport%";
-    }
-    if ($setExport !== '') {
-        $exportClauses[] = "b.MaBoTieuChuan = :selected_set";
-        $exportParams['selected_set'] = $setExport;
-    }
-    if ($stdExport !== '') {
-        $exportClauses[] = "b.MaBoTieuChuan IN (SELECT MaBoTieuChuan FROM TieuChuan WHERE MaTieuChuan = :selected_std)";
-        $exportParams['selected_std'] = $stdExport;
-    }
-    if ($criExport !== '') {
-        $exportClauses[] = "b.MaBoTieuChuan IN (SELECT tc.MaBoTieuChuan FROM TieuChuan tc JOIN TieuChi tchi ON tchi.MaTieuChuan = tc.MaTieuChuan WHERE tchi.MaTieuChi = :selected_crit)";
-        $exportParams['selected_crit'] = $criExport;
-    }
-    if ($evExport !== '') {
-        $exportClauses[] = "b.MaBoTieuChuan IN (SELECT DISTINCT COALESCE(m.MaBoTieuChuan, tc.MaBoTieuChuan) FROM MinhChung m LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = m.MaTieuChi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan WHERE m.MaMinhChung = :selected_ev)";
-        $exportParams['selected_ev'] = $evExport;
-    }
-    if ($statusExport !== null) {
-        $exportClauses[] = "b.TrangThai = :selected_status";
-        $exportParams['selected_status'] = $statusExport;
-    }
-
-    $exportWhere = !empty($exportClauses) ? ' WHERE ' . implode(' AND ', $exportClauses) : '';
-    $exportStmt = $pdo->prepare("SELECT b.MaBoTieuChuan, b.TenBoTieuChuan, COALESCE(b.ThongTu, '') AS ThongTu, b.NgayBanHanh, b.MoTa, b.TrangThai FROM BoTieuChuan b" . $exportWhere . " ORDER BY b.TrangThai DESC, b.MaBoTieuChuan ASC");
-    $exportStmt->execute($exportParams);
-    $exportData = $exportStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $exportRows = [];
-    $stt = 1;
-    foreach ($exportData as $row) {
-        $exportRows[] = [
-            'stt'           => $stt++,
-            'code'          => $row['MaBoTieuChuan'],
-            'name'          => $row['TenBoTieuChuan'],
-            'thong_tu'      => $row['ThongTu'] ?: 'N/A',
-            'ngay_ban_hanh' => $row['NgayBanHanh'] ? date('d/m/Y', strtotime($row['NgayBanHanh'])) : '-',
-            'status'        => (int)$row['TrangThai'] === 1 ? 'Hoạt động' : 'Ngừng hoạt động',
-            'mo_ta'         => $row['MoTa'] ?: '-',
-        ];
-    }
-
-    $columns = [
-        ['key' => 'stt', 'label' => 'STT', 'align' => 'center', 'width' => '60px'],
-        ['key' => 'code', 'label' => 'Mã bộ tiêu chuẩn', 'align' => 'center', 'width' => '140px'],
-        ['key' => 'name', 'label' => 'Tên bộ tiêu chuẩn', 'align' => 'left', 'width' => '320px'],
-        ['key' => 'thong_tu', 'label' => 'Số hiệu / Thông tư', 'align' => 'left', 'width' => '200px'],
-        ['key' => 'ngay_ban_hanh', 'label' => 'Ngày ban hành', 'align' => 'center', 'width' => '120px'],
-        ['key' => 'status', 'label' => 'Trạng thái', 'align' => 'center', 'width' => '130px'],
-        ['key' => 'mo_ta', 'label' => 'Mô tả', 'align' => 'left', 'width' => '280px'],
+    $filter = [
+        'q'            => trim($_GET['q'] ?? $_GET['keyword'] ?? $_GET['search'] ?? ''),
+        'standard_set' => trim($_GET['standard_set'] ?? $_GET['set'] ?? ''),
+        'standard'     => trim($_GET['standard'] ?? ''),
+        'criterion'    => trim($_GET['criterion'] ?? ''),
+        'evidence'     => trim($_GET['evidence'] ?? ''),
+        'status'       => isset($_GET['status']) && $_GET['status'] !== '' ? (int)$_GET['status'] : null,
     ];
 
-    export_to_excel('csdl_minh_chung_' . date('Ymd_His') . '.xls', 'DANH SÁCH CƠ SỞ DỮ LIỆU MINH CHỨNG', $columns, $exportRows);
+    $filename = 'csdl_minh_chung_phan_cap_' . date('Ymd_His') . '.xlsx';
+    export_hierarchical_standards_excel($filename, $filter);
     exit;
 }
 
@@ -283,6 +228,120 @@ html[data-theme="dark"] .standards-card {
     background: #132744;
     border-color: rgba(255, 255, 255, 0.08);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Interactive Hierarchy Navigation & Target Highlighting */
+.interactive-hierarchy-step {
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    user-select: none;
+}
+.interactive-hierarchy-step:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.16) !important;
+    border-color: #2563eb !important;
+    background-color: #eff6ff !important;
+}
+.interactive-tree-item {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 2px 6px;
+    transition: all 0.15s ease-in-out;
+    display: block;
+    user-select: none;
+}
+.interactive-tree-item:hover {
+    background-color: #dbeafe;
+    color: #1d4ed8 !important;
+    text-decoration: underline;
+}
+.interactive-link {
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+.interactive-link:hover {
+    color: #1d4ed8 !important;
+    text-decoration: underline;
+}
+/* Hiệu ứng Đốm sáng & Viền phát quang cực kỳ nổi bật khi nhảy tới dòng */
+@keyframes targetRowPulse {
+    0% {
+        background: linear-gradient(90deg, rgba(254, 240, 138, 0.75) 0%, rgba(191, 219, 254, 0.85) 35%, rgba(219, 234, 254, 0.4) 100%) !important;
+        box-shadow: 0 0 0 4px #2563eb, 0 0 28px rgba(37, 99, 235, 0.55), inset 0 0 12px rgba(37, 99, 235, 0.15) !important;
+        outline: 2px solid #2563eb !important;
+        outline-offset: -1px;
+        transform: scale(1.012);
+    }
+    30% {
+        background: linear-gradient(90deg, rgba(254, 240, 138, 0.55) 0%, rgba(191, 219, 254, 0.65) 45%, rgba(219, 234, 254, 0.25) 100%) !important;
+        box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.4), 0 0 35px rgba(37, 99, 235, 0.4) !important;
+        outline: 2px solid #2563eb !important;
+        transform: scale(1.006);
+    }
+    60% {
+        background: rgba(219, 234, 254, 0.3) !important;
+        box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.15), 0 0 20px rgba(37, 99, 235, 0.2) !important;
+        outline: 2px solid rgba(37, 99, 235, 0.4) !important;
+        transform: scale(1);
+    }
+    100% {
+        background: transparent;
+        box-shadow: none;
+        outline: none;
+        transform: scale(1);
+    }
+}
+
+.highlight-target-row {
+    animation: targetRowPulse 3.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    position: relative !important;
+    z-index: 30 !important;
+    border-left: 6px solid #2563eb !important;
+    border-radius: 6px;
+    transition: border-left 0.3s ease;
+}
+
+/* Thẻ định vị nổi (Floating Target Beacon Badge) */
+.jump-target-beacon {
+    position: absolute;
+    top: -14px;
+    left: 24px;
+    z-index: 999;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 14px;
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    border-radius: 20px;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.8);
+    pointer-events: none;
+    animation: beaconBounce 3.5s ease-out forwards;
+}
+@keyframes beaconBounce {
+    0% {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.85);
+    }
+    15% {
+        opacity: 1;
+        transform: translateY(0) scale(1.05);
+    }
+    30% {
+        transform: translateY(-2px) scale(1);
+    }
+    75% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.9);
+    }
 }
 
 /* Tree Toggle Button */
@@ -952,6 +1011,10 @@ html[data-theme="dark"] .modern-pagination .page-item.disabled .page-link {
                                                                                                                                                 <button class="btn btn-xs btn-outline-info btn-view-evidence-detail" type="button"
                                                                                                                                                     data-id="<?= htmlspecialchars($mcId) ?>"
                                                                                                                                                     data-name="<?= htmlspecialchars($mc['TenMinhChung']) ?>"
+                                                                                                                                                    data-raw-set-id="<?= htmlspecialchars($setId) ?>"
+                                                                                                                                                    data-raw-standard-id="<?= htmlspecialchars($tcId) ?>"
+                                                                                                                                                    data-raw-criterion-id="<?= htmlspecialchars($tchiId) ?>"
+                                                                                                                                                    data-raw-evidence-id="<?= htmlspecialchars($mcId) ?>"
                                                                                                                                                     data-criterion="<?= htmlspecialchars($tchiId . ' - ' . $tchi['TenTieuChi']) ?>"
                                                                                                                                                     data-standard="<?= htmlspecialchars($tcId . ' - ' . $tc['TenTieuChuan']) ?>"
                                                                                                                                                     data-set="<?= htmlspecialchars($setId . ' - ' . $set['TenBoTieuChuan']) ?>"
@@ -1093,97 +1156,176 @@ html[data-theme="dark"] .modern-pagination .page-item.disabled .page-link {
      MODAL 2: XEM CHI TIẾT BỘ TIÊU CHUẨN
 =============================================== -->
 <div class="modal fade" id="modalViewStandardSetDetails" tabindex="-1" aria-labelledby="modalViewStandardSetLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-primary text-white py-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-info-circle-fill fs-5 text-white"></i>
-                    <h5 class="modal-title mb-0 text-white fw-bold" id="modalViewStandardSetLabel">Chi tiết Bộ Tiêu chuẩn</h5>
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header text-white py-3 px-4" style="background: linear-gradient(135deg, #1e3a8a, #2563eb);">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-white bg-opacity-20 p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="bi bi-folder2-open fs-5 text-white"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0 text-white fw-bold" id="modalViewStandardSetLabel">Chi tiết Bộ Tiêu chuẩn</h5>
+                        <small class="text-white text-opacity-75">Thông tin danh mục & tài liệu kiểm định chất lượng</small>
+                    </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4">
-                <!-- Header Banner -->
-                <div class="p-3 mb-3 rounded-3 bg-light border d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary px-3 py-2 fs-6 fw-bold" id="view_set_id_badge">BTC01</span>
-                        <h6 class="mb-0 fw-bold text-dark fs-6" id="view_set_title">Tên bộ tiêu chuẩn</h6>
-                    </div>
-                    <span id="view_set_status_badge" class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-7 fw-semibold">
-                        <i class="bi bi-check-circle-fill me-1"></i>Hoạt động
-                    </span>
-                </div>
+            <div class="modal-body p-4 bg-light">
+                <!-- Hero Header Card -->
+                <div class="card border-0 shadow-sm rounded-3 mb-3 bg-white">
+                    <div class="card-body p-3 p-md-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 pb-3 border-bottom">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-primary px-3 py-2 fs-6 fw-bold shadow-sm" id="view_set_id_badge">BTC01</span>
+                                <h5 class="mb-0 fw-bold text-dark fs-5" id="view_set_title">Tên bộ tiêu chuẩn</h5>
+                            </div>
+                            <span id="view_set_status_badge" class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-7 fw-semibold">
+                                <i class="bi bi-check-circle-fill me-1"></i>Hoạt động
+                            </span>
+                        </div>
 
-                <!-- Detail Fields Table -->
-                <div class="table-responsive mb-3">
-                    <table class="table table-bordered align-middle mb-0">
-                        <tbody>
-                            <tr>
-                                <th style="width: 28%;" class="bg-light text-secondary"><i class="bi bi-upc-scan me-2 text-primary"></i>Mã bộ tiêu chuẩn</th>
-                                <td id="view_set_id" class="fw-bold text-primary"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-bookmark-star me-2 text-primary"></i>Tên bộ tiêu chuẩn</th>
-                                <td id="view_set_name" class="fw-semibold text-dark"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Số hiệu / Thông tư</th>
-                                <td><span id="view_set_thongtu" class="badge bg-info-subtle text-dark border border-info-subtle fs-7 fw-semibold"></span></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-calendar-event me-2 text-primary"></i>Ngày ban hành</th>
-                                <td id="view_set_date" class="text-secondary"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-toggle-on me-2 text-primary"></i>Trạng thái</th>
-                                <td id="view_set_status_text"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-diagram-3 me-2 text-primary"></i>Cấu trúc phân cấp</th>
-                                <td>
-                                    <div class="d-flex flex-wrap gap-2">
-                                        <span class="badge bg-secondary-subtle text-secondary py-2 px-3" id="view_set_standards_count"><i class="bi bi-folder2 me-1"></i>0 Tiêu chuẩn</span>
-                                        <span class="badge bg-secondary-subtle text-secondary py-2 px-3" id="view_set_criteria_count"><i class="bi bi-list-check me-1"></i>0 Tiêu chí</span>
-                                        <span class="badge bg-secondary-subtle text-secondary py-2 px-3" id="view_set_evidences_count"><i class="bi bi-file-earmark-check me-1"></i>0 Minh chứng</span>
+                        <!-- 2-Column Info Grid -->
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <div class="p-3 rounded-3 bg-light border h-100">
+                                    <div class="small fw-bold text-muted text-uppercase mb-3"><i class="bi bi-card-checklist me-1 text-primary"></i>Căn cứ pháp lý & Thông tin</div>
+                                    <div class="d-flex flex-column gap-2">
+                                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
+                                            <span class="text-muted small">Mã bộ:</span>
+                                            <span class="fw-bold font-monospace text-primary" id="view_set_id"></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
+                                            <span class="text-muted small">Số hiệu / Thông tư:</span>
+                                            <span id="view_set_thongtu" class="badge bg-info-subtle text-dark border border-info-subtle fs-7 fw-semibold"></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
+                                            <span class="text-muted small">Ngày ban hành:</span>
+                                            <span class="fw-semibold text-dark" id="view_set_date"></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center py-1">
+                                            <span class="text-muted small">Trạng thái:</span>
+                                            <span id="view_set_status_text"></span>
+                                        </div>
                                     </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-card-text me-2 text-primary"></i>Mô tả / Ghi chú</th>
-                                <td><div id="view_set_desc" class="text-secondary text-break" style="white-space: pre-wrap;"></div></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-paperclip me-2 text-primary"></i>File dữ liệu đính kèm</th>
-                                <td>
-                                    <div id="view_set_file_container">
-                                        <!-- Populated via JS -->
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="p-3 rounded-3 bg-light border h-100 d-flex flex-column justify-content-between">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="small fw-bold text-muted text-uppercase"><i class="bi bi-diagram-3-fill me-1 text-primary"></i>Vị trí & Quy mô phân cấp</div>
+                                        <span class="badge bg-primary text-white rounded-pill px-2 py-1" style="font-size: 0.72rem;">
+                                            <i class="bi bi-layers me-1"></i>Cấp 1 / 4
+                                        </span>
                                     </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+                                    <!-- 4-Level Visual Pipeline / Hierarchy Flow -->
+                                    <div class="p-2 bg-white rounded-3 border shadow-xs mb-2">
+                                        <div class="d-flex align-items-center justify-content-between text-center gap-1">
+                                            <!-- Cấp 1: Bộ Tiêu chuẩn (Active) -->
+                                            <div class="flex-fill p-1 rounded-2 bg-primary-subtle border border-primary-subtle interactive-hierarchy-step" data-modal-type="set" data-jump-level="set" role="button" title="Bấm để nhảy tới vị trí Bộ tiêu chuẩn này trên bảng">
+                                                <span class="badge bg-primary text-white rounded-pill px-2 py-0 mb-1" style="font-size: 0.65rem;">Cấp 1</span>
+                                                <div class="fw-bold text-primary small text-truncate"><i class="bi bi-folder2-open me-1"></i>Bộ tiêu chuẩn</div>
+                                                <div class="text-primary fw-semibold" style="font-size: 0.68rem;">(Đang xem)</div>
+                                            </div>
+
+                                            <div class="text-muted"><i class="bi bi-chevron-right text-secondary opacity-50"></i></div>
+
+                                            <!-- Cấp 2: Tiêu chuẩn -->
+                                            <div class="flex-fill p-1 rounded-2 bg-light border interactive-hierarchy-step" data-modal-type="set" data-jump-level="standard" role="button" title="Bấm để mở và trỏ tới bảng Tiêu chuẩn con trong danh sách">
+                                                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-0 mb-1" style="font-size: 0.65rem;">Cấp 2</span>
+                                                <div class="fw-bold text-dark small text-truncate"><i class="bi bi-folder me-1 text-secondary"></i>Tiêu chuẩn</div>
+                                                <div class="fw-bold text-primary fs-7"><span id="view_set_std_num">0</span> <small class="text-muted fw-normal" style="font-size: 0.7rem;">mục</small></div>
+                                            </div>
+
+                                            <div class="text-muted"><i class="bi bi-chevron-right text-secondary opacity-50"></i></div>
+
+                                            <!-- Cấp 3: Tiêu chí -->
+                                            <div class="flex-fill p-1 rounded-2 bg-light border interactive-hierarchy-step" data-modal-type="set" data-jump-level="criterion" role="button" title="Bấm để mở và trỏ tới bảng Tiêu chí con trong danh sách">
+                                                <span class="badge bg-info-subtle text-info rounded-pill px-2 py-0 mb-1" style="font-size: 0.65rem;">Cấp 3</span>
+                                                <div class="fw-bold text-dark small text-truncate"><i class="bi bi-list-check me-1 text-info"></i>Tiêu chí</div>
+                                                <div class="fw-bold text-info fs-7"><span id="view_set_crit_num">0</span> <small class="text-muted fw-normal" style="font-size: 0.7rem;">mục</small></div>
+                                            </div>
+
+                                            <div class="text-muted"><i class="bi bi-chevron-right text-secondary opacity-50"></i></div>
+
+                                            <!-- Cấp 4: Minh chứng -->
+                                            <div class="flex-fill p-1 rounded-2 bg-light border interactive-hierarchy-step" data-modal-type="set" data-jump-level="evidence" role="button" title="Bấm để mở và trỏ tới bảng Minh chứng con trong danh sách">
+                                                <span class="badge bg-success-subtle text-success rounded-pill px-2 py-0 mb-1" style="font-size: 0.65rem;">Cấp 4</span>
+                                                <div class="fw-bold text-dark small text-truncate"><i class="bi bi-file-earmark-check me-1 text-success"></i>Minh chứng</div>
+                                                <div class="fw-bold text-success fs-7"><span id="view_set_ev_num">0</span> <small class="text-muted fw-normal" style="font-size: 0.7rem;">mục</small></div>
+                                            </div>
+                                        </div>
+                                        <div class="text-center mt-1">
+                                            <small class="text-primary fw-medium" style="font-size: 0.72rem;"><i class="bi bi-cursor-fill me-1"></i>Bấm vào ô bất kỳ để nhảy ngay tới bảng dữ liệu đó</small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Chi tiết cây phân cấp (Tree Hierarchy Path) -->
+                                    <div class="p-2 bg-white rounded-2 border">
+                                        <div class="small fw-semibold text-muted text-uppercase mb-1" style="font-size: 0.7rem;">
+                                            <i class="bi bi-diagram-2 me-1"></i>Sơ đồ phân cấp (Bấm để nhảy tới bảng):
+                                        </div>
+                                        <div class="font-monospace text-dark ps-1" style="font-size: 0.76rem; line-height: 1.45;">
+                                            <div class="interactive-tree-item text-primary fw-bold text-truncate" data-modal-type="set" data-jump-level="set" role="button" title="Bấm để nhảy tới Bộ tiêu chuẩn">
+                                                <i class="bi bi-box-seam me-1"></i>[1] Bộ TC: <span class="fw-normal text-secondary" id="view_set_tree_name">-</span>
+                                            </div>
+                                            <div class="interactive-tree-item text-secondary ps-3 text-truncate" data-modal-type="set" data-jump-level="standard" role="button" title="Bấm để mở và nhảy tới Tiêu chuẩn">
+                                                <i class="bi bi-arrow-return-right me-1 text-muted"></i>[2] <span class="fw-bold text-primary" id="view_set_tree_std">0</span> Tiêu chuẩn trực thuộc &rarr;
+                                            </div>
+                                            <div class="interactive-tree-item text-secondary ps-4 ms-2 text-truncate" data-modal-type="set" data-jump-level="criterion" role="button" title="Bấm để mở và nhảy tới Tiêu chí">
+                                                <i class="bi bi-arrow-return-right me-1 text-muted"></i>[3] <span class="fw-bold text-info" id="view_set_tree_crit">0</span> Tiêu chí trực thuộc &rarr;
+                                            </div>
+                                            <div class="interactive-tree-item text-success ps-5 ms-3 fw-bold text-truncate" data-modal-type="set" data-jump-level="evidence" role="button" title="Bấm để mở và nhảy tới Minh chứng">
+                                                <i class="bi bi-arrow-return-right me-1 text-success"></i>[4] <span class="badge bg-success-subtle text-success px-2 py-0" id="view_set_tree_ev">0 minh chứng</span> &rarr;
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-none" id="view_set_standards_count"></div>
+                                    <div class="d-none" id="view_set_criteria_count"></div>
+                                    <div class="d-none" id="view_set_evidences_count"></div>
+                                </div>
+                            </div>
+
+                            <!-- Mô tả trích yếu -->
+                            <div class="col-12">
+                                <div class="p-3 rounded-3 bg-light border">
+                                    <div class="small fw-bold text-muted text-uppercase mb-2"><i class="bi bi-chat-left-quote me-1 text-primary"></i>Mô tả / Trích yếu nội dung</div>
+                                    <div id="view_set_desc" class="text-secondary small" style="white-space: pre-wrap; line-height: 1.6;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Tệp đính kèm -->
+                            <div class="col-12">
+                                <div class="small fw-bold text-muted text-uppercase mb-2"><i class="bi bi-paperclip me-1 text-primary"></i>File dữ liệu đính kèm</div>
+                                <div id="view_set_file_container">
+                                    <!-- Populated via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Preview Area -->
-                <div id="view_set_preview_box" class="card border shadow-none bg-light p-3" style="display: none;">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                        <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-eye-fill me-2 text-primary"></i>Xem trước File dữ liệu:</h6>
+                <div id="view_set_preview_box" class="card border-0 shadow-sm rounded-3 bg-white p-3" style="display: none;">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
+                        <div class="fw-bold text-dark"><i class="bi bi-eye-fill me-2 text-primary"></i>Xem trước tài liệu trực tiếp:</div>
                         <a href="#" id="view_set_preview_newtab_link" target="_blank" class="btn btn-sm btn-primary">
                             <i class="bi bi-box-arrow-up-right me-1"></i>Mở toàn màn hình ở tab mới
                         </a>
                     </div>
-                    <div id="view_set_preview_content" class="text-center bg-white rounded border p-2" style="min-height: 200px;">
+                    <div id="view_set_preview_content" class="text-center rounded bg-secondary-subtle overflow-hidden" style="min-height: 420px;">
                         <!-- Embed / Image / Message -->
                     </div>
                 </div>
             </div>
-            <div class="modal-footer bg-light py-2 d-flex justify-content-between">
+            <div class="modal-footer bg-white border-top py-2 px-4 d-flex justify-content-between">
                 <div></div>
                 <div class="d-inline-flex gap-2">
                     <a href="#" id="view_set_btn_open_tab_footer" target="_blank" class="btn btn-primary btn-sm" style="display: none;">
                         <i class="bi bi-box-arrow-up-right me-1"></i>Xem file dữ liệu (Tab mới)
                     </a>
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
                 </div>
             </div>
         </div>
@@ -1194,84 +1336,135 @@ html[data-theme="dark"] .modern-pagination .page-item.disabled .page-link {
      MODAL 3: XEM CHI TIẾT MINH CHỨNG
 =============================================== -->
 <div class="modal fade" id="modalViewEvidenceDetails" tabindex="-1" aria-labelledby="modalViewEvidenceLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-primary text-white py-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-file-earmark-text-fill fs-5 text-white"></i>
-                    <h5 class="modal-title mb-0 text-white fw-bold" id="modalViewEvidenceLabel">Chi tiết Minh chứng</h5>
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header text-white py-3 px-4" style="background: linear-gradient(135deg, #1e3a8a, #2563eb);">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-white bg-opacity-20 p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="bi bi-file-earmark-text fs-5 text-white"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0 text-white fw-bold" id="modalViewEvidenceLabel">Chi tiết Minh chứng</h5>
+                        <small class="text-white text-opacity-75">Hồ sơ tài liệu minh chứng kiểm định chất lượng</small>
+                    </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4">
-                <!-- Header Banner -->
-                <div class="p-3 mb-3 rounded-3 bg-light border d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary px-3 py-2 fs-6 fw-bold" id="view_ev_id_badge">MC01</span>
-                        <h6 class="mb-0 fw-bold text-dark fs-6" id="view_ev_title">Tên minh chứng</h6>
-                    </div>
-                    <span id="view_ev_status_badge" class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-7 fw-semibold">
-                        <i class="bi bi-check-circle-fill me-1"></i>Hoạt động
-                    </span>
-                </div>
+            <div class="modal-body p-4 bg-light">
+                <!-- Hero Header Card -->
+                <div class="card border-0 shadow-sm rounded-3 mb-3 bg-white">
+                    <div class="card-body p-3 p-md-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 pb-3 border-bottom">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-primary px-3 py-2 fs-6 fw-bold shadow-sm" id="view_ev_id_badge">MC01</span>
+                                <h5 class="mb-0 fw-bold text-dark fs-5" id="view_ev_title">Tên minh chứng</h5>
+                            </div>
+                            <span id="view_ev_status_badge" class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-7 fw-semibold">
+                                <i class="bi bi-check-circle-fill me-1"></i>Hoạt động
+                            </span>
+                        </div>
 
-                <!-- Detail Fields Table -->
-                <div class="table-responsive mb-3">
-                    <table class="table table-bordered align-middle mb-0">
-                        <tbody>
-                            <tr>
-                                <th style="width: 28%;" class="bg-light text-secondary"><i class="bi bi-upc me-2 text-primary"></i>Mã minh chứng</th>
-                                <td id="view_ev_id" class="fw-bold text-primary"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-card-heading me-2 text-primary"></i>Tên minh chứng</th>
-                                <td id="view_ev_name" class="fw-semibold text-dark"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-collection me-2 text-primary"></i>Bộ tiêu chuẩn</th>
-                                <td id="view_ev_set" class="text-secondary"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-folder2 me-2 text-primary"></i>Tiêu chuẩn cha</th>
-                                <td id="view_ev_standard" class="text-secondary"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-list-task me-2 text-primary"></i>Tiêu chí cha</th>
-                                <td id="view_ev_criterion" class="text-secondary fw-medium"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-calendar3 me-2 text-primary"></i>Năm học</th>
-                                <td id="view_ev_namhoc" class="text-secondary"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-calendar-event me-2 text-primary"></i>Ngày ban hành</th>
-                                <td id="view_ev_date" class="text-secondary"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-person me-2 text-primary"></i>Người tạo</th>
-                                <td id="view_ev_creator" class="text-secondary"></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-card-text me-2 text-primary"></i>Mô tả / Trích yếu</th>
-                                <td><div id="view_ev_desc" class="text-secondary text-break" style="white-space: pre-wrap;"></div></td>
-                            </tr>
-                            <tr>
-                                <th class="bg-light text-secondary"><i class="bi bi-paperclip me-2 text-primary"></i>Tệp đính kèm</th>
-                                <td>
-                                    <div id="view_ev_file_container">
-                                        <!-- Populated via JS -->
+                        <!-- 2-Column Info Grid -->
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <div class="p-3 rounded-3 bg-light border h-100">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="small fw-bold text-muted text-uppercase"><i class="bi bi-diagram-3-fill me-1 text-primary"></i>Phân cấp trực thuộc</div>
+                                        <span class="badge bg-success text-white rounded-pill px-2 py-1" style="font-size: 0.72rem;">
+                                            <i class="bi bi-layers me-1"></i>Cấp 4 / 4
+                                        </span>
                                     </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+                                    <!-- 4-Level Pipeline Stepper -->
+                                    <div class="p-2 bg-white rounded-3 border shadow-xs mb-2">
+                                        <div class="d-flex align-items-center justify-content-between text-center gap-1">
+                                            <div class="flex-fill p-1 rounded-2 bg-light border interactive-hierarchy-step" data-modal-type="evidence" data-jump-level="set" role="button" title="Bấm để nhảy tới Bộ tiêu chuẩn chứa minh chứng này">
+                                                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-0 mb-1" style="font-size: 0.65rem;">Cấp 1</span>
+                                                <div class="fw-bold text-dark small text-truncate"><i class="bi bi-folder2-open me-1 text-primary"></i>Bộ TC</div>
+                                            </div>
+                                            <div class="text-muted"><i class="bi bi-chevron-right text-secondary opacity-50"></i></div>
+                                            <div class="flex-fill p-1 rounded-2 bg-light border interactive-hierarchy-step" data-modal-type="evidence" data-jump-level="standard" role="button" title="Bấm để nhảy tới Tiêu chuẩn chứa minh chứng này">
+                                                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-0 mb-1" style="font-size: 0.65rem;">Cấp 2</span>
+                                                <div class="fw-bold text-dark small text-truncate"><i class="bi bi-folder me-1 text-secondary"></i>Tiêu chuẩn</div>
+                                            </div>
+                                            <div class="text-muted"><i class="bi bi-chevron-right text-secondary opacity-50"></i></div>
+                                            <div class="flex-fill p-1 rounded-2 bg-light border interactive-hierarchy-step" data-modal-type="evidence" data-jump-level="criterion" role="button" title="Bấm để nhảy tới Tiêu chí chứa minh chứng này">
+                                                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-0 mb-1" style="font-size: 0.65rem;">Cấp 3</span>
+                                                <div class="fw-bold text-dark small text-truncate"><i class="bi bi-list-check me-1 text-info"></i>Tiêu chí</div>
+                                            </div>
+                                            <div class="text-muted"><i class="bi bi-chevron-right text-success opacity-75"></i></div>
+                                            <div class="flex-fill p-1 rounded-2 bg-success-subtle border border-success-subtle interactive-hierarchy-step" data-modal-type="evidence" data-jump-level="evidence" role="button" title="Bấm để nhảy tới dòng Minh chứng này trên bảng">
+                                                <span class="badge bg-success text-white rounded-pill px-2 py-0 mb-1" style="font-size: 0.65rem;">Cấp 4</span>
+                                                <div class="fw-bold text-success small text-truncate"><i class="bi bi-file-earmark-check me-1"></i>Minh chứng</div>
+                                            </div>
+                                        </div>
+                                        <div class="text-center mt-1">
+                                            <small class="text-primary fw-medium" style="font-size: 0.72rem;"><i class="bi bi-cursor-fill me-1"></i>Bấm vào ô bất kỳ để nhảy ngay tới bảng dữ liệu đó</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex flex-column gap-2">
+                                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
+                                            <span class="text-muted small">Mã minh chứng:</span>
+                                            <span class="fw-bold font-monospace text-primary" id="view_ev_id"></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
+                                            <span class="text-muted small">Bộ tiêu chuẩn:</span>
+                                            <span class="fw-semibold text-primary interactive-link text-end" id="view_ev_set" data-modal-type="evidence" data-jump-level="set" role="button" title="Bấm để nhảy tới Bộ tiêu chuẩn này trên bảng"></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
+                                            <span class="text-muted small">Tiêu chuẩn cha:</span>
+                                            <span class="fw-semibold text-primary interactive-link text-end" id="view_ev_standard" data-modal-type="evidence" data-jump-level="standard" role="button" title="Bấm để nhảy tới Tiêu chuẩn này trên bảng"></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center py-1">
+                                            <span class="text-muted small">Tiêu chí cha:</span>
+                                            <span class="fw-semibold text-primary interactive-link text-end" id="view_ev_criterion" data-modal-type="evidence" data-jump-level="criterion" role="button" title="Bấm để nhảy tới Tiêu chí này trên bảng"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="p-3 rounded-3 bg-light border h-100">
+                                    <div class="small fw-bold text-muted text-uppercase mb-3"><i class="bi bi-info-circle me-1 text-primary"></i>Thông tin ban hành</div>
+                                    <div class="d-flex flex-column gap-2">
+                                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
+                                            <span class="text-muted small">Năm học:</span>
+                                            <span class="fw-semibold text-dark" id="view_ev_namhoc"></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
+                                            <span class="text-muted small">Ngày ban hành:</span>
+                                            <span class="fw-semibold text-dark" id="view_ev_date"></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center py-1">
+                                            <span class="text-muted small">Người tạo / tải lên:</span>
+                                            <span class="fw-semibold text-dark" id="view_ev_creator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mô tả trích yếu -->
+                            <div class="col-12">
+                                <div class="p-3 rounded-3 bg-light border">
+                                    <div class="small fw-bold text-muted text-uppercase mb-2"><i class="bi bi-chat-left-quote me-1 text-primary"></i>Mô tả / Trích yếu nội dung</div>
+                                    <div id="view_ev_desc" class="text-secondary small" style="white-space: pre-wrap; line-height: 1.6;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Tệp đính kèm -->
+                            <div class="col-12">
+                                <div class="small fw-bold text-muted text-uppercase mb-2"><i class="bi bi-paperclip me-1 text-primary"></i>Tệp đính kèm</div>
+                                <div id="view_ev_file_container">
+                                    <!-- Populated via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer bg-light py-2 d-flex justify-content-between">
-                <div></div>
-                <div class="d-inline-flex gap-2">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
-                </div>
+            <div class="modal-footer bg-white border-top py-2 px-4 d-flex justify-content-end">
+                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
             </div>
         </div>
     </div>
@@ -1614,34 +1807,47 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // Helper safe setters
+    const setSafeText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text !== undefined && text !== null ? text : '';
+    };
+    const setSafeHtml = (id, html) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html !== undefined && html !== null ? html : '';
+    };
+
     // 2. Setup PDF Viewer Modal
     const modalPdfEl = document.getElementById('modalPdfViewer');
-    const modalPdf = modalPdfEl ? new bootstrap.Modal(modalPdfEl) : null;
+    const getModalPdfInstance = () => modalPdfEl ? bootstrap.Modal.getOrCreateInstance(modalPdfEl) : null;
     const pdfIframe = document.getElementById('pdfViewerIframe');
     const pdfTitle = document.getElementById('modalPdfViewerLabel');
     const btnOpenTab = document.getElementById('btnPdfOpenNewTab');
     const btnDownload = document.getElementById('btnPdfDownload');
 
-    document.querySelectorAll('.btn-view-pdf').forEach(btn => {
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            const pdfUrl = this.dataset.pdfUrl;
-            const title = this.dataset.pdfTitle || 'Xem chi tiết tệp PDF';
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.btn-view-pdf');
+        if (!btn) return;
+        e.stopPropagation();
+        e.preventDefault();
 
-            if (!pdfUrl) return;
+        const pdfUrl = btn.dataset.pdfUrl;
+        const title = btn.dataset.pdfTitle || 'Xem chi tiết tệp PDF';
 
-            if (pdfTitle) pdfTitle.textContent = title;
-            if (btnOpenTab) btnOpenTab.href = pdfUrl;
-            if (btnDownload) btnDownload.href = pdfUrl;
+        if (!pdfUrl) return;
 
-            if (pdfIframe) {
-                pdfIframe.src = pdfUrl;
-            }
+        if (pdfTitle) pdfTitle.textContent = title;
+        if (btnOpenTab) btnOpenTab.href = pdfUrl;
+        if (btnDownload) btnDownload.href = pdfUrl;
 
-            if (modalPdf) {
-                modalPdf.show();
-            }
-        });
+        if (pdfIframe) {
+            pdfIframe.src = pdfUrl;
+        }
+
+        const modalInstance = getModalPdfInstance();
+        if (modalInstance) {
+            modalInstance.show();
+        }
     });
 
     if (modalPdfEl) {
@@ -1652,52 +1858,67 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 3. Setup View Standard Set Detail Modal
     const modalViewEl = document.getElementById('modalViewStandardSetDetails');
-    const modalView = modalViewEl ? new bootstrap.Modal(modalViewEl) : null;
+    const getModalViewSetInstance = () => modalViewEl ? bootstrap.Modal.getOrCreateInstance(modalViewEl) : null;
+    let currentViewedSetId = '';
 
-    document.querySelectorAll('.btn-view-set-detail').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const id = this.dataset.id || '';
-            const name = this.dataset.name || '';
-            const thongtu = this.dataset.thongtu || '';
-            const dateFormatted = this.dataset.dateFormatted || '-';
-            const desc = this.dataset.desc || 'Không có mô tả / ghi chú bổ sung.';
-            const status = this.dataset.status || '1';
-            const pdf = this.dataset.pdf || '';
-            const pdfUrl = this.dataset.pdfUrl || '';
-            const stdCount = this.dataset.standardsCount || '0';
-            const critCount = this.dataset.criteriaCount || '0';
-            const evCount = this.dataset.evidencesCount || '0';
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.btn-view-set-detail');
+        if (!btn) return;
+        e.stopPropagation();
+        e.preventDefault();
 
-            document.getElementById('view_set_id_badge').textContent = id;
-            document.getElementById('view_set_id').textContent = id;
-            document.getElementById('view_set_title').textContent = name;
-            document.getElementById('view_set_name').textContent = name;
-            document.getElementById('view_set_thongtu').textContent = thongtu || 'Chưa nhập số hiệu';
-            document.getElementById('view_set_date').textContent = dateFormatted;
+        const id = btn.dataset.id || '';
+        currentViewedSetId = id;
+        const name = btn.dataset.name || '';
+        const thongtu = btn.dataset.thongtu || '';
+        const dateFormatted = btn.dataset.dateFormatted || '-';
+        const desc = btn.dataset.desc || 'Không có mô tả / ghi chú bổ sung.';
+        const status = btn.dataset.status || '1';
+        const pdf = btn.dataset.pdf || '';
+        const pdfUrl = btn.dataset.pdfUrl || '';
+        const stdCount = btn.dataset.standardsCount || '0';
+        const critCount = btn.dataset.criteriaCount || '0';
+        const evCount = btn.dataset.evidencesCount || '0';
 
-            const isAct = status === '1';
-            const statusBadge = document.getElementById('view_set_status_badge');
+        setSafeText('view_set_id_badge', id);
+        setSafeText('view_set_id', id);
+        setSafeText('view_set_title', name);
+        setSafeText('view_set_thongtu', thongtu || 'Chưa nhập số hiệu');
+        setSafeText('view_set_date', dateFormatted);
+
+        const isAct = status === '1';
+        const statusBadge = document.getElementById('view_set_status_badge');
+        if (statusBadge) {
             statusBadge.className = isAct ? 'badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-7 fw-semibold' : 'badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 fs-7 fw-semibold';
             statusBadge.innerHTML = isAct ? '<i class="bi bi-check-circle-fill me-1"></i>Hoạt động' : '<i class="bi bi-pause-circle-fill me-1"></i>Ngừng hoạt động';
-            document.getElementById('view_set_status_text').innerHTML = isAct ? '<span class="text-success fw-bold"><i class="bi bi-check2-circle me-1"></i>Đang hoạt động (Hiển thị)</span>' : '<span class="text-muted"><i class="bi bi-dash-circle me-1"></i>Ngừng hoạt động</span>';
+        }
+        setSafeHtml('view_set_status_text', isAct ? '<span class="text-success fw-bold"><i class="bi bi-check2-circle me-1"></i>Đang hoạt động (Hiển thị)</span>' : '<span class="text-muted"><i class="bi bi-dash-circle me-1"></i>Ngừng hoạt động</span>');
 
-            document.getElementById('view_set_standards_count').innerHTML = `<i class="bi bi-folder2 me-1"></i>${stdCount} Tiêu chuẩn`;
-            document.getElementById('view_set_criteria_count').innerHTML = `<i class="bi bi-list-check me-1"></i>${critCount} Tiêu chí`;
-            document.getElementById('view_set_evidences_count').innerHTML = `<i class="bi bi-file-earmark-check me-1"></i>${evCount} Minh chứng`;
+        setSafeText('view_set_std_num', stdCount);
+        setSafeText('view_set_crit_num', critCount);
+        setSafeText('view_set_ev_num', evCount);
+        setSafeText('view_set_tree_name', name ? `${id} - ${name}` : id);
+        setSafeText('view_set_tree_std', stdCount);
+        setSafeText('view_set_tree_crit', critCount);
+        setSafeText('view_set_tree_ev', `${evCount} minh chứng`);
+        setSafeHtml('view_set_standards_count', `<i class="bi bi-folder2 me-1"></i>${stdCount} Tiêu chuẩn`);
+        setSafeHtml('view_set_criteria_count', `<i class="bi bi-list-check me-1"></i>${critCount} Tiêu chí`);
+        setSafeHtml('view_set_evidences_count', `<i class="bi bi-file-earmark-check me-1"></i>${evCount} Minh chứng`);
 
-            document.getElementById('view_set_desc').textContent = desc;
+        setSafeText('view_set_desc', desc);
 
-            const fileContainer = document.getElementById('view_set_file_container');
-            const previewBox = document.getElementById('view_set_preview_box');
-            const previewContent = document.getElementById('view_set_preview_content');
-            const previewNewtabLink = document.getElementById('view_set_preview_newtab_link');
-            const footerOpenTab = document.getElementById('view_set_btn_open_tab_footer');
+        const fileContainer = document.getElementById('view_set_file_container');
+        const previewBox = document.getElementById('view_set_preview_box');
+        const previewContent = document.getElementById('view_set_preview_content');
+        const previewNewtabLink = document.getElementById('view_set_preview_newtab_link');
+        const footerOpenTab = document.getElementById('view_set_btn_open_tab_footer');
 
-            if (pdf && pdfUrl) {
-                const ext = pdf.split('.').pop().toLowerCase();
-                const isPdf = ext === 'pdf';
-                const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+        if (pdf && pdfUrl) {
+            const ext = pdf.split('.').pop().toLowerCase();
+            const isPdf = ext === 'pdf';
+            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
 
+            if (fileContainer) {
                 fileContainer.innerHTML = `
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 p-2 bg-light rounded border">
                         <div class="d-flex align-items-center gap-2">
@@ -1717,75 +1938,99 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                     </div>
                 `;
-
-                if (footerOpenTab) {
-                    footerOpenTab.href = pdfUrl;
-                    footerOpenTab.style.display = 'inline-block';
-                }
-
-                if (isPdf) {
-                    previewBox.style.display = 'block';
-                    previewNewtabLink.href = pdfUrl;
-                    previewContent.innerHTML = `<iframe src="${escapeHtml(pdfUrl)}" style="width: 100%; height: 400px; border: none; border-radius: 8px;"></iframe>`;
-                } else if (isImage) {
-                    previewBox.style.display = 'block';
-                    previewNewtabLink.href = pdfUrl;
-                    previewContent.innerHTML = `<img src="${escapeHtml(pdfUrl)}" alt="Preview" class="img-fluid rounded shadow-sm" style="max-height: 400px;">`;
-                } else {
-                    previewBox.style.display = 'none';
-                    previewContent.innerHTML = '';
-                }
-            } else {
-                fileContainer.innerHTML = `<span class="badge bg-light text-muted border p-2"><i class="bi bi-info-circle me-1"></i>Chưa đính kèm file dữ liệu nào cho bộ tiêu chuẩn này.</span>`;
-                previewBox.style.display = 'none';
-                previewContent.innerHTML = '';
-                if (footerOpenTab) footerOpenTab.style.display = 'none';
             }
 
-            if (modalView) modalView.show();
-        });
+            if (footerOpenTab) {
+                footerOpenTab.href = pdfUrl;
+                footerOpenTab.style.display = 'inline-block';
+            }
+
+            if (isPdf) {
+                if (previewBox) previewBox.style.display = 'block';
+                if (previewNewtabLink) previewNewtabLink.href = pdfUrl;
+                if (previewContent) previewContent.innerHTML = `<iframe src="${escapeHtml(pdfUrl)}" style="width: 100%; height: 400px; border: none; border-radius: 8px;"></iframe>`;
+            } else if (isImage) {
+                if (previewBox) previewBox.style.display = 'block';
+                if (previewNewtabLink) previewNewtabLink.href = pdfUrl;
+                if (previewContent) previewContent.innerHTML = `<img src="${escapeHtml(pdfUrl)}" alt="Preview" class="img-fluid rounded shadow-sm" style="max-height: 400px;">`;
+            } else {
+                if (previewBox) previewBox.style.display = 'none';
+                if (previewContent) previewContent.innerHTML = '';
+            }
+        } else {
+            if (fileContainer) {
+                fileContainer.innerHTML = `<span class="badge bg-light text-muted border p-2"><i class="bi bi-info-circle me-1"></i>Chưa đính kèm file dữ liệu nào cho bộ tiêu chuẩn này.</span>`;
+            }
+            if (previewBox) previewBox.style.display = 'none';
+            if (previewContent) previewContent.innerHTML = '';
+            if (footerOpenTab) footerOpenTab.style.display = 'none';
+        }
+
+        const modalInstance = getModalViewSetInstance();
+        if (modalInstance) {
+            modalInstance.show();
+        }
     });
 
     // 4. Setup View Evidence Detail Modal
     const modalEvViewEl = document.getElementById('modalViewEvidenceDetails');
-    const modalEvView = modalEvViewEl ? new bootstrap.Modal(modalEvViewEl) : null;
+    const getModalEvViewInstance = () => modalEvViewEl ? bootstrap.Modal.getOrCreateInstance(modalEvViewEl) : null;
+    let currentEvidenceContext = { setId: '', standardId: '', criterionId: '', evidenceId: '' };
 
-    document.querySelectorAll('.btn-view-evidence-detail').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const id = this.dataset.id || '';
-            const name = this.dataset.name || '';
-            const set = this.dataset.set || '-';
-            const standard = this.dataset.standard || '-';
-            const criterion = this.dataset.criterion || '-';
-            const namhoc = this.dataset.namhoc || '-';
-            const date = this.dataset.date || '-';
-            const desc = this.dataset.desc || '-';
-            const status = this.dataset.status || 'Hoạt động';
-            const creator = this.dataset.creator || 'Hệ thống';
-            const hasFile = this.dataset.hasFile === '1';
-            const fileUrl = this.dataset.fileUrl || '#';
-            const downloadUrl = this.dataset.downloadUrl || '#';
-            const fileName = this.dataset.fileName || '';
-            const fileExt = this.dataset.fileExt || '';
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.btn-view-evidence-detail');
+        if (!btn) return;
+        e.stopPropagation();
+        e.preventDefault();
 
-            document.getElementById('view_ev_id_badge').textContent = id;
-            document.getElementById('view_ev_id').textContent = id;
-            document.getElementById('view_ev_title').textContent = name;
-            document.getElementById('view_ev_name').textContent = name;
-            document.getElementById('view_ev_set').textContent = set;
-            document.getElementById('view_ev_standard').textContent = standard;
-            document.getElementById('view_ev_criterion').textContent = criterion;
-            document.getElementById('view_ev_namhoc').textContent = namhoc;
-            document.getElementById('view_ev_date').textContent = date;
-            document.getElementById('view_ev_creator').textContent = creator;
-            document.getElementById('view_ev_desc').textContent = desc;
+        const id = btn.dataset.id || '';
+        const name = btn.dataset.name || '';
+        const rawSetId = btn.dataset.rawSetId || '';
+        const rawStandardId = btn.dataset.rawStandardId || '';
+        const rawCriterionId = btn.dataset.rawCriterionId || '';
+        const rawEvidenceId = btn.dataset.rawEvidenceId || id;
 
-            const isAct = status === 'Hoạt động';
-            const statusBadge = document.getElementById('view_ev_status_badge');
+        currentEvidenceContext = {
+            setId: rawSetId,
+            standardId: rawStandardId,
+            criterionId: rawCriterionId,
+            evidenceId: rawEvidenceId
+        };
+
+        const set = btn.dataset.set || '-';
+        const standard = btn.dataset.standard || '-';
+        const criterion = btn.dataset.criterion || '-';
+        const namhoc = btn.dataset.namhoc || '-';
+        const date = btn.dataset.date || '-';
+        const desc = btn.dataset.desc || '-';
+        const status = btn.dataset.status || 'Hoạt động';
+        const creator = btn.dataset.creator || 'Hệ thống';
+        const hasFile = btn.dataset.hasFile === '1';
+        const fileUrl = btn.dataset.fileUrl || '#';
+        const downloadUrl = btn.dataset.downloadUrl || '#';
+        const fileName = btn.dataset.fileName || '';
+        const fileExt = btn.dataset.fileExt || '';
+
+        setSafeText('view_ev_id_badge', id);
+        setSafeText('view_ev_id', id);
+        setSafeText('view_ev_title', name);
+        setSafeText('view_ev_set', set);
+        setSafeText('view_ev_standard', standard);
+        setSafeText('view_ev_criterion', criterion);
+        setSafeText('view_ev_namhoc', namhoc);
+        setSafeText('view_ev_date', date);
+        setSafeText('view_ev_creator', creator);
+        setSafeText('view_ev_desc', desc);
+
+        const isAct = status === 'Hoạt động';
+        const statusBadge = document.getElementById('view_ev_status_badge');
+        if (statusBadge) {
             statusBadge.className = isAct ? 'badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-7 fw-semibold' : 'badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 fs-7 fw-semibold';
             statusBadge.innerHTML = isAct ? '<i class="bi bi-check-circle-fill me-1"></i>Hoạt động' : '<i class="bi bi-pause-circle-fill me-1"></i>Tạm ẩn';
+        }
 
-            const fileContainer = document.getElementById('view_ev_file_container');
+        const fileContainer = document.getElementById('view_ev_file_container');
+        if (fileContainer) {
             if (hasFile) {
                 const isPdf = fileExt === 'pdf';
                 fileContainer.innerHTML = `
@@ -1808,9 +2053,184 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 fileContainer.innerHTML = `<span class="badge bg-light text-muted border p-2"><i class="bi bi-info-circle me-1"></i>Chưa có tệp đính kèm nào cho minh chứng này.</span>`;
             }
+        }
 
-            if (modalEvView) modalEvView.show();
-        });
+        const modalInstance = getModalEvViewInstance();
+        if (modalInstance) {
+            modalInstance.show();
+        }
+    });
+
+    /**
+     * Kích hoạt hiệu ứng phát quang đặc biệt & gắn thẻ định vị nổi (Beacon) tại dòng mục tiêu
+     */
+    function triggerHighlightTarget(targetRow, label) {
+        if (!targetRow) return;
+
+        // Cuộn màn hình mượt mà đưa đối tượng vào giữa khung nhìn
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Kích hoạt hiệu ứng phát sáng & viền xung quanh
+        targetRow.classList.remove('highlight-target-row');
+        void targetRow.offsetWidth; // Buộc reflow để kích hoạt lại animation
+        targetRow.classList.add('highlight-target-row');
+
+        // Gắn thẻ chỉ đường định vị nổi (Floating Locator Beacon)
+        const oldBeacon = targetRow.querySelector('.jump-target-beacon');
+        if (oldBeacon) oldBeacon.remove();
+
+        const beacon = document.createElement('div');
+        beacon.className = 'jump-target-beacon';
+        beacon.innerHTML = `<i class="bi bi-geo-alt-fill text-warning"></i><span>Vị trí bạn chọn: <strong>${escapeHtml(label)}</strong></span>`;
+
+        // Đảm bảo phần tử có position tương đối
+        if (getComputedStyle(targetRow).position === 'static') {
+            targetRow.style.position = 'relative';
+        }
+        targetRow.appendChild(beacon);
+
+        // Tự động dọn dẹp thẻ beacon sau khi animation kết thúc (3.6 giây)
+        setTimeout(() => {
+            if (beacon && beacon.parentNode) {
+                beacon.remove();
+            }
+        }, 3600);
+    }
+
+    /**
+     * Chức năng: Điều hướng & Nhảy trực tiếp đến vị trí dòng tương ứng trên bảng dữ liệu chính
+     * --------------------------------------------------------------------------------------
+     * @param {string} level - Cấp độ cần nhảy tới: 'set' (Bộ TC), 'standard' (Tiêu chuẩn), 'criterion' (Tiêu chí), 'evidence' (Minh chứng)
+     * @param {object} context - Ngữ cảnh chứa các mã ID cha/con và instance Modal hiện tại để đóng lại
+     */
+    function jumpToHierarchy(level, context) {
+        // Đóng modal đang hiển thị
+        if (context && context.modalInstance) {
+            context.modalInstance.hide();
+        }
+
+        const setId = context ? context.setId : '';
+        const stdId = context ? context.standardId : '';
+        const criId = context ? context.criterionId : '';
+        const evId = context ? context.evidenceId : '';
+
+        if (!setId) return;
+
+        // CẤP 1: BỘ TIÊU CHUẨN
+        if (level === 'set') {
+            const row = document.getElementById('set-row-' + setId);
+            if (row) {
+                triggerHighlightTarget(row, 'Bộ tiêu chuẩn (Cấp 1)');
+            }
+            return;
+        }
+
+        // CẤP 2: TIÊU CHUẨN (Mở accordion Bộ tiêu chuẩn, cuộn tới dòng Tiêu chuẩn)
+        if (level === 'standard') {
+            const setCollapse = document.getElementById('collapse-set-' + setId);
+            if (setCollapse) {
+                bootstrap.Collapse.getOrCreateInstance(setCollapse, { toggle: false }).show();
+            }
+            setTimeout(() => {
+                let targetRow = stdId ? document.getElementById('standard-row-' + stdId) : null;
+                if (!targetRow && setCollapse) {
+                    targetRow = setCollapse.querySelector('.nested-standard-row') || setCollapse;
+                }
+                if (targetRow) {
+                    triggerHighlightTarget(targetRow, 'Tiêu chuẩn (Cấp 2)');
+                }
+            }, 250);
+            return;
+        }
+
+        // CẤP 3: TIÊU CHÍ (Mở accordion Bộ TC -> Tiêu chuẩn, cuộn tới dòng Tiêu chí)
+        if (level === 'criterion') {
+            const setCollapse = document.getElementById('collapse-set-' + setId);
+            if (setCollapse) {
+                bootstrap.Collapse.getOrCreateInstance(setCollapse, { toggle: false }).show();
+            }
+            setTimeout(() => {
+                let stdCollapse = stdId ? document.getElementById('collapse-standard-' + stdId) : null;
+                if (!stdCollapse && setCollapse) {
+                    stdCollapse = setCollapse.querySelector('.collapse[id^="collapse-standard-"]');
+                }
+                if (stdCollapse) {
+                    bootstrap.Collapse.getOrCreateInstance(stdCollapse, { toggle: false }).show();
+                }
+                setTimeout(() => {
+                    let targetRow = criId ? document.getElementById('criterion-row-' + criId) : null;
+                    if (!targetRow && setCollapse) {
+                        targetRow = setCollapse.querySelector('.nested-criterion-row');
+                    }
+                    if (targetRow) {
+                        triggerHighlightTarget(targetRow, 'Tiêu chí (Cấp 3)');
+                    }
+                }, 220);
+            }, 250);
+            return;
+        }
+
+        // CẤP 4: MINH CHỨNG (Mở accordion Bộ TC -> Tiêu chuẩn -> Tiêu chí, cuộn tới dòng Minh chứng)
+        if (level === 'evidence') {
+            const setCollapse = document.getElementById('collapse-set-' + setId);
+            if (setCollapse) {
+                bootstrap.Collapse.getOrCreateInstance(setCollapse, { toggle: false }).show();
+            }
+            setTimeout(() => {
+                let stdCollapse = stdId ? document.getElementById('collapse-standard-' + stdId) : null;
+                if (!stdCollapse && setCollapse) {
+                    stdCollapse = setCollapse.querySelector('.collapse[id^="collapse-standard-"]');
+                }
+                if (stdCollapse) {
+                    bootstrap.Collapse.getOrCreateInstance(stdCollapse, { toggle: false }).show();
+                }
+                setTimeout(() => {
+                    let criCollapse = criId ? document.getElementById('collapse-criterion-' + criId) : null;
+                    if (!criCollapse && setCollapse) {
+                        criCollapse = setCollapse.querySelector('.collapse[id^="collapse-criterion-"]');
+                    }
+                    if (criCollapse) {
+                        bootstrap.Collapse.getOrCreateInstance(criCollapse, { toggle: false }).show();
+                    }
+                    setTimeout(() => {
+                        let targetRow = evId ? document.getElementById('evidence-row-' + evId) : null;
+                        if (!targetRow && setCollapse) {
+                            targetRow = setCollapse.querySelector('.nested-evidence-row');
+                        }
+                        if (targetRow) {
+                            triggerHighlightTarget(targetRow, 'Minh chứng (Cấp 4)');
+                        }
+                    }, 220);
+                }, 220);
+            }, 250);
+            return;
+        }
+    }
+
+    // 6. Đăng ký sự kiện Click cho các thẻ Phân cấp có thể tương tác (Interactive Hierarchy Navigation)
+    document.addEventListener('click', function (e) {
+        const jumpEl = e.target.closest('[data-jump-level]');
+        if (!jumpEl) return;
+
+        const level = jumpEl.dataset.jumpLevel;
+        const modalType = jumpEl.dataset.modalType;
+
+        if (modalType === 'set') {
+            const modalInstance = getModalViewSetInstance();
+            jumpToHierarchy(level, {
+                setId: currentViewedSetId,
+                modalInstance: modalInstance
+            });
+        } else if (modalType === 'evidence') {
+            const modalInstance = getModalEvViewInstance();
+            jumpToHierarchy(level, {
+                setId: currentEvidenceContext.setId,
+                standardId: currentEvidenceContext.standardId,
+                criterionId: currentEvidenceContext.criterionId,
+                evidenceId: currentEvidenceContext.evidenceId,
+                modalInstance: modalInstance
+            });
+        }
     });
 });
 </script>
