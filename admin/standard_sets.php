@@ -28,37 +28,19 @@ if (isset($_POST['action']) && $_POST['action'] === 'toggle_status_ajax') {
     exit;
 }
 
-// Handle Excel Export
+// Handle Excel Export (Xuất đa tầng phân cấp Bộ TC -> Tiêu chuẩn -> Tiêu chí -> Minh chứng kèm Grouping / Outlining sổ ra - gập vào)
 if (isset($_GET['export']) && $_GET['export'] === 'excel') {
-    require_once __DIR__ . '/../includes/data.php';
-
-    $exportRows = [];
-    $stmtSets = $pdo->query("SELECT * FROM BoTieuChuan ORDER BY TrangThai DESC, MaBoTieuChuan ASC");
-    $sets = $stmtSets->fetchAll(PDO::FETCH_ASSOC);
-
-    foreach ($sets as $idx => $s) {
-        $exportRows[] = [
-            'stt'           => $idx + 1,
-            'code'          => $s['MaBoTieuChuan'],
-            'name'          => $s['TenBoTieuChuan'],
-            'thong_tu'      => $s['ThongTu'] ?? '',
-            'ngay_ban_hanh' => $s['NgayBanHanh'] ?? '',
-            'status'        => (int)$s['TrangThai'] === 1 ? 'Hoạt động' : 'Ngừng hoạt động',
-            'mo_ta'         => $s['MoTa'] ?? '',
-        ];
-    }
-
-    $columns = [
-        ['key' => 'stt', 'label' => 'STT', 'align' => 'center', 'width' => '60px'],
-        ['key' => 'code', 'label' => 'Mã bộ tiêu chuẩn', 'align' => 'center', 'width' => '140px'],
-        ['key' => 'name', 'label' => 'Tên bộ tiêu chuẩn', 'align' => 'left', 'width' => '320px'],
-        ['key' => 'thong_tu', 'label' => 'Số hiệu / Thông tư', 'align' => 'left', 'width' => '200px'],
-        ['key' => 'ngay_ban_hanh', 'label' => 'Ngày ban hành', 'align' => 'center', 'width' => '120px'],
-        ['key' => 'status', 'label' => 'Trạng thái', 'align' => 'center', 'width' => '130px'],
-        ['key' => 'mo_ta', 'label' => 'Mô tả', 'align' => 'left', 'width' => '280px'],
+    $filter = [
+        'q'            => trim($_GET['q'] ?? $_GET['keyword'] ?? $_GET['search'] ?? ''),
+        'standard_set' => trim($_GET['standard_set'] ?? $_GET['set'] ?? ''),
+        'standard'     => trim($_GET['standard'] ?? ''),
+        'criterion'    => trim($_GET['criterion'] ?? ''),
+        'evidence'     => trim($_GET['evidence'] ?? ''),
+        'status'       => isset($_GET['status']) && $_GET['status'] !== '' ? (int)$_GET['status'] : null,
     ];
 
-    export_to_excel('danh_sach_bo_tieu_chuan_' . date('Ymd_His') . '.xls', 'DANH SÁCH BỘ TIÊU CHUẨN KIỂM ĐỊNH ĐỘNG', $columns, $exportRows);
+    $filename = 'danh_sach_phan_cap_bo_tieu_chuan_' . date('Ymd_His') . '.xlsx';
+    export_hierarchical_standards_excel($filename, $filter);
     exit;
 }
 
@@ -382,6 +364,158 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $success = 'Xóa tiêu chí thành công.';
         }
 
+        // ==========================================
+        // 4. CẤP MINH CHỨNG
+        // ==========================================
+        if ($action === 'save_evidence') {
+            $rawId       = trim($_POST['id'] ?? '');
+            $maMC        = trim($_POST['ma_minh_chung'] ?? '');
+            $tenMC       = trim($_POST['ten_minh_chung'] ?? '');
+            $ngayBanHanh = trim($_POST['ngay_ban_hanh'] ?? '') ?: null;
+            $namHoc      = trim($_POST['nam_hoc'] ?? '') ?: null;
+            $maTieuChi   = trim($_POST['ma_tieu_chi'] ?? '') ?: null;
+            $moTa        = trim($_POST['mo_ta'] ?? '');
+            $userId      = $_SESSION['user_id'] ?? 'ND001';
+            $status      = isset($_POST['trang_thai']) ? (int)$_POST['trang_thai'] : 1;
+            $status      = in_array($status, [0, 1], true) ? $status : 1;
+
+            if ($maMC === '') {
+                throw new RuntimeException('Vui lòng nhập Mã minh chứng.');
+            }
+            if ($tenMC === '') {
+                throw new RuntimeException('Vui lòng nhập Tên minh chứng.');
+            }
+            if (!$maTieuChi) {
+                throw new RuntimeException('Vui lòng chọn Tiêu chí cha.');
+            }
+
+            // Lấy MaBoTieuChuan từ MaTieuChi
+            $stmtSet = $pdo->prepare('SELECT tc.MaBoTieuChuan FROM TieuChi tchi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan WHERE tchi.MaTieuChi = :tchi LIMIT 1');
+            $stmtSet->execute(['tchi' => $maTieuChi]);
+            $maBoTieuChuan = $stmtSet->fetchColumn() ?: null;
+
+            $file = $_FILES['evidence_file'] ?? null;
+            $maxUploadMb = 100;
+            $maxUploadBytes = $maxUploadMb * 1024 * 1024;
+            if ($file && $file['error'] === UPLOAD_ERR_OK && (int)$file['size'] > $maxUploadBytes) {
+                throw new RuntimeException('Dung lượng tệp tin tải lên vượt quá giới hạn tối đa cho phép (' . $maxUploadMb . 'MB).');
+            }
+
+            $relativePath = null;
+            if ($file && $file['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $uploadDir = __DIR__ . '/../uploads/evidences';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                $storedName = 'MC_' . date('YmdHis') . '_' . random_int(100, 999) . '.' . $ext;
+                $targetPath = $uploadDir . '/' . $storedName;
+                if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                    $relativePath = 'uploads/evidences/' . $storedName;
+                }
+            }
+
+            if ($rawId !== '') {
+                // Update
+                if ($maMC !== $rawId) {
+                    $chk = $pdo->prepare('SELECT COUNT(*) FROM MinhChung WHERE MaMinhChung = :code');
+                    $chk->execute(['code' => $maMC]);
+                    if ((int)$chk->fetchColumn() > 0) {
+                        throw new RuntimeException('Mã minh chứng "' . $maMC . '" đã tồn tại.');
+                    }
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+                    $upLogs = $pdo->prepare('UPDATE download_logs SET MaMinhChung = :new_code WHERE MaMinhChung = :old_code');
+                    $upLogs->execute(['new_code' => $maMC, 'old_code' => $rawId]);
+                }
+
+                if ($relativePath) {
+                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, MoTa = :mota, TepTin = :file, NamHoc = :namhoc, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id WHERE MaMinhChung = :old_code');
+                    $stmt->execute([
+                        'new_code'      => $maMC,
+                        'title'         => $tenMC,
+                        'ngay_ban_hanh' => $ngayBanHanh,
+                        'mota'          => $moTa,
+                        'file'          => $relativePath,
+                        'namhoc'        => $namHoc,
+                        'status'        => $status,
+                        'tchi'          => $maTieuChi,
+                        'set_id'        => $maBoTieuChuan,
+                        'old_code'      => $rawId,
+                    ]);
+                } else {
+                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, MoTa = :mota, NamHoc = :namhoc, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id WHERE MaMinhChung = :old_code');
+                    $stmt->execute([
+                        'new_code'      => $maMC,
+                        'title'         => $tenMC,
+                        'ngay_ban_hanh' => $ngayBanHanh,
+                        'mota'          => $moTa,
+                        'namhoc'        => $namHoc,
+                        'status'        => $status,
+                        'tchi'          => $maTieuChi,
+                        'set_id'        => $maBoTieuChuan,
+                        'old_code'      => $rawId,
+                    ]);
+                }
+                if ($maMC !== $rawId) {
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+                }
+                log_activity('cap_nhat', 'minh_chung', 0, $maMC . ' - ' . $tenMC);
+                $success = 'Cập nhật minh chứng thành công.';
+            } else {
+                // Insert
+                $chk = $pdo->prepare('SELECT COUNT(*) FROM MinhChung WHERE MaMinhChung = :code');
+                $chk->execute(['code' => $maMC]);
+                if ((int)$chk->fetchColumn() > 0) {
+                    throw new RuntimeException('Mã minh chứng "' . $maMC . '" đã tồn tại.');
+                }
+
+                $stmt = $pdo->prepare('INSERT INTO MinhChung (MaMinhChung, TenMinhChung, NgayBanHanh, MoTa, TepTin, NamHoc, TrangThai, MaTieuChi, MaBoTieuChuan, MaNguoiDung) VALUES (:code, :title, :ngay_ban_hanh, :mota, :file, :namhoc, :status, :tchi, :set_id, :user_id)');
+                $stmt->execute([
+                    'code'          => $maMC,
+                    'title'         => $tenMC,
+                    'ngay_ban_hanh' => $ngayBanHanh,
+                    'mota'          => $moTa,
+                    'file'          => $relativePath,
+                    'namhoc'        => $namHoc,
+                    'status'        => $status,
+                    'tchi'          => $maTieuChi,
+                    'set_id'        => $maBoTieuChuan,
+                    'user_id'       => $userId,
+                ]);
+                log_activity('them_moi', 'minh_chung', 0, $maMC . ' - ' . $tenMC);
+                $success = 'Thêm mới minh chứng thành công.';
+            }
+        }
+
+        if ($action === 'delete_evidence') {
+            $id = trim($_POST['id'] ?? '');
+            if ($id === '') {
+                throw new RuntimeException('Mã minh chứng không hợp lệ.');
+            }
+            $stmt = $pdo->prepare('SELECT TenMinhChung, TepTin FROM MinhChung WHERE MaMinhChung = :id');
+            $stmt->execute(['id' => $id]);
+            $evData = $stmt->fetch();
+            if (!$evData) {
+                throw new RuntimeException('Minh chứng không tồn tại.');
+            }
+
+            $filePath = $evData['TepTin'] ?? null;
+            $pdo->prepare('DELETE FROM download_logs WHERE MaMinhChung = :id')->execute(['id' => $id]);
+            $delStmt = $pdo->prepare('DELETE FROM MinhChung WHERE MaMinhChung = :id');
+            $delStmt->execute(['id' => $id]);
+
+            if (!empty($filePath)) {
+                $projectRoot = realpath(__DIR__ . '/..');
+                $normalizedRel = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, ltrim($filePath, '/\\'));
+                $fullPath = $projectRoot ? ($projectRoot . DIRECTORY_SEPARATOR . $normalizedRel) : null;
+                if ($fullPath && file_exists($fullPath) && is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+            log_activity('xoa', 'minh_chung', 0, $id . ' - ' . ($evData['TenMinhChung'] ?? ''));
+            $success = 'Xóa minh chứng thành công.';
+        }
+
     } catch (Throwable $exception) {
         $error = 'Thao tác không thành công: ' . $exception->getMessage();
     }
@@ -391,6 +525,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 $searchKeyword        = trim($_GET['q'] ?? $_GET['keyword'] ?? $_GET['search'] ?? '');
 $selectedStandardSet  = trim($_GET['standard_set'] ?? $_GET['set'] ?? '');
 $selectedStandard     = trim($_GET['standard'] ?? '');
+$selectedCriterion    = trim($_GET['criterion'] ?? '');
+$selectedEvidence     = trim($_GET['evidence'] ?? '');
 $selectedStatus       = isset($_GET['status']) && $_GET['status'] !== '' ? (int)$_GET['status'] : null;
 
 $perPage = 5;
@@ -415,6 +551,27 @@ if ($selectedStandardSet !== '') {
 if ($selectedStandard !== '') {
     $whereClauses[] = "b.MaBoTieuChuan IN (SELECT MaBoTieuChuan FROM TieuChuan WHERE MaTieuChuan = :selected_std)";
     $queryParams['selected_std'] = $selectedStandard;
+}
+
+if ($selectedCriterion !== '') {
+    $whereClauses[] = "b.MaBoTieuChuan IN (
+        SELECT tc.MaBoTieuChuan 
+        FROM TieuChuan tc 
+        JOIN TieuChi tchi ON tchi.MaTieuChuan = tc.MaTieuChuan 
+        WHERE tchi.MaTieuChi = :selected_crit
+    )";
+    $queryParams['selected_crit'] = $selectedCriterion;
+}
+
+if ($selectedEvidence !== '') {
+    $whereClauses[] = "b.MaBoTieuChuan IN (
+        SELECT DISTINCT COALESCE(m.MaBoTieuChuan, tc.MaBoTieuChuan)
+        FROM MinhChung m
+        LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = m.MaTieuChi
+        LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan
+        WHERE m.MaMinhChung = :selected_ev
+    )";
+    $queryParams['selected_ev'] = $selectedEvidence;
 }
 
 if ($selectedStatus !== null) {
@@ -466,12 +623,16 @@ $standardSetsList = $stmtSets->fetchAll(PDO::FETCH_ASSOC);
 // Full list for Filter Dropdowns
 $allSetsForFilter = $pdo->query("SELECT MaBoTieuChuan, TenBoTieuChuan, ThongTu FROM BoTieuChuan ORDER BY TrangThai DESC, MaBoTieuChuan ASC")->fetchAll(PDO::FETCH_ASSOC);
 $allStandardsForFilter = $pdo->query("SELECT MaTieuChuan, TenTieuChuan, MaBoTieuChuan FROM TieuChuan ORDER BY MaBoTieuChuan ASC, ThuTu ASC, MaTieuChuan ASC")->fetchAll(PDO::FETCH_ASSOC);
+$allCriteriaForFilter = $pdo->query("SELECT tchi.MaTieuChi, tchi.TenTieuChi, tchi.MaTieuChuan, tc.MaBoTieuChuan FROM TieuChi tchi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan ORDER BY tchi.ThuTu ASC, tchi.MaTieuChi ASC")->fetchAll(PDO::FETCH_ASSOC);
+$allEvidencesForFilter = $pdo->query("SELECT m.MaMinhChung, m.TenMinhChung, m.MaTieuChi, m.MaBoTieuChuan, tc.MaTieuChuan FROM MinhChung m LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = m.MaTieuChi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan ORDER BY m.MaMinhChung ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Filter query parameters for links
 $currentFilterParams = [];
 if ($searchKeyword !== '') $currentFilterParams['q'] = $searchKeyword;
 if ($selectedStandardSet !== '') $currentFilterParams['standard_set'] = $selectedStandardSet;
 if ($selectedStandard !== '') $currentFilterParams['standard'] = $selectedStandard;
+if ($selectedCriterion !== '') $currentFilterParams['criterion'] = $selectedCriterion;
+if ($selectedEvidence !== '') $currentFilterParams['evidence'] = $selectedEvidence;
 if ($selectedStatus !== null) $currentFilterParams['status'] = $selectedStatus;
 
 // 2. Fetch Standards grouped by Set
@@ -510,6 +671,31 @@ $stmtAllTChi = $pdo->query("
 $allCriteriaByStandard = [];
 foreach ($stmtAllTChi->fetchAll(PDO::FETCH_ASSOC) as $tchi) {
     $allCriteriaByStandard[$tchi['MaTieuChuan']][] = $tchi;
+}
+
+// 4. Fetch Evidences grouped by Criterion
+$stmtAllMC = $pdo->query("
+    SELECT 
+        m.MaMinhChung,
+        m.TenMinhChung,
+        m.NgayBanHanh,
+        m.MoTa,
+        m.TepTin,
+        m.NamHoc,
+        m.TrangThai,
+        m.MaTieuChi,
+        m.MaBoTieuChuan,
+        m.NgayCapNhat,
+        u.HoTen AS NguoiTao
+    FROM MinhChung m
+    LEFT JOIN NguoiDung u ON u.MaNguoiDung = m.MaNguoiDung
+    ORDER BY m.MaMinhChung ASC
+");
+$allEvidencesByCriterion = [];
+foreach ($stmtAllMC->fetchAll(PDO::FETCH_ASSOC) as $mc) {
+    if (!empty($mc['MaTieuChi'])) {
+        $allEvidencesByCriterion[$mc['MaTieuChi']][] = $mc;
+    }
 }
 
 $pageTitle = page_title('Quản lý Bộ Tiêu chuẩn động');
@@ -794,7 +980,7 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                         </div>
                         <div>
                             <h2 class="h5 mb-0 fw-bold text-dark">Quản lý Bộ tiêu chuẩn động</h2>
-                            <span class="text-muted small">Mô hình cây phân cấp: <strong>Bộ tiêu chuẩn &rarr; Tiêu chuẩn &rarr; Tiêu chí</strong></span>
+                            <span class="text-muted small">Mô hình cây phân cấp: <strong>Bộ tiêu chuẩn &rarr; Tiêu chuẩn &rarr; Tiêu chí &rarr; Minh chứng</strong></span>
                         </div>
                     </div>
                 </div>
@@ -817,10 +1003,13 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                 <i class="bi bi-funnel-fill me-1"></i> Bộ lọc & Tìm kiếm tập trung
                             </span>
                             <span class="text-secondary small d-none d-md-inline">
-                                Lọc tự động ngay khi nhập hoặc chọn điều kiện
+                                Chọn điều kiện hoặc nhập từ khóa rồi nhấn nút <strong>Lọc</strong>
                             </span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
+                            <button type="submit" form="filterForm" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm d-inline-flex align-items-center gap-1" id="btnSubmitFilterHeader" title="Áp dụng bộ lọc">
+                                <i class="bi bi-funnel-fill"></i> Lọc dữ liệu
+                            </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="btnResetAll" title="Đặt lại tất cả bộ lọc">
                                 <i class="bi bi-arrow-counterclockwise me-1"></i> Đặt lại
                             </button>
@@ -828,10 +1017,10 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                     </div>
 
                     <form id="filterForm" method="get" action="" class="row g-3">
-                        <!-- CÁCH 1: Ô NHẬP TỪ KHÓA TÌM NHANH (MÃ HOẶC TÊN BỘ TIÊU CHUẨN) -->
-                        <div class="col-12 col-xl-4">
+                        <!-- CÁCH 1: Ô NHẬP TỪ KHÓA TÌM NHANH -->
+                        <div class="col-12 col-xxl-3 col-xl-3">
                             <label for="filterKeyword" class="form-label fw-bold small text-primary mb-1 d-flex align-items-center gap-1">
-                                <i class="bi bi-search"></i> Cách 1: Ô nhập từ khóa (Mã / Tên bộ tiêu chuẩn)
+                                <i class="bi bi-search"></i> Tìm kiếm
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-end-0 text-muted">
@@ -847,20 +1036,23 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                 <button class="btn btn-light border border-start-0 text-muted" type="button" id="btnClearKeyword" style="display: <?= $searchKeyword !== '' ? 'block' : 'none' ?>;" title="Xóa từ khóa">
                                     <i class="bi bi-x-circle-fill"></i>
                                 </button>
+                                <button class="btn btn-primary d-inline-flex align-items-center gap-1" type="submit" title="Tìm kiếm theo từ khóa">
+                                    <i class="bi bi-search"></i> Lọc
+                                </button>
                             </div>
                             <div class="form-text small text-secondary mt-1">
-                                <i class="bi bi-lightning-charge text-warning"></i> Tự động tìm kiếm ngay khi gõ
+                                <i class="bi bi-info-circle text-primary"></i> Nhập từ khóa rồi bấm <strong>Lọc</strong> hoặc nhấn Enter
                             </div>
                         </div>
 
-                        <!-- CÁCH 2: CỤM 3 Ô CHỌN NHANH (DROPDOWN SONG SONG & LIÊN KẾT) -->
-                        <div class="col-12 col-xl-8">
+                        <!-- CÁCH 2: CỤM 5 Ô CHỌN NHANH PHÂN CẤP LIÊN KẾT + NÚT LỌC -->
+                        <div class="col-12 col-xxl-9 col-xl-9">
                             <label class="form-label fw-bold small text-primary mb-1 d-flex align-items-center gap-1">
-                                <i class="bi bi-diagram-3"></i> Cách 2: Ô chọn nhanh phân cấp (Bộ Tiêu chuẩn &rarr; Tiêu chuẩn &rarr; Trạng thái)
+                                <i class="bi bi-diagram-3"></i> Tìm kiếm phân cấp
                             </label>
-                            <div class="row g-2">
+                            <div class="row g-2 align-items-center">
                                 <!-- Dropdown 1: Bộ Tiêu chuẩn -->
-                                <div class="col-12 col-md-4">
+                                <div class="col-12 col-sm-6 col-md-4 col-xl">
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text bg-light text-muted" title="Lọc theo Bộ Tiêu chuẩn"><i class="bi bi-collection"></i></span>
                                         <select class="form-select form-select-sm" id="filterStandardSet" name="standard_set">
@@ -874,8 +1066,8 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                     </div>
                                 </div>
 
-                                <!-- Dropdown 2: Tiêu chuẩn (Tự động lọc theo Bộ tiêu chuẩn đã chọn) -->
-                                <div class="col-12 col-md-4">
+                                <!-- Dropdown 2: Tiêu chuẩn -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl">
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text bg-light text-muted" title="Lọc theo Tiêu chuẩn"><i class="bi bi-folder2"></i></span>
                                         <select class="form-select form-select-sm" id="filterStandard" name="standard">
@@ -892,8 +1084,47 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                     </div>
                                 </div>
 
-                                <!-- Dropdown 3: Trạng thái -->
-                                <div class="col-12 col-md-4">
+                                <!-- Dropdown 3: Tiêu chí -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light text-muted" title="Lọc theo Tiêu chí"><i class="bi bi-list-task"></i></span>
+                                        <select class="form-select form-select-sm" id="filterCriterion" name="criterion">
+                                            <option value="">-- Tất cả Tiêu chí (<?= count($allCriteriaForFilter) ?>) --</option>
+                                            <?php foreach ($allCriteriaForFilter as $cri): ?>
+                                                <option value="<?= htmlspecialchars($cri['MaTieuChi']) ?>" 
+                                                        data-standard="<?= htmlspecialchars($cri['MaTieuChuan']) ?>"
+                                                        data-set="<?= htmlspecialchars($cri['MaBoTieuChuan']) ?>"
+                                                        <?= $selectedCriterion === (string)$cri['MaTieuChi'] ? 'selected' : '' ?> 
+                                                        title="<?= htmlspecialchars($cri['TenTieuChi']) ?>">
+                                                    <?= htmlspecialchars($cri['MaTieuChi'] . ' - ' . $cri['TenTieuChi']) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Dropdown 4: Minh chứng -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light text-muted" title="Lọc theo Minh chứng"><i class="bi bi-file-earmark-text"></i></span>
+                                        <select class="form-select form-select-sm" id="filterEvidence" name="evidence">
+                                            <option value="">-- Tất cả Minh chứng (<?= count($allEvidencesForFilter) ?>) --</option>
+                                            <?php foreach ($allEvidencesForFilter as $ev): ?>
+                                                <option value="<?= htmlspecialchars($ev['MaMinhChung']) ?>" 
+                                                        data-criterion="<?= htmlspecialchars($ev['MaTieuChi']) ?>"
+                                                        data-standard="<?= htmlspecialchars($ev['MaTieuChuan']) ?>"
+                                                        data-set="<?= htmlspecialchars($ev['MaBoTieuChuan']) ?>"
+                                                        <?= $selectedEvidence === (string)$ev['MaMinhChung'] ? 'selected' : '' ?> 
+                                                        title="<?= htmlspecialchars($ev['TenMinhChung']) ?>">
+                                                    <?= htmlspecialchars($ev['MaMinhChung'] . ' - ' . $ev['TenMinhChung']) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Dropdown 5: Trạng thái -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl">
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text bg-light text-muted" title="Lọc theo Trạng thái"><i class="bi bi-toggle-on"></i></span>
                                         <select class="form-select form-select-sm" id="filterStatus" name="status">
@@ -903,15 +1134,22 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                         </select>
                                     </div>
                                 </div>
+
+                                <!-- Nút Lọc kết quả -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-auto">
+                                    <button type="submit" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center justify-content-center gap-1 shadow-sm w-100" style="height: 31px;" id="btnApplyFilter" title="Áp dụng lọc">
+                                        <i class="bi bi-funnel-fill"></i> Lọc
+                                    </button>
+                                </div>
                             </div>
                             <div class="form-text small text-secondary mt-1">
-                                <i class="bi bi-arrow-repeat text-info"></i> Các ô chọn tự động liên kết và lọc danh sách tương ứng
+                                <i class="bi bi-arrow-repeat text-info"></i> Các ô chọn tự động liên kết danh sách; chọn xong bấm nút <strong>Lọc</strong> để tải kết quả
                             </div>
                         </div>
                     </form>
 
                     <!-- DẢI CHIPS HIỂN THỊ CÁC TIÊU CHÍ ĐANG LỌC -->
-                    <div id="activeFilterTags" class="d-flex flex-wrap align-items-center gap-2 mt-3 pt-3 border-top" style="<?= ($searchKeyword !== '' || $selectedStandardSet !== '' || $selectedStandard !== '' || $selectedStatus !== null) ? '' : 'display: none !important;' ?>">
+                    <div id="activeFilterTags" class="d-flex flex-wrap align-items-center gap-2 mt-3 pt-3 border-top" style="<?= ($searchKeyword !== '' || $selectedStandardSet !== '' || $selectedStandard !== '' || $selectedCriterion !== '' || $selectedEvidence !== '' || $selectedStatus !== null) ? '' : 'display: none !important;' ?>">
                         <span class="text-secondary small fw-semibold"><i class="bi bi-tags"></i> Đang lọc theo:</span>
                         <div id="tagList" class="d-flex flex-wrap gap-2"></div>
                     </div>
@@ -1040,11 +1278,22 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                             title="Sửa Thông tư / Bộ tiêu chuẩn">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <form method="post" class="d-inline" data-confirm-form="Bạn có chắc chắn muốn xóa bộ tiêu chuẩn này? Hệ thống sẽ chặn xóa nếu đã có Tiêu chuẩn con bên trong.">
-                                            <input type="hidden" name="action" value="delete_standard_set">
-                                            <input type="hidden" name="id" value="<?= htmlspecialchars($setId) ?>">
-                                            <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa Bộ tiêu chuẩn"><i class="bi bi-trash"></i></button>
-                                        </form>
+                                        <?php if (!empty($standards) || (int)($set['MinhChungCount'] ?? 0) > 0): ?>
+                                            <?php 
+                                                $reason = !empty($standards) 
+                                                    ? 'Bộ tiêu chuẩn này đang chứa ' . count($standards) . ' tiêu chuẩn con' 
+                                                    : 'Bộ tiêu chuẩn này đang có ' . (int)$set['MinhChungCount'] . ' minh chứng liên kết';
+                                            ?>
+                                            <button class="btn btn-sm btn-outline-secondary opacity-50" type="button" disabled title="Không thể xóa: <?= $reason ?>">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        <?php else: ?>
+                                            <form method="post" class="d-inline" data-confirm-form="Bạn có chắc chắn muốn xóa bộ tiêu chuẩn này?">
+                                                <input type="hidden" name="action" value="delete_standard_set">
+                                                <input type="hidden" name="id" value="<?= htmlspecialchars($setId) ?>">
+                                                <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa Bộ tiêu chuẩn"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -1057,7 +1306,7 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                             <div class="d-flex justify-content-between align-items-center mb-3">
                                                 <div class="d-flex align-items-center gap-2">
                                                     <i class="bi bi-diagram-3-fill text-primary"></i>
-                                                    <h6 class="mb-0 fw-bold text-dark">Quản lý Cấp Tiêu chuẩn (thuộc: <?= htmlspecialchars($set['TenBoTieuChuan']) ?>)</h6>
+                                                    <h6 class="mb-0 fw-bold text-dark">Quản lý Tiêu chuẩn</h6>
                                                     <span class="badge bg-primary-subtle text-primary"><?= count($standards) ?> tiêu chuẩn</span>
                                                 </div>
                                                 <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalAddStandard" data-set-id="<?= htmlspecialchars($setId) ?>" data-set-name="<?= htmlspecialchars($set['TenBoTieuChuan']) ?>">
@@ -1117,11 +1366,17 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                                                                 title="Sửa Tiêu chuẩn">
                                                                                 <i class="bi bi-pencil"></i>
                                                                             </button>
-                                                                            <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa tiêu chuẩn này? Hệ thống sẽ chặn nếu có tiêu chí con.">
-                                                                                <input type="hidden" name="action" value="delete_standard">
-                                                                                <input type="hidden" name="id" value="<?= htmlspecialchars($tcId) ?>">
-                                                                                <button class="btn btn-xs btn-outline-danger" type="submit" title="Xóa Tiêu chuẩn"><i class="bi bi-trash"></i></button>
-                                                                            </form>
+                                                                            <?php if (!empty($criteria)): ?>
+                                                                                <button class="btn btn-xs btn-outline-secondary opacity-50" type="button" disabled title="Không thể xóa: Tiêu chuẩn này đang chứa <?= count($criteria) ?> tiêu chí con">
+                                                                                    <i class="bi bi-trash"></i>
+                                                                                </button>
+                                                                            <?php else: ?>
+                                                                                <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa tiêu chuẩn này?">
+                                                                                    <input type="hidden" name="action" value="delete_standard">
+                                                                                    <input type="hidden" name="id" value="<?= htmlspecialchars($tcId) ?>">
+                                                                                    <button class="btn btn-xs btn-outline-danger" type="submit" title="Xóa Tiêu chuẩn"><i class="bi bi-trash"></i></button>
+                                                                                </form>
+                                                                            <?php endif; ?>
                                                                         </div>
                                                                     </td>
                                                                 </tr>
@@ -1134,7 +1389,7 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                                                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                                                                     <div class="d-flex align-items-center gap-2">
                                                                                         <i class="bi bi-list-task text-success"></i>
-                                                                                        <strong class="small text-dark">Quản lý Cấp Tiêu chí (thuộc: <?= htmlspecialchars($tc['TenTieuChuan']) ?>)</strong>
+                                                                                        <strong class="small text-dark">Quản lý Tiêu chí</strong>
                                                                                         <span class="badge bg-success-subtle text-success small"><?= count($criteria) ?> tiêu chí</span>
                                                                                     </div>
                                                                                     <button class="btn btn-xs btn-success" type="button" data-bs-toggle="modal" data-bs-target="#modalAddCriterion" data-standard-id="<?= htmlspecialchars($tcId) ?>" data-standard-name="<?= htmlspecialchars($tc['TenTieuChuan']) ?>">
@@ -1151,28 +1406,48 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                                                                         <table class="table table-xs table-hover align-middle mb-0">
                                                                                             <thead class="table-secondary">
                                                                                                 <tr>
-                                                                                                    <th style="width: 100px;">Mã Tiêu chí</th>
-                                                                                                    <th style="min-width: 250px;">Tên Tiêu chí</th>
-                                                                                                    <th style="min-width: 250px;">Nội dung / Yêu cầu</th>
-                                                                                                    <th style="width: 140px;" class="text-center">Minh chứng gắn</th>
-                                                                                                    <th style="width: 110px;" class="text-end">Hành động</th>
+                                                                                                    <th style="width: 45px;" class="text-center">Sổ</th>
+                                                                                                    <th style="width: 110px;">Mã Tiêu chí</th>
+                                                                                                    <th style="min-width: 220px;">Tên Tiêu chí</th>
+                                                                                                    <th style="min-width: 220px;">Nội dung / Yêu cầu</th>
+                                                                                                    <th style="width: 140px;" class="text-center">Minh chứng</th>
+                                                                                                    <th style="width: 160px;" class="text-end">Hành động</th>
                                                                                                 </tr>
                                                                                             </thead>
                                                                                             <tbody>
-                                                                                                <?php foreach ($criteria as $tchi): ?>
-                                                                                                    <tr>
-                                                                                                        <td class="fw-bold text-success"><?= htmlspecialchars($tchi['MaTieuChi']) ?></td>
-                                                                                                        <td class="fw-medium"><?= htmlspecialchars($tchi['TenTieuChi']) ?></td>
+                                                                                                <?php foreach ($criteria as $tchi): 
+                                                                                                    $tchiId = $tchi['MaTieuChi'];
+                                                                                                    $evidences = $allEvidencesByCriterion[$tchiId] ?? [];
+                                                                                                ?>
+                                                                                                    <tr class="nested-criterion-row" id="criterion-row-<?= htmlspecialchars($tchiId) ?>">
+                                                                                                        <td class="text-center">
+                                                                                                            <button class="btn btn-xs btn-outline-secondary tree-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-criterion-<?= htmlspecialchars($tchiId) ?>" aria-expanded="false" title="Mở rộng / Thu gọn Minh chứng con">
+                                                                                                                <i class="bi bi-chevron-right" style="font-size: 0.75rem;"></i>
+                                                                                                            </button>
+                                                                                                        </td>
+                                                                                                        <td class="fw-bold text-success"><?= htmlspecialchars($tchiId) ?></td>
+                                                                                                        <td class="fw-semibold">
+                                                                                                            <a class="text-decoration-none text-dark" href="javascript:void(0)" data-bs-toggle="collapse" data-bs-target="#collapse-criterion-<?= htmlspecialchars($tchiId) ?>">
+                                                                                                                <?= htmlspecialchars($tchi['TenTieuChi']) ?>
+                                                                                                            </a>
+                                                                                                        </td>
                                                                                                         <td class="small text-secondary"><?= htmlspecialchars($tchi['NoiDung'] ?: '-') ?></td>
                                                                                                         <td class="text-center">
-                                                                                                            <span class="badge <?= (int)$tchi['total_evidences'] > 0 ? 'bg-primary' : 'bg-light text-muted border' ?>">
-                                                                                                                <?= (int)$tchi['total_evidences'] ?> minh chứng
+                                                                                                            <span class="badge <?= !empty($evidences) ? 'bg-primary' : 'bg-light text-muted border' ?>">
+                                                                                                                <?= count($evidences) ?> minh chứng
                                                                                                             </span>
                                                                                                         </td>
                                                                                                         <td class="text-end">
                                                                                                             <div class="d-inline-flex gap-1">
+                                                                                                                <button class="btn btn-xs btn-outline-success btn-add-evidence" type="button" 
+                                                                                                                    data-bs-toggle="modal" data-bs-target="#modalAddEvidence" 
+                                                                                                                    data-criterion-id="<?= htmlspecialchars($tchiId) ?>" 
+                                                                                                                    data-criterion-name="<?= htmlspecialchars($tchi['TenTieuChi']) ?>"
+                                                                                                                    title="Thêm Minh chứng con">
+                                                                                                                    <i class="bi bi-plus-circle me-1"></i>Minh chứng
+                                                                                                                </button>
                                                                                                                 <button class="btn btn-xs btn-outline-primary btn-edit-criterion" type="button"
-                                                                                                                    data-id="<?= htmlspecialchars($tchi['MaTieuChi']) ?>"
+                                                                                                                    data-id="<?= htmlspecialchars($tchiId) ?>"
                                                                                                                     data-name="<?= htmlspecialchars($tchi['TenTieuChi']) ?>"
                                                                                                                     data-desc="<?= htmlspecialchars($tchi['NoiDung']) ?>"
                                                                                                                     data-order="<?= htmlspecialchars($tchi['ThuTu']) ?>"
@@ -1180,11 +1455,132 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                                                                                                     title="Sửa Tiêu chí">
                                                                                                                     <i class="bi bi-pencil"></i>
                                                                                                                 </button>
-                                                                                                                <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa tiêu chí này? Chỉ xóa được khi chưa gắn minh chứng nào.">
-                                                                                                                    <input type="hidden" name="action" value="delete_criterion">
-                                                                                                                    <input type="hidden" name="id" value="<?= htmlspecialchars($tchi['MaTieuChi']) ?>">
-                                                                                                                    <button class="btn btn-xs btn-outline-danger" type="submit" title="Xóa Tiêu chí"><i class="bi bi-trash"></i></button>
-                                                                                                                </form>
+                                                                                                                <?php if (!empty($evidences)): ?>
+                                                                                                                    <button class="btn btn-xs btn-outline-secondary opacity-50" type="button" disabled title="Không thể xóa: Tiêu chí này đang có <?= count($evidences) ?> minh chứng liên kết">
+                                                                                                                        <i class="bi bi-trash"></i>
+                                                                                                                    </button>
+                                                                                                                <?php else: ?>
+                                                                                                                    <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa tiêu chí này?">
+                                                                                                                        <input type="hidden" name="action" value="delete_criterion">
+                                                                                                                        <input type="hidden" name="id" value="<?= htmlspecialchars($tchiId) ?>">
+                                                                                                                        <button class="btn btn-xs btn-outline-danger" type="submit" title="Xóa Tiêu chí"><i class="bi bi-trash"></i></button>
+                                                                                                                    </form>
+                                                                                                                <?php endif; ?>
+                                                                                                            </div>
+                                                                                                        </td>
+                                                                                                    </tr>
+
+                                                                                                    <!-- LEVEL 4 COLLAPSIBLE CONTAINER: CẤP MINH CHỨNG -->
+                                                                                                    <tr class="p-0 border-0">
+                                                                                                        <td colspan="6" class="p-0 border-0">
+                                                                                                            <div class="collapse" id="collapse-criterion-<?= htmlspecialchars($tchiId) ?>">
+                                                                                                                <div class="p-3 my-1 ms-4 bg-white rounded border shadow-sm">
+                                                                                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                                                                                        <div class="d-flex align-items-center gap-2">
+                                                                                                                            <i class="bi bi-files text-primary"></i>
+                                                                                                                            <strong class="small text-dark">Quản lý Minh chứng</strong>
+                                                                                                                            <span class="badge bg-primary-subtle text-primary small"><?= count($evidences) ?> minh chứng</span>
+                                                                                                                        </div>
+                                                                                                                        <button class="btn btn-xs btn-primary btn-add-evidence" type="button" 
+                                                                                                                            data-bs-toggle="modal" data-bs-target="#modalAddEvidence" 
+                                                                                                                            data-criterion-id="<?= htmlspecialchars($tchiId) ?>" 
+                                                                                                                            data-criterion-name="<?= htmlspecialchars($tchi['TenTieuChi']) ?>">
+                                                                                                                            <i class="bi bi-plus-lg me-1"></i>Thêm Minh chứng
+                                                                                                                        </button>
+                                                                                                                    </div>
+
+                                                                                                                    <?php if (empty($evidences)): ?>
+                                                                                                                        <div class="text-center py-2 text-muted small bg-light rounded border border-dashed">
+                                                                                                                            Chưa có minh chứng nào được gắn cho tiêu chí này. Bấm <strong>"+ Thêm Minh chứng"</strong> để tạo mới.
+                                                                                                                        </div>
+                                                                                                                    <?php else: ?>
+                                                                                                                        <div class="table-responsive bg-white rounded border">
+                                                                                                                            <table class="table table-xs align-middle mb-0">
+                                                                                                                                <thead class="table-light">
+                                                                                                                                    <tr>
+                                                                                                                                        <th style="width: 45px;" class="text-center">STT</th>
+                                                                                                                                        <th style="width: 90px;">Mã MC</th>
+                                                                                                                                        <th style="min-width: 200px;">Tên Minh chứng</th>
+                                                                                                                                        <th style="width: 100px;" class="text-center">Năm học</th>
+                                                                                                                                        <th style="width: 110px;" class="text-center">Ngày ban hành</th>
+                                                                                                                                        <th style="width: 130px;">Tệp đính kèm</th>
+                                                                                                                                        <th style="width: 95px;" class="text-center">Trạng thái</th>
+                                                                                                                                        <th style="width: 90px;" class="text-end">Hành động</th>
+                                                                                                                                    </tr>
+                                                                                                                                </thead>
+                                                                                                                                <tbody>
+                                                                                                                                    <?php 
+                                                                                                                                    $mcIdx = 1;
+                                                                                                                                    foreach ($evidences as $mc): 
+                                                                                                                                        $mcId = $mc['MaMinhChung'];
+                                                                                                                                        $mcFile = $mc['TepTin'];
+                                                                                                                                        $mcIsActive = (int)($mc['TrangThai'] ?? 1) === 1;
+                                                                                                                                        $hasFile = !empty($mcFile) && file_exists(__DIR__ . '/../' . $mcFile);
+                                                                                                                                        $fileExt = $hasFile ? strtolower(pathinfo($mcFile, PATHINFO_EXTENSION)) : '';
+                                                                                                                                        $fileUrl = $hasFile ? base_url($mcFile) : '#';
+                                                                                                                                    ?>
+                                                                                                                                        <tr class="nested-evidence-row" id="evidence-row-<?= htmlspecialchars($mcId) ?>">
+                                                                                                                                            <td class="text-center text-muted small"><?= $mcIdx++ ?></td>
+                                                                                                                                            <td class="fw-bold text-primary"><?= htmlspecialchars($mcId) ?></td>
+                                                                                                                                            <td>
+                                                                                                                                                <div class="fw-medium text-dark"><?= htmlspecialchars($mc['TenMinhChung']) ?></div>
+                                                                                                                                                <?php if (!empty($mc['MoTa'])): ?>
+                                                                                                                                                    <small class="text-muted line-clamp-1"><?= htmlspecialchars($mc['MoTa']) ?></small>
+                                                                                                                                                <?php endif; ?>
+                                                                                                                                            </td>
+                                                                                                                                            <td class="text-center small"><?= htmlspecialchars($mc['NamHoc'] ?: '-') ?></td>
+                                                                                                                                            <td class="text-center small"><?= !empty($mc['NgayBanHanh']) ? date('d/m/Y', strtotime($mc['NgayBanHanh'])) : '-' ?></td>
+                                                                                                                                            <td>
+                                                                                                                                                <?php if ($hasFile): ?>
+                                                                                                                                                    <div class="d-inline-flex gap-1 align-items-center">
+                                                                                                                                                        <?php if ($fileExt === 'pdf'): ?>
+                                                                                                                                                            <button class="btn btn-xs btn-outline-danger btn-view-pdf" type="button" data-pdf-url="<?= htmlspecialchars($fileUrl) ?>" data-pdf-title="<?= htmlspecialchars($mc['TenMinhChung']) ?>" title="Xem tệp PDF">
+                                                                                                                                                                <i class="bi bi-file-earmark-pdf"></i> Xem
+                                                                                                                                                            </button>
+                                                                                                                                                        <?php else: ?>
+                                                                                                                                                            <a href="<?= htmlspecialchars($fileUrl) ?>" target="_blank" class="btn btn-xs btn-outline-secondary" title="Mở / Tải tệp">
+                                                                                                                                                                <i class="bi bi-file-earmark"></i> Tải về
+                                                                                                                                                            </a>
+                                                                                                                                                        <?php endif; ?>
+                                                                                                                                                        <small class="text-muted font-monospace" style="font-size: 0.7rem;">.<?= htmlspecialchars($fileExt) ?></small>
+                                                                                                                                                    </div>
+                                                                                                                                                <?php else: ?>
+                                                                                                                                                    <span class="text-muted small">Không có file</span>
+                                                                                                                                                <?php endif; ?>
+                                                                                                                                            </td>
+                                                                                                                                            <td class="text-center">
+                                                                                                                                                <span class="badge <?= $mcIsActive ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' ?> small">
+                                                                                                                                                    <?= $mcIsActive ? 'Hoạt động' : 'Tạm ẩn' ?>
+                                                                                                                                                </span>
+                                                                                                                                            </td>
+                                                                                                                                            <td class="text-end">
+                                                                                                                                                <div class="d-inline-flex gap-1">
+                                                                                                                                                    <button class="btn btn-xs btn-outline-primary btn-edit-evidence" type="button"
+                                                                                                                                                        data-id="<?= htmlspecialchars($mcId) ?>"
+                                                                                                                                                        data-name="<?= htmlspecialchars($mc['TenMinhChung']) ?>"
+                                                                                                                                                        data-date="<?= htmlspecialchars($mc['NgayBanHanh'] ?? '') ?>"
+                                                                                                                                                        data-namhoc="<?= htmlspecialchars($mc['NamHoc'] ?? '') ?>"
+                                                                                                                                                        data-mota="<?= htmlspecialchars($mc['MoTa'] ?? '') ?>"
+                                                                                                                                                        data-status="<?= $mcIsActive ? '1' : '0' ?>"
+                                                                                                                                                        data-file="<?= htmlspecialchars($mc['TepTin'] ?? '') ?>"
+                                                                                                                                                        data-criterion-id="<?= htmlspecialchars($tchiId) ?>"
+                                                                                                                                                        title="Sửa Minh chứng">
+                                                                                                                                                        <i class="bi bi-pencil"></i>
+                                                                                                                                                    </button>
+                                                                                                                                                    <form method="post" class="d-inline" data-confirm-form="Bạn có chắc chắn muốn xóa minh chứng <?= htmlspecialchars($mcId) ?> này?">
+                                                                                                                                                        <input type="hidden" name="action" value="delete_evidence">
+                                                                                                                                                        <input type="hidden" name="id" value="<?= htmlspecialchars($mcId) ?>">
+                                                                                                                                                        <button class="btn btn-xs btn-outline-danger" type="submit" title="Xóa Minh chứng"><i class="bi bi-trash"></i></button>
+                                                                                                                                                    </form>
+                                                                                                                                                </div>
+                                                                                                                                            </td>
+                                                                                                                                        </tr>
+                                                                                                                                    <?php endforeach; ?>
+                                                                                                                                </tbody>
+                                                                                                                            </table>
+                                                                                                                        </div>
+                                                                                                                    <?php endif; ?>
+                                                                                                                </div>
                                                                                                             </div>
                                                                                                         </td>
                                                                                                     </tr>
@@ -1423,7 +1819,85 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
 </div>
 
 <!-- ==========================================
-     MODAL 4: XEM TRỰC TIẾP FILE PDF THÔNG TƯ
+     MODAL 4: THÊM / SỬA MINH CHỨNG
+=============================================== -->
+<div class="modal fade" id="modalAddEvidence" tabindex="-1" aria-labelledby="modalEvidenceLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="" id="formEvidence" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="save_evidence">
+                <input type="hidden" name="id" id="ev_edit_id" value="">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEvidenceLabel"><i class="bi bi-file-earmark-plus me-2"></i>Thêm mới Minh chứng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Thuộc Tiêu chí <span class="text-danger">*</span></label>
+                            <select name="ma_tieu_chi" id="ev_ma_tchi" class="form-select" required>
+                                <?php foreach ($allStandardsBySet as $setK => $standardsList): ?>
+                                    <?php foreach ($standardsList as $tcItem): 
+                                        $critList = $allCriteriaByStandard[$tcItem['MaTieuChuan']] ?? [];
+                                        if (empty($critList)) continue;
+                                    ?>
+                                        <optgroup label="[<?= htmlspecialchars($setK) ?>] <?= htmlspecialchars($tcItem['MaTieuChuan']) ?> - <?= htmlspecialchars($tcItem['TenTieuChuan']) ?>">
+                                            <?php foreach ($critList as $cItem): ?>
+                                                <option value="<?= htmlspecialchars($cItem['MaTieuChi']) ?>">
+                                                    <?= htmlspecialchars($cItem['MaTieuChi'] . ' - ' . $cItem['TenTieuChi']) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </optgroup>
+                                    <?php endforeach; ?>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Mã Minh chứng <span class="text-danger">*</span></label>
+                            <input type="text" name="ma_minh_chung" id="ev_ma_mc" class="form-control" placeholder="VD: MC01, MC02..." required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Năm học</label>
+                            <input type="text" name="nam_hoc" id="ev_nam_hoc" class="form-control" placeholder="VD: 2025-2026, 2024-2025...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Ngày ban hành</label>
+                            <input type="date" name="ngay_ban_hanh" id="ev_ngay_ban_hanh" class="form-control">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Tên Minh chứng <span class="text-danger">*</span></label>
+                            <input type="text" name="ten_minh_chung" id="ev_ten_mc" class="form-control" placeholder="VD: Quyết định thành lập hội đồng đánh giá..." required>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Mô tả / Trích yếu nội dung</label>
+                            <textarea name="mo_ta" id="ev_mo_ta" class="form-control" rows="2" placeholder="Nhập trích yếu hoặc tóm tắt minh chứng..."></textarea>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">Tệp đính kèm (PDF, DOCX, XLSX...)</label>
+                            <input type="file" name="evidence_file" id="ev_file" class="form-control" accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.jpg,.jpeg,.png">
+                            <div class="form-text small text-muted" id="ev_current_file_text">Tối đa 100MB. Định dạng hỗ trợ: PDF, Word, Excel, ZIP.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Trạng thái</label>
+                            <select name="trang_thai" id="ev_trang_thai" class="form-select">
+                                <option value="1">Đang hoạt động (Hiển thị)</option>
+                                <option value="0">Tạm ẩn</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Lưu Minh chứng</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     MODAL 5: XEM TRỰC TIẾP FILE PDF
 =============================================== -->
 <div class="modal fade" id="modalPdfViewer" tabindex="-1" aria-labelledby="modalPdfViewerLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered pdf-viewer-modal-dialog">
@@ -1558,6 +2032,8 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
 <script>
 window.STANDARD_SETS_FILTER_DATA = <?= json_encode($allSetsForFilter, JSON_UNESCAPED_UNICODE) ?>;
 window.STANDARDS_FILTER_DATA = <?= json_encode($allStandardsForFilter, JSON_UNESCAPED_UNICODE) ?>;
+window.CRITERIA_FILTER_DATA = <?= json_encode($allCriteriaForFilter, JSON_UNESCAPED_UNICODE) ?>;
+window.EVIDENCES_FILTER_DATA = <?= json_encode($allEvidencesForFilter, JSON_UNESCAPED_UNICODE) ?>;
 
 document.addEventListener('DOMContentLoaded', function () {
     // ==============================================
@@ -1568,6 +2044,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const clearKeywordBtn   = document.getElementById('btnClearKeyword');
     const standardSetSelect = document.getElementById('filterStandardSet');
     const standardSelect    = document.getElementById('filterStandard');
+    const criterionSelect   = document.getElementById('filterCriterion');
+    const evidenceSelect    = document.getElementById('filterEvidence');
     const statusSelect      = document.getElementById('filterStatus');
     const btnResetAll       = document.getElementById('btnResetAll');
     const activeTagsBox     = document.getElementById('activeFilterTags');
@@ -1575,8 +2053,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let debounceTimer = null;
 
-    const ALL_SETS_DATA = window.STANDARD_SETS_FILTER_DATA || [];
+    const ALL_SETS_DATA      = window.STANDARD_SETS_FILTER_DATA || [];
     const ALL_STANDARDS_DATA = window.STANDARDS_FILTER_DATA || [];
+    const ALL_CRITERIA_DATA  = window.CRITERIA_FILTER_DATA || [];
+    const ALL_EVIDENCES_DATA = window.EVIDENCES_FILTER_DATA || [];
 
     function escapeHtml(text) {
         if (!text) return '';
@@ -1600,12 +2080,52 @@ document.addEventListener('DOMContentLoaded', function () {
         standardSelect.innerHTML = html;
     }
 
+    // Cập nhật danh sách Tiêu chí theo Bộ tiêu chuẩn & Tiêu chuẩn đã chọn
+    function updateCriteriaDropdown(selectedSetId, selectedStdId, currentCriVal = '') {
+        if (!criterionSelect) return;
+        let filtered = ALL_CRITERIA_DATA;
+        if (selectedStdId) {
+            filtered = filtered.filter(cri => cri.MaTieuChuan === selectedStdId);
+        } else if (selectedSetId) {
+            filtered = filtered.filter(cri => cri.MaBoTieuChuan === selectedSetId);
+        }
+
+        let html = `<option value="">-- Tất cả Tiêu chí (${filtered.length}) --</option>`;
+        filtered.forEach(cri => {
+            const isSel = (currentCriVal && currentCriVal === cri.MaTieuChi) ? 'selected' : '';
+            html += `<option value="${escapeHtml(cri.MaTieuChi)}" data-standard="${escapeHtml(cri.MaTieuChuan)}" data-set="${escapeHtml(cri.MaBoTieuChuan)}" ${isSel} title="${escapeHtml(cri.TenTieuChi)}">${escapeHtml(cri.MaTieuChi)} - ${escapeHtml(cri.TenTieuChi)}</option>`;
+        });
+        criterionSelect.innerHTML = html;
+    }
+
+    // Cập nhật danh sách Minh chứng theo Bộ tiêu chuẩn, Tiêu chuẩn & Tiêu chí đã chọn
+    function updateEvidencesDropdown(selectedSetId, selectedStdId, selectedCriId, currentEvVal = '') {
+        if (!evidenceSelect) return;
+        let filtered = ALL_EVIDENCES_DATA;
+        if (selectedCriId) {
+            filtered = filtered.filter(ev => ev.MaTieuChi === selectedCriId);
+        } else if (selectedStdId) {
+            filtered = filtered.filter(ev => ev.MaTieuChuan === selectedStdId);
+        } else if (selectedSetId) {
+            filtered = filtered.filter(ev => ev.MaBoTieuChuan === selectedSetId);
+        }
+
+        let html = `<option value="">-- Tất cả Minh chứng (${filtered.length}) --</option>`;
+        filtered.forEach(ev => {
+            const isSel = (currentEvVal && currentEvVal === ev.MaMinhChung) ? 'selected' : '';
+            html += `<option value="${escapeHtml(ev.MaMinhChung)}" data-criterion="${escapeHtml(ev.MaTieuChi)}" data-standard="${escapeHtml(ev.MaTieuChuan)}" data-set="${escapeHtml(ev.MaBoTieuChuan)}" ${isSel} title="${escapeHtml(ev.TenMinhChung)}">${escapeHtml(ev.MaMinhChung)} - ${escapeHtml(ev.TenMinhChung)}</option>`;
+        });
+        evidenceSelect.innerHTML = html;
+    }
+
     // Hiển thị Chips lọc đang hoạt động
     function renderActiveFilterTags() {
         if (!activeTagsBox || !tagList) return;
         const kw = keywordInput ? keywordInput.value.trim() : '';
         const setVal = standardSetSelect ? standardSetSelect.value : '';
         const stdVal = standardSelect ? standardSelect.value : '';
+        const criVal = criterionSelect ? criterionSelect.value : '';
+        const evVal  = evidenceSelect ? evidenceSelect.value : '';
         const statusVal = statusSelect ? statusSelect.value : '';
 
         let tags = [];
@@ -1631,6 +2151,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 onRemove: () => {
                     if (standardSetSelect) standardSetSelect.value = '';
                     updateStandardsDropdown('');
+                    updateCriteriaDropdown('', '');
+                    updateEvidencesDropdown('', '', '');
                     if (filterForm) filterForm.submit();
                 }
             });
@@ -1644,6 +2166,35 @@ document.addEventListener('DOMContentLoaded', function () {
                 label: `Tiêu chuẩn: ${stdLabel}`,
                 onRemove: () => {
                     if (standardSelect) standardSelect.value = '';
+                    updateCriteriaDropdown(standardSetSelect ? standardSetSelect.value : '', '');
+                    updateEvidencesDropdown(standardSetSelect ? standardSetSelect.value : '', '', '');
+                    if (filterForm) filterForm.submit();
+                }
+            });
+        }
+
+        if (criVal) {
+            const criObj = ALL_CRITERIA_DATA.find(cri => cri.MaTieuChi === criVal);
+            const criLabel = criObj ? `${criObj.MaTieuChi} - ${criObj.TenTieuChi}` : criVal;
+            tags.push({
+                type: 'criterion',
+                label: `Tiêu chí: ${criLabel}`,
+                onRemove: () => {
+                    if (criterionSelect) criterionSelect.value = '';
+                    updateEvidencesDropdown(standardSetSelect ? standardSetSelect.value : '', standardSelect ? standardSelect.value : '', '');
+                    if (filterForm) filterForm.submit();
+                }
+            });
+        }
+
+        if (evVal) {
+            const evObj = ALL_EVIDENCES_DATA.find(ev => ev.MaMinhChung === evVal);
+            const evLabel = evObj ? `${evObj.MaMinhChung} - ${evObj.TenMinhChung}` : evVal;
+            tags.push({
+                type: 'evidence',
+                label: `Minh chứng: ${evLabel}`,
+                onRemove: () => {
+                    if (evidenceSelect) evidenceSelect.value = '';
                     if (filterForm) filterForm.submit();
                 }
             });
@@ -1685,17 +2236,29 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // Khởi tạo các dropdown liên kết theo tham số URL ban đầu
+    const initSetVal = standardSetSelect ? standardSetSelect.value : '';
+    const initStdVal = standardSelect ? standardSelect.value : '';
+    const initCriVal = criterionSelect ? criterionSelect.value : '';
+    const initEvVal  = evidenceSelect ? evidenceSelect.value : '';
+
+    if (initSetVal) {
+        updateStandardsDropdown(initSetVal, initStdVal);
+    }
+    if (initSetVal || initStdVal) {
+        updateCriteriaDropdown(initSetVal, initStdVal, initCriVal);
+    }
+    if (initSetVal || initStdVal || initCriVal) {
+        updateEvidencesDropdown(initSetVal, initStdVal, initCriVal, initEvVal);
+    }
+
     renderActiveFilterTags();
 
-    // Debounce tìm kiếm khi gõ
+    // Tìm kiếm từ khóa: hiển thị nút xóa khi có nội dung
     if (keywordInput) {
         keywordInput.addEventListener('input', function () {
             const hasVal = this.value.trim() !== '';
             if (clearKeywordBtn) clearKeywordBtn.style.display = hasVal ? 'block' : 'none';
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                if (filterForm) filterForm.submit();
-            }, 450);
         });
     }
 
@@ -1707,16 +2270,17 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Khi chọn Bộ tiêu chuẩn -> Cập nhật dropdown Tiêu chuẩn và submit
+    // Khi chọn Bộ tiêu chuẩn -> Cập nhật danh sách Tiêu chuẩn, Tiêu chí, Minh chứng
     if (standardSetSelect) {
         standardSetSelect.addEventListener('change', function () {
             const setVal = this.value;
-            updateStandardsDropdown(setVal);
-            if (filterForm) filterForm.submit();
+            updateStandardsDropdown(setVal, '');
+            updateCriteriaDropdown(setVal, '', '');
+            updateEvidencesDropdown(setVal, '', '', '');
         });
     }
 
-    // Khi chọn Tiêu chuẩn -> Tự động sync Bộ tiêu chuẩn nếu cần và submit
+    // Khi chọn Tiêu chuẩn -> Tự động sync Bộ tiêu chuẩn nếu cần, cập nhật Tiêu chí & Minh chứng
     if (standardSelect) {
         standardSelect.addEventListener('change', function () {
             const stdVal = this.value;
@@ -1726,14 +2290,51 @@ document.addEventListener('DOMContentLoaded', function () {
                     standardSetSelect.value = stdObj.MaBoTieuChuan;
                 }
             }
-            if (filterForm) filterForm.submit();
+            const currentSetVal = standardSetSelect ? standardSetSelect.value : '';
+            updateCriteriaDropdown(currentSetVal, stdVal, '');
+            updateEvidencesDropdown(currentSetVal, stdVal, '', '');
         });
     }
 
-    // Khi đổi Trạng thái -> Submit
-    if (statusSelect) {
-        statusSelect.addEventListener('change', function () {
-            if (filterForm) filterForm.submit();
+    // Khi chọn Tiêu chí -> Tự động sync Bộ tiêu chuẩn & Tiêu chuẩn nếu cần, cập nhật Minh chứng
+    if (criterionSelect) {
+        criterionSelect.addEventListener('change', function () {
+            const criVal = this.value;
+            if (criVal) {
+                const criObj = ALL_CRITERIA_DATA.find(cri => cri.MaTieuChi === criVal);
+                if (criObj) {
+                    if (criObj.MaBoTieuChuan && standardSetSelect && standardSetSelect.value !== criObj.MaBoTieuChuan) {
+                        standardSetSelect.value = criObj.MaBoTieuChuan;
+                    }
+                    if (criObj.MaTieuChuan && standardSelect && standardSelect.value !== criObj.MaTieuChuan) {
+                        standardSelect.value = criObj.MaTieuChuan;
+                    }
+                }
+            }
+            const currentSetVal = standardSetSelect ? standardSetSelect.value : '';
+            const currentStdVal = standardSelect ? standardSelect.value : '';
+            updateEvidencesDropdown(currentSetVal, currentStdVal, criVal, '');
+        });
+    }
+
+    // Khi chọn Minh chứng -> Tự động sync Bộ tiêu chuẩn, Tiêu chuẩn & Tiêu chí nếu cần
+    if (evidenceSelect) {
+        evidenceSelect.addEventListener('change', function () {
+            const evVal = this.value;
+            if (evVal) {
+                const evObj = ALL_EVIDENCES_DATA.find(ev => ev.MaMinhChung === evVal);
+                if (evObj) {
+                    if (evObj.MaBoTieuChuan && standardSetSelect && standardSetSelect.value !== evObj.MaBoTieuChuan) {
+                        standardSetSelect.value = evObj.MaBoTieuChuan;
+                    }
+                    if (evObj.MaTieuChuan && standardSelect && standardSelect.value !== evObj.MaTieuChuan) {
+                        standardSelect.value = evObj.MaTieuChuan;
+                    }
+                    if (evObj.MaTieuChi && criterionSelect && criterionSelect.value !== evObj.MaTieuChi) {
+                        criterionSelect.value = evObj.MaTieuChi;
+                    }
+                }
+            }
         });
     }
 
@@ -2061,6 +2662,49 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('cri_ma_tc').value = this.dataset.standardId || '';
 
             if (modalCri) modalCri.show();
+        });
+    });
+
+    // 7. Modal Add / Edit Evidence (Minh chứng)
+    const modalEvEl = document.getElementById('modalAddEvidence');
+    const modalEv = modalEvEl ? new bootstrap.Modal(modalEvEl) : null;
+
+    if (modalEvEl) {
+        modalEvEl.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            if (!button || button.classList.contains('btn-edit-evidence')) return;
+            const critId = button.getAttribute('data-criterion-id');
+            if (critId && document.getElementById('ev_ma_tchi')) {
+                document.getElementById('ev_ma_tchi').value = critId;
+            }
+        });
+        modalEvEl.addEventListener('hidden.bs.modal', function () {
+            document.getElementById('formEvidence').reset();
+            document.getElementById('ev_edit_id').value = '';
+            document.getElementById('ev_current_file_text').innerHTML = 'Tối đa 100MB. Định dạng hỗ trợ: PDF, Word, Excel, ZIP.';
+            document.getElementById('modalEvidenceLabel').innerHTML = '<i class="bi bi-file-earmark-plus me-2"></i>Thêm mới Minh chứng';
+        });
+    }
+
+    document.querySelectorAll('.btn-edit-evidence').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.getElementById('ev_edit_id').value = this.dataset.id || '';
+            document.getElementById('ev_ma_mc').value = this.dataset.id || '';
+            document.getElementById('ev_ten_mc').value = this.dataset.name || '';
+            document.getElementById('ev_ngay_ban_hanh').value = this.dataset.date || '';
+            document.getElementById('ev_nam_hoc').value = this.dataset.namhoc || '';
+            document.getElementById('ev_mo_ta').value = this.dataset.mota || '';
+            document.getElementById('ev_trang_thai').value = this.dataset.status || '1';
+            if (this.dataset.criterionId && document.getElementById('ev_ma_tchi')) {
+                document.getElementById('ev_ma_tchi').value = this.dataset.criterionId;
+            }
+            if (this.dataset.file) {
+                document.getElementById('ev_current_file_text').innerHTML = '<span class="text-primary"><i class="bi bi-paperclip"></i> Tệp hiện tại: <strong>' + this.dataset.file.split('/').pop() + '</strong> (Chọn tệp mới nếu muốn thay thế)</span>';
+            } else {
+                document.getElementById('ev_current_file_text').innerHTML = 'Chưa có tệp đính kèm. Chọn tệp để tải lên (Tối đa 100MB).';
+            }
+            document.getElementById('modalEvidenceLabel').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Cập nhật Minh chứng';
+            if (modalEv) modalEv.show();
         });
     });
 });
