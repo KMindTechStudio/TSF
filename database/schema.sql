@@ -125,6 +125,22 @@ CREATE TABLE download_logs (
     CONSTRAINT fk_download_logs_minh_chung FOREIGN KEY (MaMinhChung) REFERENCES MinhChung(MaMinhChung) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 9. Bảng cau_hinh (Cấu hình hệ thống & Thông tin CTĐT)
+CREATE TABLE IF NOT EXISTS cau_hinh (
+    khoa VARCHAR(100) NOT NULL PRIMARY KEY,
+    gia_tri TEXT NULL,
+    ngay_cap_nhat TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO cau_hinh (khoa, gia_tri) VALUES
+('school', 'Trường Đại học Tài chính - Ngân hàng Hà Nội'),
+('faculty', 'Khoa Công nghệ thông tin'),
+('program_name', 'Công nghệ thông tin'),
+('program_code', '7480201'),
+('degree', 'Cử nhân'),
+('cycle', '2026-2031')
+ON DUPLICATE KEY UPDATE gia_tri=VALUES(gia_tri);
+
 -- Khởi tạo danh sách tài khoản cơ sở (Mật khẩu mặc định: 123456)
 INSERT INTO NguoiDung (MaNguoiDung, HoTen, Email, SoDienThoai, TenDangNhap, MatKhau, VaiTro, TrangThai) VALUES
 ('ND001', 'Quản trị viên', 'admin@fbu.edu.vn', '0912345678', 'admin', '$2y$10$JvlJpiWq7KynMo1bP47ptuuZUNRRKwNYJpbip17YDEzsMInyQGk3G', 'admin', 1),

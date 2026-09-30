@@ -6,12 +6,30 @@ $pdo = db();
 $appName = 'Hệ thống Quản lý Minh chứng Kiểm định CTĐT';
 
 $trainingProgram = [
-    'name'   => 'Công nghệ thông tin',
-    'code'   => '7480201',
-    'degree' => 'Cử nhân',
-    'school' => 'Trường Đại học Tài chính - Ngân hàng Hà Nội',
-    'cycle'  => '2026-2031',
+    'name'    => 'Công nghệ thông tin',
+    'code'    => '7480201',
+    'degree'  => 'Cử nhân',
+    'school'  => 'Trường Đại học Tài chính - Ngân hàng Hà Nội',
+    'faculty' => 'Khoa Công nghệ thông tin',
+    'cycle'   => '2026-2031',
 ];
+
+try {
+    $settingsStmt = $pdo->query("SELECT khoa, gia_tri FROM cau_hinh");
+    if ($settingsStmt) {
+        $settingsRows = $settingsStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        if (!empty($settingsRows)) {
+            if (!empty($settingsRows['school']))       $trainingProgram['school']  = $settingsRows['school'];
+            if (!empty($settingsRows['faculty']))      $trainingProgram['faculty'] = $settingsRows['faculty'];
+            if (!empty($settingsRows['program_name'])) $trainingProgram['name']    = $settingsRows['program_name'];
+            if (!empty($settingsRows['program_code'])) $trainingProgram['code']    = $settingsRows['program_code'];
+            if (!empty($settingsRows['degree']))       $trainingProgram['degree']  = $settingsRows['degree'];
+            if (!empty($settingsRows['cycle']))        $trainingProgram['cycle']   = $settingsRows['cycle'];
+        }
+    }
+} catch (Throwable $e) {
+    // Graceful fallback to default configuration
+}
 
 $roles = [
     'admin' => 'Quản trị viên',

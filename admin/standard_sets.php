@@ -4,6 +4,17 @@ require_roles(['admin']);
 require_once __DIR__ . '/../config/database.php';
 
 $pdo = db();
+
+if (!function_exists('match_search_kw')) {
+    function match_search_kw(?string $haystack, string $needle): bool {
+        if ($needle === '' || $haystack === null || $haystack === '') return false;
+        if (function_exists('search_contains')) {
+            return search_contains($haystack, $needle);
+        }
+        return mb_stripos($haystack, $needle, 0, 'UTF-8') !== false;
+    }
+}
+
 $success = '';
 $error = '';
 
@@ -1052,6 +1063,66 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
     border: none;
     border-radius: 8px;
 }
+
+/* Search Result Highlighting & Location Indicator */
+.search-matched-row {
+    background-color: #fef08a !important;
+    border-left: 5px solid #d97706 !important;
+    position: relative;
+    transition: all 0.3s ease;
+}
+.search-matched-row.current-focus-match {
+    background-color: #fde047 !important;
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.5) !important;
+    z-index: 5;
+    animation: searchPulseGlow 1.5s infinite ease-in-out;
+}
+@keyframes searchPulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+    70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+html[data-theme="dark"] .search-matched-row {
+    background-color: #451a03 !important;
+    border-left: 5px solid #f59e0b !important;
+}
+html[data-theme="dark"] .search-matched-row.current-focus-match {
+    background-color: #78350f !important;
+    box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.6) !important;
+}
+.search-matched-text {
+    background: #fef08a;
+    color: #78350f;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    border-bottom: 2px solid #f59e0b;
+    display: inline;
+}
+html[data-theme="dark"] .search-matched-text {
+    background: #854d0e;
+    color: #fef08a;
+    border-bottom-color: #fde047;
+}
+.badge-matched-locator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background-color: #fef08a;
+    color: #854d0e;
+    border: 1px solid #f59e0b;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+html[data-theme="dark"] .badge-matched-locator {
+    background-color: #78350f;
+    color: #fef08a;
+    border-color: #f59e0b;
+}
+
 </style>
 
 <!-- Feedback Alerts -->
@@ -1165,22 +1236,7 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                 <i class="bi bi-diagram-3"></i> Tìm kiếm phân cấp
                             </label>
                             <div class="row g-2 align-items-center">
-                                <!-- Dropdown 1: Bộ Tiêu chuẩn -->
-                                <div class="col-12 col-sm-6 col-md-4 col-xl">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text bg-light text-muted" title="Lọc theo Bộ Tiêu chuẩn"><i class="bi bi-collection"></i></span>
-                                        <select class="form-select form-select-sm" id="filterStandardSet" name="standard_set">
-                                            <option value="">-- Tất cả Bộ Tiêu chuẩn (<?= count($allSetsForFilter) ?>) --</option>
-                                            <?php foreach ($allSetsForFilter as $stSet): ?>
-                                                <option value="<?= htmlspecialchars($stSet['MaBoTieuChuan']) ?>" <?= $selectedStandardSet === (string)$stSet['MaBoTieuChuan'] ? 'selected' : '' ?> title="<?= htmlspecialchars($stSet['TenBoTieuChuan']) ?>">
-                                                    <?= htmlspecialchars($stSet['MaBoTieuChuan'] . ' - ' . $stSet['TenBoTieuChuan']) ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <!-- Dropdown 2: Tiêu chuẩn -->
+                                <!-- Dropdown 1: Tiêu chuẩn -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl">
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text bg-light text-muted" title="Lọc theo Tiêu chuẩn"><i class="bi bi-folder2"></i></span>
@@ -1198,7 +1254,7 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                     </div>
                                 </div>
 
-                                <!-- Dropdown 3: Tiêu chí -->
+                                <!-- Dropdown 2: Tiêu chí -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl">
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text bg-light text-muted" title="Lọc theo Tiêu chí"><i class="bi bi-list-task"></i></span>
@@ -1217,7 +1273,7 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                     </div>
                                 </div>
 
-                                <!-- Dropdown 4: Minh chứng -->
+                                <!-- Dropdown 3: Minh chứng -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl">
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text bg-light text-muted" title="Lọc theo Minh chứng"><i class="bi bi-file-earmark-text"></i></span>
@@ -1237,7 +1293,7 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                     </div>
                                 </div>
 
-                                <!-- Dropdown 5: Trạng thái -->
+                                <!-- Dropdown 4: Trạng thái -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl">
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text bg-light text-muted" title="Lọc theo Trạng thái"><i class="bi bi-toggle-on"></i></span>
@@ -1271,6 +1327,30 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
             </div>
 
             <!-- Main Master-Detail Table -->
+                        <!-- Search Result Navigator Alert -->
+            <?php if ($searchKeyword !== ''): ?>
+                <div class="alert alert-warning border border-warning-subtle shadow-sm rounded-3 py-2 px-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2" id="searchResultsAlert">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="spinner-grow spinner-grow-sm text-warning" role="status"></span>
+                        <span class="fw-bold text-dark">
+                            <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                            Kết quả tìm kiếm cho: <span class="badge bg-dark text-warning fs-7 px-2 py-1">"<?= htmlspecialchars($searchKeyword) ?>"</span>
+                        </span>
+                        <span class="text-secondary small fw-medium" id="searchMatchCountText">(Đang định vị...)</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small d-none d-md-inline">Di chuyển vị trí khớp:</span>
+                        <button type="button" class="btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-1" id="btnPrevMatch" title="Đến kết quả trước">
+                            <i class="bi bi-chevron-up"></i> Trước
+                        </button>
+                        <span class="badge bg-warning text-dark fw-bold" id="matchCurrentIndexBadge">1 / 1</span>
+                        <button type="button" class="btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-1" id="btnNextMatch" title="Đến kết quả tiếp theo">
+                            <i class="bi bi-chevron-down"></i> Sau
+                        </button>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <div class="table-responsive border rounded-3 overflow-hidden">
                 <table class="table standards-table align-middle mb-0" data-paginated="true" data-no-auto-paginate="true">
                     <thead>
@@ -1299,12 +1379,44 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                             $isActive = (int)$set['TrangThai'] === 1;
                             $formattedDate = $set['NgayBanHanh'] ? date('d/m/Y', strtotime($set['NgayBanHanh'])) : '-';
                             $sttNumber = $index + 1 + $offset;
+                        
+                            // Kiểm tra khớp từ khóa tìm kiếm Cấp 1 (Bộ Tiêu chuẩn)
+                            $setMatchesSelf = $searchKeyword !== '' && (
+                                match_search_kw($set['MaBoTieuChuan'], $searchKeyword) ||
+                                match_search_kw($set['TenBoTieuChuan'], $searchKeyword) ||
+                                match_search_kw($set['ThongTu'], $searchKeyword) ||
+                                match_search_kw($set['MoTa'], $searchKeyword)
+                            );
+                            $setHasMatchingChild = false;
+                            if ($searchKeyword !== '' && !empty($standards)) {
+                                foreach ($standards as $tc_chk) {
+                                    if (match_search_kw($tc_chk['MaTieuChuan'], $searchKeyword) || match_search_kw($tc_chk['TenTieuChuan'], $searchKeyword) || match_search_kw($tc_chk['MoTa'], $searchKeyword)) {
+                                        $setHasMatchingChild = true;
+                                        break;
+                                    }
+                                    $cri_chk_list = $allCriteriaByStandard[$tc_chk['MaTieuChuan']] ?? [];
+                                    foreach ($cri_chk_list as $cri_chk) {
+                                        if (match_search_kw($cri_chk['MaTieuChi'], $searchKeyword) || match_search_kw($cri_chk['TenTieuChi'], $searchKeyword) || match_search_kw($cri_chk['NoiDung'], $searchKeyword)) {
+                                            $setHasMatchingChild = true;
+                                            break 2;
+                                        }
+                                        $ev_chk_list = $allEvidencesByCriterion[$cri_chk['MaTieuChi']] ?? [];
+                                        foreach ($ev_chk_list as $ev_chk) {
+                                            if (match_search_kw($ev_chk['MaMinhChung'], $searchKeyword) || match_search_kw($ev_chk['TenMinhChung'], $searchKeyword) || match_search_kw($ev_chk['MoTa'], $searchKeyword) || match_search_kw($ev_chk['NamHoc'], $searchKeyword)) {
+                                                $setHasMatchingChild = true;
+                                                break 3;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            $isSetOpen = ($selectedStandardSet === $setId) || ($searchKeyword !== '' && ($setMatchesSelf || $setHasMatchingChild));
                         ?>
                             <!-- LEVEL 1: THÔNG TƯ / BỘ TIÊU CHUẨN ROW -->
-                            <tr class="table-set-row <?= $isActive ? 'is-active-set' : '' ?>" id="set-row-<?= htmlspecialchars($setId) ?>">
+                            <tr class="table-set-row <?= $isActive ? 'is-active-set' : '' ?> <?= $setMatchesSelf ? 'search-matched-row' : '' ?>" id="set-row-<?= htmlspecialchars($setId) ?>">
                                 <td class="text-center">
                                     <div class="d-inline-flex align-items-center gap-1">
-                                        <button class="btn btn-sm btn-light tree-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-set-<?= htmlspecialchars($setId) ?>" aria-expanded="false" title="Mở rộng / Thu gọn Tiêu chuẩn con">
+                                        <button class="btn btn-sm btn-light tree-toggle-btn <?= $isSetOpen ? 'is-open expanded' : '' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-set-<?= htmlspecialchars($setId) ?>" aria-expanded="<?= $isSetOpen ? 'true' : 'false' ?>" title="Mở rộng / Thu gọn Tiêu chuẩn con">
                                             <i class="bi bi-chevron-right fs-6"></i>
                                         </button>
                                         <span class="fw-bold text-secondary"><?= $sttNumber ?></span>
@@ -1330,7 +1442,7 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                 </td>
                                 <td>
                                     <span class="badge bg-info-subtle text-dark border border-info-subtle fw-semibold">
-                                        <i class="bi bi-file-text me-1"></i><?= htmlspecialchars($set['ThongTu'] ?: 'Chưa nhập số hiệu') ?>
+                                        <i class="bi bi-file-text me-1"></i><?= highlight_search_text($set['ThongTu'] ?: 'Chưa nhập số hiệu', $searchKeyword) ?>
                                     </span>
                                 </td>
                                 <td class="text-center text-nowrap">
@@ -1415,7 +1527,7 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                             <!-- LEVEL 2 COLLAPSIBLE CONTAINER: CẤP TIÊU CHUẨN -->
                             <tr class="p-0 border-0">
                                 <td colspan="7" class="p-0 border-0">
-                                    <div class="collapse" id="collapse-set-<?= htmlspecialchars($setId) ?>">
+                                    <div class="collapse <?= $isSetOpen ? 'show' : '' ?>" id="collapse-set-<?= htmlspecialchars($setId) ?>">
                                         <div class="nested-container mx-3 my-2 shadow-sm">
                                             <div class="d-flex justify-content-between align-items-center mb-3">
                                                 <div class="d-flex align-items-center gap-2">
@@ -1449,10 +1561,34 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                                             <?php foreach ($standards as $tc): 
                                                                 $tcId = $tc['MaTieuChuan'];
                                                                 $criteria = $allCriteriaByStandard[$tcId] ?? [];
+                                                            
+                                                                // Kiểm tra khớp từ khóa tìm kiếm Cấp 2 (Tiêu chuẩn)
+                                                                $stdMatchesSelf = $searchKeyword !== '' && (
+                                                                    match_search_kw($tc['MaTieuChuan'], $searchKeyword) ||
+                                                                    match_search_kw($tc['TenTieuChuan'], $searchKeyword) ||
+                                                                    match_search_kw($tc['MoTa'], $searchKeyword)
+                                                                );
+                                                                $stdHasMatchingChild = false;
+                                                                if ($searchKeyword !== '' && !empty($criteria)) {
+                                                                    foreach ($criteria as $cri_chk) {
+                                                                        if (match_search_kw($cri_chk['MaTieuChi'], $searchKeyword) || match_search_kw($cri_chk['TenTieuChi'], $searchKeyword) || match_search_kw($cri_chk['NoiDung'], $searchKeyword)) {
+                                                                            $stdHasMatchingChild = true;
+                                                                            break;
+                                                                        }
+                                                                        $ev_chk_list = $allEvidencesByCriterion[$cri_chk['MaTieuChi']] ?? [];
+                                                                        foreach ($ev_chk_list as $ev_chk) {
+                                                                            if (match_search_kw($ev_chk['MaMinhChung'], $searchKeyword) || match_search_kw($ev_chk['TenMinhChung'], $searchKeyword) || match_search_kw($ev_chk['MoTa'], $searchKeyword) || match_search_kw($ev_chk['NamHoc'], $searchKeyword)) {
+                                                                                $stdHasMatchingChild = true;
+                                                                                break 2;
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                                $isStdOpen = ($selectedStandard === $tcId) || ($searchKeyword !== '' && ($stdMatchesSelf || $stdHasMatchingChild));
                                                             ?>
-                                                                <tr class="nested-standard-row" id="standard-row-<?= htmlspecialchars($tcId) ?>">
+                                                                <tr class="nested-standard-row <?= $stdMatchesSelf ? 'search-matched-row' : '' ?>" id="standard-row-<?= htmlspecialchars($tcId) ?>">
                                                                     <td class="text-center">
-                                                                        <button class="btn btn-xs btn-outline-secondary tree-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-standard-<?= htmlspecialchars($tcId) ?>" aria-expanded="false" title="Mở rộng / Thu gọn Tiêu chí con">
+                                                                        <button class="btn btn-xs btn-outline-secondary tree-toggle-btn <?= $isStdOpen ? 'is-open expanded' : '' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-standard-<?= htmlspecialchars($tcId) ?>" aria-expanded="<?= $isStdOpen ? 'true' : 'false' ?>" title="Mở rộng / Thu gọn Tiêu chí con">
                                                                             <i class="bi bi-chevron-right" style="font-size: 0.75rem;"></i>
                                                                         </button>
                                                                     </td>
@@ -1498,7 +1634,7 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                                                 <!-- LEVEL 3 COLLAPSIBLE CONTAINER: CẤP TIÊU CHÍ -->
                                                                 <tr class="p-0 border-0">
                                                                     <td colspan="6" class="p-0 border-0">
-                                                                        <div class="collapse" id="collapse-standard-<?= htmlspecialchars($tcId) ?>">
+                                                                        <div class="collapse <?= $isStdOpen ? 'show' : '' ?>" id="collapse-standard-<?= htmlspecialchars($tcId) ?>">
                                                                             <div class="p-3 my-1 ms-4 bg-light rounded border">
                                                                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                                                                     <div class="d-flex align-items-center gap-2">
@@ -1532,10 +1668,27 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                                                                                 <?php foreach ($criteria as $tchi): 
                                                                                                     $tchiId = $tchi['MaTieuChi'];
                                                                                                     $evidences = $allEvidencesByCriterion[$tchiId] ?? [];
+                                                                                                
+                                                                                                    // Kiểm tra khớp từ khóa tìm kiếm Cấp 3 (Tiêu chí)
+                                                                                                    $critMatchesSelf = $searchKeyword !== '' && (
+                                                                                                        match_search_kw($tchi['MaTieuChi'], $searchKeyword) ||
+                                                                                                        match_search_kw($tchi['TenTieuChi'], $searchKeyword) ||
+                                                                                                        match_search_kw($tchi['NoiDung'], $searchKeyword)
+                                                                                                    );
+                                                                                                    $critHasMatchingChild = false;
+                                                                                                    if ($searchKeyword !== '' && !empty($evidences)) {
+                                                                                                        foreach ($evidences as $ev_chk) {
+                                                                                                            if (match_search_kw($ev_chk['MaMinhChung'], $searchKeyword) || match_search_kw($ev_chk['TenMinhChung'], $searchKeyword) || match_search_kw($ev_chk['MoTa'], $searchKeyword) || match_search_kw($ev_chk['NamHoc'], $searchKeyword)) {
+                                                                                                                $critHasMatchingChild = true;
+                                                                                                                break;
+                                                                                                            }
+                                                                                                        }
+                                                                                                    }
+                                                                                                    $isCritOpen = ($selectedCriterion === $tchiId) || ($searchKeyword !== '' && ($critMatchesSelf || $critHasMatchingChild));
                                                                                                 ?>
-                                                                                                    <tr class="nested-criterion-row" id="criterion-row-<?= htmlspecialchars($tchiId) ?>">
+                                                                                                    <tr class="nested-criterion-row <?= $critMatchesSelf ? 'search-matched-row' : '' ?>" id="criterion-row-<?= htmlspecialchars($tchiId) ?>">
                                                                                                         <td class="text-center">
-                                                                                                            <button class="btn btn-xs btn-outline-secondary tree-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-criterion-<?= htmlspecialchars($tchiId) ?>" aria-expanded="false" title="Mở rộng / Thu gọn Minh chứng con">
+                                                                                                            <button class="btn btn-xs btn-outline-secondary tree-toggle-btn <?= $isCritOpen ? 'is-open expanded' : '' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-criterion-<?= htmlspecialchars($tchiId) ?>" aria-expanded="<?= $isCritOpen ? 'true' : 'false' ?>" title="Mở rộng / Thu gọn Minh chứng con">
                                                                                                                 <i class="bi bi-chevron-right" style="font-size: 0.75rem;"></i>
                                                                                                             </button>
                                                                                                         </td>
@@ -1587,7 +1740,7 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                                                                                     <!-- LEVEL 4 COLLAPSIBLE CONTAINER: CẤP MINH CHỨNG -->
                                                                                                     <tr class="p-0 border-0">
                                                                                                         <td colspan="6" class="p-0 border-0">
-                                                                                                            <div class="collapse" id="collapse-criterion-<?= htmlspecialchars($tchiId) ?>">
+                                                                                                            <div class="collapse <?= $isCritOpen ? 'show' : '' ?>" id="collapse-criterion-<?= htmlspecialchars($tchiId) ?>">
                                                                                                                 <div class="p-3 my-1 ms-4 bg-white rounded border shadow-sm">
                                                                                                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                                                                                                         <div class="d-flex align-items-center gap-2">
@@ -1628,12 +1781,18 @@ html[data-theme="dark"] .modern-pagination .page-item .page-link {
                                                                                                                                     foreach ($evidences as $mc): 
                                                                                                                                         $mcId = $mc['MaMinhChung'];
                                                                                                                                         $mcFile = $mc['TepTin'];
-                                                                                                                                        $mcIsActive = (int)($mc['TrangThai'] ?? 1) === 1;
+                                                                                                                                        
+                                                                                                                                        $evMatchesSelf = $searchKeyword !== '' && (
+                                                                                                                                            match_search_kw($mc['MaMinhChung'], $searchKeyword) ||
+                                                                                                                                            match_search_kw($mc['TenMinhChung'], $searchKeyword) ||
+                                                                                                                                            match_search_kw($mc['MoTa'], $searchKeyword) ||
+                                                                                                                                            match_search_kw($mc['NamHoc'], $searchKeyword)
+                                                                                                                                        );$mcIsActive = (int)($mc['TrangThai'] ?? 1) === 1;
                                                                                                                                         $hasFile = !empty($mcFile) && file_exists(__DIR__ . '/../' . $mcFile);
                                                                                                                                         $fileExt = $hasFile ? strtolower(pathinfo($mcFile, PATHINFO_EXTENSION)) : '';
                                                                                                                                         $fileUrl = $hasFile ? base_url($mcFile) : '#';
                                                                                                                                     ?>
-                                                                                                                                        <tr class="nested-evidence-row" id="evidence-row-<?= htmlspecialchars($mcId) ?>">
+                                                                                                                                        <tr class="nested-evidence-row <?= $evMatchesSelf ? 'search-matched-row' : '' ?>" id="evidence-row-<?= htmlspecialchars($mcId) ?>">
                                                                                                                                             <td class="text-center text-muted small"><?= $mcIdx++ ?></td>
                                                                                                                                             <td class="fw-bold text-primary"><?= htmlspecialchars($mcId) ?></td>
                                                                                                                                             <td>
@@ -2260,30 +2419,12 @@ document.addEventListener('DOMContentLoaded', function () {
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
 
-    // Cập nhật danh sách Tiêu chuẩn theo Bộ tiêu chuẩn đã chọn
-    function updateStandardsDropdown(selectedSetId, currentStdVal = '') {
-        if (!standardSelect) return;
-        let filtered = ALL_STANDARDS_DATA;
-        if (selectedSetId) {
-            filtered = ALL_STANDARDS_DATA.filter(tc => tc.MaBoTieuChuan === selectedSetId);
-        }
-
-        let html = `<option value="">-- Tất cả Tiêu chuẩn (${filtered.length}) --</option>`;
-        filtered.forEach(tc => {
-            const isSel = (currentStdVal && currentStdVal === tc.MaTieuChuan) ? 'selected' : '';
-            html += `<option value="${escapeHtml(tc.MaTieuChuan)}" data-set="${escapeHtml(tc.MaBoTieuChuan)}" ${isSel} title="${escapeHtml(tc.TenTieuChuan)}">${escapeHtml(tc.MaTieuChuan)} - ${escapeHtml(tc.TenTieuChuan)}</option>`;
-        });
-        standardSelect.innerHTML = html;
-    }
-
-    // Cập nhật danh sách Tiêu chí theo Bộ tiêu chuẩn & Tiêu chuẩn đã chọn
-    function updateCriteriaDropdown(selectedSetId, selectedStdId, currentCriVal = '') {
+    // Cập nhật danh sách Tiêu chí theo Tiêu chuẩn đã chọn
+    function updateCriteriaDropdown(selectedStdId, currentCriVal = '') {
         if (!criterionSelect) return;
         let filtered = ALL_CRITERIA_DATA;
         if (selectedStdId) {
             filtered = filtered.filter(cri => cri.MaTieuChuan === selectedStdId);
-        } else if (selectedSetId) {
-            filtered = filtered.filter(cri => cri.MaBoTieuChuan === selectedSetId);
         }
 
         let html = `<option value="">-- Tất cả Tiêu chí (${filtered.length}) --</option>`;
@@ -2294,16 +2435,14 @@ document.addEventListener('DOMContentLoaded', function () {
         criterionSelect.innerHTML = html;
     }
 
-    // Cập nhật danh sách Minh chứng theo Bộ tiêu chuẩn, Tiêu chuẩn & Tiêu chí đã chọn
-    function updateEvidencesDropdown(selectedSetId, selectedStdId, selectedCriId, currentEvVal = '') {
+    // Cập nhật danh sách Minh chứng theo Tiêu chuẩn & Tiêu chí đã chọn
+    function updateEvidencesDropdown(selectedStdId, selectedCriId, currentEvVal = '') {
         if (!evidenceSelect) return;
         let filtered = ALL_EVIDENCES_DATA;
         if (selectedCriId) {
             filtered = filtered.filter(ev => ev.MaTieuChi === selectedCriId);
         } else if (selectedStdId) {
             filtered = filtered.filter(ev => ev.MaTieuChuan === selectedStdId);
-        } else if (selectedSetId) {
-            filtered = filtered.filter(ev => ev.MaBoTieuChuan === selectedSetId);
         }
 
         let html = `<option value="">-- Tất cả Minh chứng (${filtered.length}) --</option>`;
@@ -2318,7 +2457,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderActiveFilterTags() {
         if (!activeTagsBox || !tagList) return;
         const kw = keywordInput ? keywordInput.value.trim() : '';
-        const setVal = standardSetSelect ? standardSetSelect.value : '';
         const stdVal = standardSelect ? standardSelect.value : '';
         const criVal = criterionSelect ? criterionSelect.value : '';
         const evVal  = evidenceSelect ? evidenceSelect.value : '';
@@ -2338,22 +2476,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        if (setVal) {
-            const setObj = ALL_SETS_DATA.find(s => s.MaBoTieuChuan === setVal);
-            const setLabel = setObj ? `${setObj.MaBoTieuChuan} - ${setObj.TenBoTieuChuan}` : setVal;
-            tags.push({
-                type: 'set',
-                label: `Bộ: ${setLabel}`,
-                onRemove: () => {
-                    if (standardSetSelect) standardSetSelect.value = '';
-                    updateStandardsDropdown('');
-                    updateCriteriaDropdown('', '');
-                    updateEvidencesDropdown('', '', '');
-                    if (filterForm) filterForm.submit();
-                }
-            });
-        }
-
         if (stdVal) {
             const stdObj = ALL_STANDARDS_DATA.find(tc => tc.MaTieuChuan === stdVal);
             const stdLabel = stdObj ? `${stdObj.MaTieuChuan} - ${stdObj.TenTieuChuan}` : stdVal;
@@ -2362,8 +2484,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 label: `Tiêu chuẩn: ${stdLabel}`,
                 onRemove: () => {
                     if (standardSelect) standardSelect.value = '';
-                    updateCriteriaDropdown(standardSetSelect ? standardSetSelect.value : '', '');
-                    updateEvidencesDropdown(standardSetSelect ? standardSetSelect.value : '', '', '');
+                    updateCriteriaDropdown('');
+                    updateEvidencesDropdown('', '');
                     if (filterForm) filterForm.submit();
                 }
             });
@@ -2377,7 +2499,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 label: `Tiêu chí: ${criLabel}`,
                 onRemove: () => {
                     if (criterionSelect) criterionSelect.value = '';
-                    updateEvidencesDropdown(standardSetSelect ? standardSetSelect.value : '', standardSelect ? standardSelect.value : '', '');
+                    updateEvidencesDropdown(standardSelect ? standardSelect.value : '', '');
                     if (filterForm) filterForm.submit();
                 }
             });
@@ -2433,19 +2555,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Khởi tạo các dropdown liên kết theo tham số URL ban đầu
-    const initSetVal = standardSetSelect ? standardSetSelect.value : '';
     const initStdVal = standardSelect ? standardSelect.value : '';
     const initCriVal = criterionSelect ? criterionSelect.value : '';
     const initEvVal  = evidenceSelect ? evidenceSelect.value : '';
 
-    if (initSetVal) {
-        updateStandardsDropdown(initSetVal, initStdVal);
+    if (initStdVal) {
+        updateCriteriaDropdown(initStdVal, initCriVal);
     }
-    if (initSetVal || initStdVal) {
-        updateCriteriaDropdown(initSetVal, initStdVal, initCriVal);
-    }
-    if (initSetVal || initStdVal || initCriVal) {
-        updateEvidencesDropdown(initSetVal, initStdVal, initCriVal, initEvVal);
+    if (initStdVal || initCriVal) {
+        updateEvidencesDropdown(initStdVal, initCriVal, initEvVal);
     }
 
     renderActiveFilterTags();
@@ -2466,63 +2584,37 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Khi chọn Bộ tiêu chuẩn -> Cập nhật danh sách Tiêu chuẩn, Tiêu chí, Minh chứng
-    if (standardSetSelect) {
-        standardSetSelect.addEventListener('change', function () {
-            const setVal = this.value;
-            updateStandardsDropdown(setVal, '');
-            updateCriteriaDropdown(setVal, '', '');
-            updateEvidencesDropdown(setVal, '', '', '');
-        });
-    }
-
-    // Khi chọn Tiêu chuẩn -> Tự động sync Bộ tiêu chuẩn nếu cần, cập nhật Tiêu chí & Minh chứng
+    // Khi chọn Tiêu chuẩn -> Cập nhật Tiêu chí & Minh chứng
     if (standardSelect) {
         standardSelect.addEventListener('change', function () {
             const stdVal = this.value;
-            if (stdVal) {
-                const stdObj = ALL_STANDARDS_DATA.find(tc => tc.MaTieuChuan === stdVal);
-                if (stdObj && stdObj.MaBoTieuChuan && standardSetSelect && standardSetSelect.value !== stdObj.MaBoTieuChuan) {
-                    standardSetSelect.value = stdObj.MaBoTieuChuan;
-                }
-            }
-            const currentSetVal = standardSetSelect ? standardSetSelect.value : '';
-            updateCriteriaDropdown(currentSetVal, stdVal, '');
-            updateEvidencesDropdown(currentSetVal, stdVal, '', '');
+            updateCriteriaDropdown(stdVal, '');
+            updateEvidencesDropdown(stdVal, '', '');
         });
     }
 
-    // Khi chọn Tiêu chí -> Tự động sync Bộ tiêu chuẩn & Tiêu chuẩn nếu cần, cập nhật Minh chứng
+    // Khi chọn Tiêu chí -> Tự động sync Tiêu chuẩn nếu cần, cập nhật Minh chứng
     if (criterionSelect) {
         criterionSelect.addEventListener('change', function () {
             const criVal = this.value;
             if (criVal) {
                 const criObj = ALL_CRITERIA_DATA.find(cri => cri.MaTieuChi === criVal);
-                if (criObj) {
-                    if (criObj.MaBoTieuChuan && standardSetSelect && standardSetSelect.value !== criObj.MaBoTieuChuan) {
-                        standardSetSelect.value = criObj.MaBoTieuChuan;
-                    }
-                    if (criObj.MaTieuChuan && standardSelect && standardSelect.value !== criObj.MaTieuChuan) {
-                        standardSelect.value = criObj.MaTieuChuan;
-                    }
+                if (criObj && criObj.MaTieuChuan && standardSelect && standardSelect.value !== criObj.MaTieuChuan) {
+                    standardSelect.value = criObj.MaTieuChuan;
                 }
             }
-            const currentSetVal = standardSetSelect ? standardSetSelect.value : '';
             const currentStdVal = standardSelect ? standardSelect.value : '';
-            updateEvidencesDropdown(currentSetVal, currentStdVal, criVal, '');
+            updateEvidencesDropdown(currentStdVal, criVal, '');
         });
     }
 
-    // Khi chọn Minh chứng -> Tự động sync Bộ tiêu chuẩn, Tiêu chuẩn & Tiêu chí nếu cần
+    // Khi chọn Minh chứng -> Tự động sync Tiêu chuẩn & Tiêu chí nếu cần
     if (evidenceSelect) {
         evidenceSelect.addEventListener('change', function () {
             const evVal = this.value;
             if (evVal) {
                 const evObj = ALL_EVIDENCES_DATA.find(ev => ev.MaMinhChung === evVal);
                 if (evObj) {
-                    if (evObj.MaBoTieuChuan && standardSetSelect && standardSetSelect.value !== evObj.MaBoTieuChuan) {
-                        standardSetSelect.value = evObj.MaBoTieuChuan;
-                    }
                     if (evObj.MaTieuChuan && standardSelect && standardSelect.value !== evObj.MaTieuChuan) {
                         standardSelect.value = evObj.MaTieuChuan;
                     }
@@ -2537,7 +2629,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Đặt lại toàn bộ bộ lọc
     if (btnResetAll) {
         btnResetAll.addEventListener('click', function () {
-            window.location.href = '<?= base_url('admin/standard_sets.php') ?>';
+            window.location.href = window.location.pathname;
         });
     }
 

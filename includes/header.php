@@ -35,9 +35,21 @@ $pageTitle = $pageTitle ?? $appName;
                 <h1 class="h4 mb-0"><?= htmlspecialchars($heading ?? $pageTitle) ?></h1>
             </div>
             <div class="topbar-actions">
-                <form class="search-box" action="<?= base_url('user/search.php') ?>" method="get">
+                <?php
+                $isAdminSection = (strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/') !== false);
+                $currScript = basename($_SERVER['PHP_SELF'] ?? '');
+                if ($currScript === 'evidences.php') {
+                    $topSearchAction = base_url('admin/evidences.php');
+                } elseif ($isAdminSection) {
+                    $topSearchAction = base_url('admin/standard_sets.php');
+                } else {
+                    $topSearchAction = base_url('user/search.php');
+                }
+                $topSearchVal = trim($_GET['q'] ?? $_GET['keyword'] ?? $_GET['search'] ?? '');
+                ?>
+                <form class="search-box" action="<?= $topSearchAction ?>" method="get">
                     <i class="bi bi-search"></i>
-                    <input type="search" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" placeholder="Tìm kiếm mã minh chứng, tiêu chí...">
+                    <input type="search" name="q" value="<?= htmlspecialchars($topSearchVal) ?>" placeholder="Tìm kiếm mã bộ (BTC01...), tiêu chuẩn, tiêu chí, minh chứng, tên...">
                 </form>
 
                 <div class="dropdown user-menu">

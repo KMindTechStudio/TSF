@@ -388,6 +388,21 @@ function search_contains(string $haystack, string $needle): bool
     return mb_stripos(normalize_search_text($haystack), normalize_search_text($needle), 0, 'UTF-8') !== false;
 }
 
+function highlight_search_text(?string $text, string $keyword): string
+{
+    if ($text === null || $text === '') {
+        return '';
+    }
+    $escaped = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+    $kw = trim($keyword);
+    if ($kw === '') {
+        return $escaped;
+    }
+    $escapedKw = htmlspecialchars($kw, ENT_QUOTES, 'UTF-8');
+    $kwRegex = preg_quote($escapedKw, '/');
+    return preg_replace('/(' . $kwRegex . ')/iu', '<mark class="search-matched-text">$1</mark>', $escaped);
+}
+
 function user_initials(string $name): string
 {
     $name = trim($name);
@@ -624,10 +639,43 @@ function export_hierarchical_standards_excel(string $filename, array $filter = [
     $params = [];
 
     if ($searchKeyword !== '') {
-        $clauses[] = "(b.MaBoTieuChuan LIKE :k1 OR b.TenBoTieuChuan LIKE :k2 OR b.ThongTu LIKE :k3)";
-        $params['k1'] = "%$searchKeyword%";
-        $params['k2'] = "%$searchKeyword%";
-        $params['k3'] = "%$searchKeyword%";
+        $clauses[] = "(
+            b.MaBoTieuChuan LIKE :kw_b1 
+            OR b.TenBoTieuChuan LIKE :kw_b2 
+            OR b.ThongTu LIKE :kw_b3 
+            OR b.MoTa LIKE :kw_b4
+            OR b.MaBoTieuChuan IN (
+                SELECT tc_s.MaBoTieuChuan FROM TieuChuan tc_s 
+                WHERE tc_s.MaTieuChuan LIKE :kw_tc1 OR tc_s.TenTieuChuan LIKE :kw_tc2 OR tc_s.MoTa LIKE :kw_tc3
+            )
+            OR b.MaBoTieuChuan IN (
+                SELECT tc_c.MaBoTieuChuan FROM TieuChi tchi_s 
+                JOIN TieuChuan tc_c ON tc_c.MaTieuChuan = tchi_s.MaTieuChuan
+                WHERE tchi_s.MaTieuChi LIKE :kw_crit1 OR tchi_s.TenTieuChi LIKE :kw_crit2 OR tchi_s.NoiDung LIKE :kw_crit3
+            )
+            OR b.MaBoTieuChuan IN (
+                SELECT DISTINCT COALESCE(m_s.MaBoTieuChuan, tc_m.MaBoTieuChuan)
+                FROM MinhChung m_s
+                LEFT JOIN TieuChi tchi_m ON tchi_m.MaTieuChi = m_s.MaTieuChi
+                LEFT JOIN TieuChuan tc_m ON tc_m.MaTieuChuan = tchi_m.MaTieuChuan
+                WHERE m_s.MaMinhChung LIKE :kw_ev1 OR m_s.TenMinhChung LIKE :kw_ev2 OR m_s.MoTa LIKE :kw_ev3 OR m_s.NamHoc LIKE :kw_ev4
+            )
+        )";
+        $kwParam = "%$searchKeyword%";
+        $params['kw_b1'] = $kwParam;
+        $params['kw_b2'] = $kwParam;
+        $params['kw_b3'] = $kwParam;
+        $params['kw_b4'] = $kwParam;
+        $params['kw_tc1'] = $kwParam;
+        $params['kw_tc2'] = $kwParam;
+        $params['kw_tc3'] = $kwParam;
+        $params['kw_crit1'] = $kwParam;
+        $params['kw_crit2'] = $kwParam;
+        $params['kw_crit3'] = $kwParam;
+        $params['kw_ev1'] = $kwParam;
+        $params['kw_ev2'] = $kwParam;
+        $params['kw_ev3'] = $kwParam;
+        $params['kw_ev4'] = $kwParam;
     }
     if ($selectedSet !== '') {
         $clauses[] = "b.MaBoTieuChuan = :selected_set";

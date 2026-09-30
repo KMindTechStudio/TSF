@@ -441,176 +441,533 @@ $pageTitle = page_title('Quản lý người dùng');
 $heading   = 'Quản lý người dùng';
 include __DIR__ . '/../includes/header.php';
 ?>
-<?php if ($shouldOpenModal && !$success): ?><script>document.body.dataset.autoOpenModal = 'accountFormModal';</script><?php endif; ?>
-<?php if ($success): ?><div class="alert alert-success alert-dismissible fade show" role="alert"><?= htmlspecialchars($success) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div><?php endif; ?>
-<?php if ($error): ?><div class="alert alert-danger alert-dismissible fade show" role="alert"><?= htmlspecialchars($error) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div><?php endif; ?>
 
+<style>
+/* ============================================================
+   PREMIUM REDESIGNED STYLES FOR USER MANAGEMENT SYSTEM
+============================================================ */
+
+/* Metric Stats Cards */
+.user-stat-card {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 16px;
+    padding: 22px 24px;
+    box-shadow: 0 4px 18px rgba(18, 48, 95, 0.04);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+}
+.user-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(18, 48, 95, 0.1);
+    border-color: rgba(47, 100, 173, 0.35);
+}
+.user-stat-card.active-filter-card {
+    border-color: var(--brand, #2f64ad) !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f0f7ff 100%) !important;
+    box-shadow: 0 0 0 3px rgba(47, 100, 173, 0.15), 0 8px 20px rgba(47, 100, 173, 0.12) !important;
+}
+html[data-theme="dark"] .user-stat-card {
+    background: #132744;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+html[data-theme="dark"] .user-stat-card:hover {
+    border-color: rgba(88, 183, 230, 0.4);
+}
+html[data-theme="dark"] .user-stat-card.active-filter-card {
+    border-color: #58b7e6 !important;
+    background: #19355c !important;
+    box-shadow: 0 0 0 3px rgba(88, 183, 230, 0.25) !important;
+}
+
+.stat-icon-wrapper {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+.stat-icon-blue   { background: rgba(37, 99, 235, 0.12); color: #2563eb; }
+.stat-icon-red    { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+.stat-icon-amber  { background: rgba(217, 119, 6, 0.12); color: #d97706; }
+.stat-icon-green  { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+
+html[data-theme="dark"] .stat-icon-blue   { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+html[data-theme="dark"] .stat-icon-red    { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+html[data-theme="dark"] .stat-icon-amber  { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+html[data-theme="dark"] .stat-icon-green  { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+
+/* Main Users Table Card */
+.user-management-card {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(18, 48, 95, 0.05);
+    padding: 20px 22px;
+    transition: all 0.2s ease;
+}
+html[data-theme="dark"] .user-management-card {
+    background: #132744;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* User Filter Pills */
+.filter-pill-btn {
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.filter-pill-btn:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+    border-color: #94a3b8;
+}
+.filter-pill-btn.active {
+    background: var(--brand, #2f64ad);
+    color: #ffffff !important;
+    border-color: var(--brand, #2f64ad);
+    box-shadow: 0 2px 8px rgba(47, 100, 173, 0.3);
+}
+html[data-theme="dark"] .filter-pill-btn {
+    background: #1a365d;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+}
+html[data-theme="dark"] .filter-pill-btn:hover {
+    background: #234677;
+    color: #ffffff;
+}
+html[data-theme="dark"] .filter-pill-btn.active {
+    background: #58b7e6;
+    color: #06152a !important;
+    border-color: #58b7e6;
+}
+
+/* User Table Elements with Compact & Balanced Proportions */
+.users-table thead th {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 12px 10px;
+    border-bottom: 2px solid #e2e8f0;
+}
+html[data-theme="dark"] .users-table thead th {
+    background: #0d1e36;
+    color: #94a3b8;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+.users-table tbody td {
+    padding: 12px 10px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.88rem;
+}
+html[data-theme="dark"] .users-table tbody td {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+.users-table tbody tr {
+    transition: background-color 0.18s ease;
+}
+.users-table tbody tr:hover {
+    background-color: #f8fbff !important;
+}
+html[data-theme="dark"] .users-table tbody tr:hover {
+    background-color: rgba(88, 183, 230, 0.06) !important;
+}
+
+/* User Identity Display */
+.user-avatar-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #ffffff;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.avatar-bg-admin { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+.avatar-bg-user  { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+
+.copy-code-badge {
+    cursor: pointer;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    transition: all 0.2s ease;
+    padding: 4px 8px !important;
+    font-size: 0.8rem !important;
+}
+.copy-code-badge:hover {
+    transform: scale(1.04);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+/* Action Icon Buttons */
+.user-action-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+.user-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.action-buttons {
+    gap: 4px !important;
+}
+</style>
+
+<?php if ($shouldOpenModal && !$success): ?><script>document.body.dataset.autoOpenModal = 'accountFormModal';</script><?php endif; ?>
+<?php if ($success): ?><div class="alert alert-success alert-dismissible fade show rounded-3 shadow-xs mb-4 p-3" role="alert"><i class="bi bi-check-circle-fill me-2 fs-5 align-middle"></i><?= htmlspecialchars($success) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div><?php endif; ?>
+<?php if ($error): ?><div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-xs mb-4 p-3" role="alert"><i class="bi bi-exclamation-triangle-fill me-2 fs-5 align-middle"></i><?= htmlspecialchars($error) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div><?php endif; ?>
+
+<!-- 1. TOP METRIC STATS CARDS -->
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="metric-card metric-blue">
-            <i class="bi bi-people-fill"></i>
-            <span>Tổng tài khoản</span>
-            <strong class="count-up" data-count-to="<?= $totalUsersCount ?>"><?= $totalUsersCount ?></strong>
-            <small class="text-secondary">Tài khoản trên hệ thống</small>
+    <!-- Card 1: Tổng người dùng -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="user-stat-card" data-quick-filter="all" title="Bấm để hiển thị toàn bộ người dùng">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-secondary small fw-bold text-uppercase">Tổng người dùng</span>
+                <div class="stat-icon-wrapper stat-icon-blue">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-baseline gap-2">
+                <h2 class="h3 fw-bolder mb-0 text-dark count-up" data-count-to="<?= $totalUsersCount ?>"><?= $totalUsersCount ?></h2>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill small px-2.5 py-1">Hệ thống</span>
+            </div>
+            <p class="text-muted small mb-0 mt-3 d-flex align-items-center">
+                <i class="bi bi-person-check text-primary me-2 fs-6"></i>
+                <span>Toàn bộ tài khoản trong CSDL</span>
+            </p>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="metric-card metric-red">
-            <i class="bi bi-shield-lock-fill"></i>
-            <span>Quản trị viên</span>
-            <strong class="count-up" data-count-to="<?= $adminUsersCount ?>"><?= $adminUsersCount ?></strong>
-            <small class="text-secondary">Quyền quản trị cao nhất</small>
+
+    <!-- Card 2: Quản trị viên -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="user-stat-card" data-quick-filter="role-admin" title="Bấm để chỉ lọc Quản trị viên">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-secondary small fw-bold text-uppercase">Quản trị viên</span>
+                <div class="stat-icon-wrapper stat-icon-red">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-baseline gap-2">
+                <h2 class="h3 fw-bolder mb-0 text-danger count-up" data-count-to="<?= $adminUsersCount ?>"><?= $adminUsersCount ?></h2>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small px-2.5 py-1">Admin</span>
+            </div>
+            <p class="text-muted small mb-0 mt-3 d-flex align-items-center">
+                <i class="bi bi-shield-check text-danger me-2 fs-6"></i>
+                <span>Toàn quyền quản trị CSDL</span>
+            </p>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="metric-card metric-amber">
-            <i class="bi bi-person-badge-fill"></i>
-            <span>Người dùng</span>
-            <strong class="count-up" data-count-to="<?= $regularUsersCount ?>"><?= $regularUsersCount ?></strong>
-            <small class="text-secondary">Khai thác dữ liệu CSDL</small>
+
+    <!-- Card 3: Người dùng / Giảng viên -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="user-stat-card" data-quick-filter="role-user" title="Bấm để chỉ lọc Người dùng">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-secondary small fw-bold text-uppercase">Người dùng / GV</span>
+                <div class="stat-icon-wrapper stat-icon-amber">
+                    <i class="bi bi-person-badge-fill"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-baseline gap-2">
+                <h2 class="h3 fw-bolder mb-0 text-warning count-up" data-count-to="<?= $regularUsersCount ?>"><?= $regularUsersCount ?></h2>
+                <span class="badge bg-warning-subtle text-dark border border-warning-subtle rounded-pill small px-2.5 py-1">User</span>
+            </div>
+            <p class="text-muted small mb-0 mt-3 d-flex align-items-center">
+                <i class="bi bi-eye text-warning me-2 fs-6"></i>
+                <span>Khai thác, xem & tra cứu minh chứng</span>
+            </p>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="metric-card metric-green">
-            <i class="bi bi-check-circle-fill"></i>
-            <span>Đang hoạt động</span>
-            <strong class="count-up" data-count-to="<?= $activeUsersCount ?>"><?= $activeUsersCount ?></strong>
-            <small class="text-secondary">Trạng thái kích hoạt</small>
+
+    <!-- Card 4: Đang kích hoạt -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="user-stat-card" data-quick-filter="status-active" title="Bấm để chỉ lọc tài khoản Đang hoạt động">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-secondary small fw-bold text-uppercase">Đang kích hoạt</span>
+                <div class="stat-icon-wrapper stat-icon-green">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-baseline gap-2">
+                <h2 class="h3 fw-bolder mb-0 text-success count-up" data-count-to="<?= $activeUsersCount ?>"><?= $activeUsersCount ?></h2>
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small px-2.5 py-1">Hoạt động</span>
+            </div>
+            <p class="text-muted small mb-0 mt-3 d-flex align-items-center">
+                <i class="bi bi-toggle-on text-success me-2 fs-6"></i>
+                <span>Tài khoản được phép truy cập</span>
+            </p>
         </div>
     </div>
 </div>
 
-<div class="row g-4 accounts-layout">
-    <div class="col-12">
-        <div class="panel accounts-list-panel">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-                <div>
-                    <h2 class="h5 mb-1">Danh sách người dùng</h2>
-                    <p class="text-secondary small mb-0">Quản lý tài khoản, phân quyền và trạng thái người dùng trong hệ thống.</p>
-                </div>
-                <div class="d-flex gap-2">
-                    <a class="btn btn-primary" href="<?= base_url('admin/users.php?create=1') ?>"><i class="bi bi-plus-circle me-1"></i> Thêm người dùng</a>
-                    <a class="btn btn-outline-success" id="exportExcelBtn" href="<?= base_url('admin/users.php?export=excel' . ($searchKeyword !== '' ? '&search=' . urlencode($searchKeyword) : '')) ?>"><i class="bi bi-file-earmark-excel me-1"></i> Xuất Excel</a>
-                </div>
-            </div>
-            <form method="get" action="" class="mb-3" id="userSearchForm">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" id="userSearchInput" class="form-control" placeholder="Nhập mã, họ tên, email, sdt hoặc tên đăng nhập..." value="<?= htmlspecialchars($searchKeyword) ?>">
-                    <?php if ($searchKeyword !== ''): ?>
-                        <a href="<?= base_url('admin/users.php') ?>" class="btn btn-outline-secondary" title="Xóa tìm kiếm"><i class="bi bi-x-lg"></i></a>
-                    <?php endif; ?>
-                    <button class="btn btn-primary" type="submit">Tìm kiếm</button>
-                </div>
-            </form>
-            <div class="table-responsive">
-                <table class="table align-middle" data-page-size="10">
-                    <thead>
-                    <tr>
-                        <th class="text-nowrap" style="width: 120px;">Mã tài khoản</th>
-                        <th style="min-width: 200px;">Họ tên & Người dùng</th>
-                        <th style="min-width: 200px;">Email liên hệ</th>
-                        <th class="text-nowrap" style="width: 140px;">Số điện thoại</th>
-                        <th class="text-nowrap" style="width: 140px;">Tên đăng nhập</th>
-                        <th class="text-nowrap" style="width: 120px;">Mật khẩu</th>
-                        <th class="text-nowrap" style="width: 130px;">Vai trò</th>
-                        <th class="text-nowrap" style="width: 130px;">Trạng thái</th>
-                        <th class="text-end text-nowrap action-cell" style="width: 100px;">Thao tác</th>
-                    </tr>
-                    </thead>
-                    <tbody id="usersTableBody">
-                    <?php foreach ($users as $user): ?>
-                        <tr>
-                            <td class="fw-bold text-nowrap text-primary"><?= htmlspecialchars($user['code']) ?></td>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <?= avatar_html($user['avatar'] ?? null, $user['name'], 'avatar avatar-sm') ?>
-                                    <span class="fw-semibold text-dark"><?= htmlspecialchars($user['name']) ?></span>
-                                </div>
-                            </td>
-                            <td class="text-nowrap"><i class="bi bi-envelope text-muted me-1"></i><?= htmlspecialchars($user['email']) ?></td>
-                            <td class="text-nowrap"><?php if ($user['phone']): ?><i class="bi bi-telephone text-muted me-1"></i><?= htmlspecialchars($user['phone']) ?><?php else: ?><span class="text-muted">-</span><?php endif; ?></td>
-                            <td><code class="px-2 py-1 bg-light border rounded text-primary fw-bold"><?= htmlspecialchars($user['username']) ?></code></td>
-                            <td class="text-nowrap">
-                                <div class="d-inline-flex align-items-center gap-1">
-                                    <span class="text-muted pwd-text" data-masked="true" data-plain="123456">••••••••</span>
-                                    <button type="button" class="btn btn-sm btn-light border-0 p-1 text-secondary toggle-pwd-btn" title="Ẩn/Hiện mật khẩu">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                </div>
-                            </td>
-                            <td class="text-nowrap">
-                                <?php if ($user['role_code'] === 'admin'): ?>
-                                    <span class="badge text-bg-danger px-2.5 py-1.5"><i class="bi bi-shield-lock-fill me-1"></i>Quản trị viên</span>
-                                <?php else: ?>
-                                    <span class="badge text-bg-secondary px-2.5 py-1.5"><i class="bi bi-person-fill me-1"></i>Người dùng</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-nowrap status-cell">
-                                <?php if ($user['id'] === (string) $currentUserId): ?>
-                                    <span class="badge text-bg-success px-2.5 py-1.5" title="Tài khoản của bạn (Đang đăng nhập)">
-                                        <i class="bi bi-check-circle-fill me-1"></i>Đang hoạt động
-                                    </span>
-                                <?php else: ?>
-                                    <form method="post" class="d-inline toggle-status-form">
-                                        <input type="hidden" name="action" value="toggle_user">
-                                        <input type="hidden" name="id" value="<?= htmlspecialchars($user['id']) ?>">
-                                        <button type="button" class="btn p-0 border-0 bg-transparent toggle-status-btn"
-                                                data-user-id="<?= htmlspecialchars($user['id']) ?>"
-                                                data-status="<?= (int) $user['status_raw'] ?>"
-                                                title="Bấm để <?= (int) $user['status_raw'] === 1 ? 'ngưng áp dụng tài khoản' : 'kích hoạt lại tài khoản' ?>">
-                                            <?php if ((int) $user['status_raw'] === 1): ?>
-                                                <span class="badge text-bg-success px-2.5 py-1.5 status-badge" style="cursor: pointer; transition: all 0.2s ease;">
-                                                    <i class="bi bi-check-circle-fill me-1"></i><span class="status-label">Đang hoạt động</span>
-                                                    <i class="bi bi-arrow-repeat ms-1 opacity-75 small"></i>
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="badge text-bg-warning text-dark px-2.5 py-1.5 status-badge" style="cursor: pointer; transition: all 0.2s ease;">
-                                                    <i class="bi bi-dash-circle-fill me-1"></i><span class="status-label">Ngưng áp dụng</span>
-                                                    <i class="bi bi-arrow-repeat ms-1 opacity-75 small"></i>
-                                                </span>
-                                            <?php endif; ?>
-                                        </button>
-                                    </form>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-end action-cell">
-                                <div class="action-buttons d-flex justify-content-end gap-1">
-                                    <?php if ($user['id'] !== (string) $currentUserId): ?>
-                                        <button class="btn btn-sm btn-outline-<?= (int) $user['status_raw'] === 1 ? 'warning' : 'success' ?> toggle-action-btn"
-                                                type="button"
-                                                data-user-id="<?= htmlspecialchars($user['id']) ?>"
-                                                data-status="<?= (int) $user['status_raw'] ?>"
-                                                title="<?= (int) $user['status_raw'] === 1 ? 'Khóa / Ngưng áp dụng' : 'Kích hoạt tài khoản' ?>">
-                                            <i class="bi bi-<?= (int) $user['status_raw'] === 1 ? 'lock' : 'unlock' ?>"></i>
-                                        </button>
-                                    <?php endif; ?>
-                                    <a class="btn btn-sm btn-outline-primary" href="?edit=<?= $user['id'] ?>" title="Sửa tài khoản"><i class="bi bi-pencil"></i></a>
-                                    <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa người dùng này?">
-                                        <input type="hidden" name="action" value="delete_user">
-                                        <input type="hidden" name="id" value="<?= $user['id'] ?>">
-                                        <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa tài khoản"><i class="bi bi-trash"></i></button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                    <tr id="noDataRow" class="<?= !empty($users) ? 'd-none' : '' ?>">
-                        <td colspan="9" class="text-center text-secondary py-4">Không có dữ liệu được ghi</td>
-                    </tr>
-                    </tbody>
-                </table>
+<!-- 2. MAIN USER MANAGEMENT CARD -->
+<div class="user-management-card mb-4">
+    <!-- Header: Title & Actions -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-3 border-bottom mb-4">
+        <div>
+            <h2 class="h5 fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-people text-primary fs-5"></i> Danh sách người dùng hệ thống
+            </h2>
+            <p class="text-secondary small mb-0">Quản lý tài khoản cán bộ giảng viên, phân quyền vai trò và trạng thái hoạt động.</p>
+        </div>
+        <div class="d-flex gap-3">
+            <a class="btn btn-primary d-inline-flex align-items-center gap-2 shadow-sm px-3.5 py-2" href="<?= base_url('admin/users.php?create=1') ?>">
+                <i class="bi bi-person-plus-fill fs-6"></i>
+                <span>Thêm người dùng mới</span>
+            </a>
+            <a class="btn btn-outline-success d-inline-flex align-items-center gap-2 px-3.5 py-2" id="exportExcelBtn" href="<?= base_url('admin/users.php?export=excel' . ($searchKeyword !== '' ? '&search=' . urlencode($searchKeyword) : '')) ?>">
+                <i class="bi bi-file-earmark-excel-fill fs-6"></i>
+                <span>Xuất Excel</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="row g-3 align-items-center mb-4">
+        <!-- Search Input -->
+        <div class="col-12 col-md-5 col-lg-4">
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted px-3"><i class="bi bi-search"></i></span>
+                <input type="text" name="search" id="userSearchInput" class="form-control bg-light border-start-0 ps-1 py-2" placeholder="Tìm theo mã, tên, email, sđt, username..." value="<?= htmlspecialchars($searchKeyword) ?>" autocomplete="off">
+                <button class="btn btn-light border border-start-0 text-muted px-3" type="button" id="btnClearSearch" style="display: <?= $searchKeyword !== '' ? 'block' : 'none' ?>;" title="Xóa tìm kiếm">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
             </div>
         </div>
+
+        <!-- Role Filter Tabs -->
+        <div class="col-12 col-md-7 col-lg-5">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="text-muted small me-1 fw-semibold"><i class="bi bi-funnel me-1"></i>Lọc:</span>
+                <button type="button" class="filter-pill-btn active" data-filter-type="role" data-filter-value="all">
+                    <span>Tất cả (<span id="roleCountAll"><?= $totalUsersCount ?></span>)</span>
+                </button>
+                <button type="button" class="filter-pill-btn" data-filter-type="role" data-filter-value="admin">
+                    <i class="bi bi-shield-lock text-danger"></i>
+                    <span>Quản trị (<span id="roleCountAdmin"><?= $adminUsersCount ?></span>)</span>
+                </button>
+                <button type="button" class="filter-pill-btn" data-filter-type="role" data-filter-value="user">
+                    <i class="bi bi-person text-primary"></i>
+                    <span>Người dùng (<span id="roleCountUser"><?= $regularUsersCount ?></span>)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Result Counter Badge -->
+        <div class="col-12 col-lg-3 text-lg-end">
+            <span class="badge bg-light text-secondary border px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2" id="tableFilterCount">
+                <i class="bi bi-check2-circle text-success fs-6"></i>
+                <span>Hiển thị <strong class="text-dark" id="visibleCountDisplay"><?= count($users) ?></strong> / <?= $totalUsersCount ?> tài khoản</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- Responsive Table -->
+    <div class="table-responsive border rounded-3 overflow-hidden">
+        <table class="table users-table align-middle mb-0" data-page-size="10">
+            <thead>
+                <tr>
+                    <th class="text-center text-nowrap" style="width: 45px;">STT</th>
+                    <th class="text-nowrap" style="width: 95px;">Mã TK</th>
+                    <th style="min-width: 175px;">Họ tên & Người dùng</th>
+                    <th style="min-width: 165px;">Email liên hệ</th>
+                    <th class="text-nowrap" style="width: 110px;">Số điện thoại</th>
+                    <th class="text-nowrap" style="width: 105px;">Tên đăng nhập</th>
+                    <th class="text-nowrap" style="width: 95px;">Mật khẩu</th>
+                    <th class="text-center text-nowrap" style="width: 110px;">Vai trò</th>
+                    <th class="text-center text-nowrap" style="width: 125px;">Trạng thái</th>
+                    <th class="text-end text-nowrap action-cell" style="width: 95px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody">
+            <?php 
+            $stt = 1;
+            foreach ($users as $user): 
+                $isAdmin = ($user['role_code'] === 'admin');
+                $isActive = (int)($user['status_raw'] ?? 1) === 1;
+                $isMe = ($user['id'] === (string)$currentUserId);
+            ?>
+                <tr data-user-role="<?= $isAdmin ? 'admin' : 'user' ?>" data-user-status="<?= $isActive ? '1' : '0' ?>" id="user-row-<?= htmlspecialchars($user['id']) ?>">
+                    <td class="text-center text-muted small fw-medium"><?= $stt++ ?></td>
+                    <td>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1.5 fw-bold copy-code-badge d-inline-flex align-items-center gap-1.5" data-clipboard-text="<?= htmlspecialchars($user['code']) ?>" title="Bấm để sao chép mã">
+                            <span><?= htmlspecialchars($user['code']) ?></span>
+                            <i class="bi bi-copy opacity-50" style="font-size: 0.72rem;"></i>
+                        </span>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div class="user-avatar-circle <?= $isAdmin ? 'avatar-bg-admin' : 'avatar-bg-user' ?>" title="<?= htmlspecialchars($user['name']) ?>">
+                                <?= user_initials($user['name']) ?>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark d-flex align-items-center gap-1.5 mb-0.5">
+                                    <span><?= htmlspecialchars($user['name']) ?></span>
+                                    <?php if ($isMe): ?>
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill" style="font-size: 0.65rem; padding: 2px 6px;">Bạn</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="text-muted small d-flex align-items-center" style="font-size: 0.78rem;">
+                                    <i class="bi bi-shield-check text-secondary me-1"></i>
+                                    <span><?= $isAdmin ? 'Quản trị viên' : 'Cán bộ / GV' ?></span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-nowrap">
+                        <a href="mailto:<?= htmlspecialchars($user['email']) ?>" class="text-decoration-none text-dark d-inline-flex align-items-center hover-primary" title="Gửi email" style="gap: 5px;">
+                            <i class="bi bi-envelope text-primary"></i>
+                            <span class="small font-monospace"><?= htmlspecialchars($user['email']) ?></span>
+                        </a>
+                    </td>
+                    <td class="text-nowrap">
+                        <?php if ($user['phone']): ?>
+                            <a href="tel:<?= htmlspecialchars($user['phone']) ?>" class="text-decoration-none text-dark d-inline-flex align-items-center small font-monospace" title="Gọi điện" style="gap: 5px;">
+                                <i class="bi bi-telephone text-success"></i>
+                                <span><?= htmlspecialchars($user['phone']) ?></span>
+                            </a>
+                        <?php else: ?>
+                            <span class="text-muted small ms-2">-</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <code class="px-2 py-1 bg-light border rounded text-primary fw-bold small"><?= htmlspecialchars($user['username']) ?></code>
+                    </td>
+                    <td class="text-nowrap">
+                        <div class="d-inline-flex align-items-center gap-1.5 bg-light px-2 py-1 rounded-3 border">
+                            <span class="text-muted font-monospace pwd-text small" data-masked="true" data-plain="123456">••••••</span>
+                            <button type="button" class="btn btn-sm btn-link p-0 text-secondary toggle-pwd-btn ms-1" title="Hiện / Ẩn mật khẩu">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="text-center text-nowrap">
+                        <?php if ($isAdmin): ?>
+                            <span class="badge bg-danger text-white px-2.5 py-1.5 rounded-pill shadow-xs d-inline-flex align-items-center gap-1.5" style="font-size: 0.78rem;">
+                                <i class="bi bi-shield-lock-fill"></i>
+                                <span>Quản trị</span>
+                            </span>
+                        <?php else: ?>
+                            <span class="badge bg-secondary-subtle text-secondary border px-2.5 py-1.5 rounded-pill d-inline-flex align-items-center gap-1.5" style="font-size: 0.78rem;">
+                                <i class="bi bi-person-fill"></i>
+                                <span>Người dùng</span>
+                            </span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="text-center text-nowrap status-cell">
+                        <?php if ($isMe): ?>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 rounded-pill d-inline-flex align-items-center gap-1.5" style="font-size: 0.78rem;" title="Tài khoản đang đăng nhập">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span>Hoạt động</span>
+                            </span>
+                        <?php else: ?>
+                            <form method="post" class="d-inline toggle-status-form">
+                                <input type="hidden" name="action" value="toggle_user">
+                                <input type="hidden" name="id" value="<?= htmlspecialchars($user['id']) ?>">
+                                <button type="button" class="btn p-0 border-0 bg-transparent toggle-status-btn"
+                                        data-user-id="<?= htmlspecialchars($user['id']) ?>"
+                                        data-status="<?= (int) $user['status_raw'] ?>"
+                                        title="Bấm để <?= $isActive ? 'ngưng áp dụng tài khoản' : 'kích hoạt lại tài khoản' ?>">
+                                    <?php if ($isActive): ?>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 rounded-pill status-badge d-inline-flex align-items-center gap-1.5" style="font-size: 0.78rem; cursor: pointer; transition: all 0.2s ease;">
+                                            <i class="bi bi-check-circle-fill text-success"></i>
+                                            <span class="status-label">Hoạt động</span>
+                                            <i class="bi bi-arrow-repeat opacity-50 ms-1 small"></i>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1.5 rounded-pill status-badge d-inline-flex align-items-center gap-1.5" style="font-size: 0.78rem; cursor: pointer; transition: all 0.2s ease;">
+                                            <i class="bi bi-dash-circle-fill text-warning"></i>
+                                            <span class="status-label">Khóa</span>
+                                            <i class="bi bi-arrow-repeat opacity-50 ms-1 small"></i>
+                                        </span>
+                                    <?php endif; ?>
+                                </button>
+                            </form>
+                        <?php endif; ?>
+                    </td>
+                    <td class="text-end action-cell">
+                        <div class="action-buttons d-inline-flex justify-content-end gap-1">
+                            <?php if (!$isMe): ?>
+                                <button class="btn btn-sm btn-outline-<?= $isActive ? 'warning' : 'success' ?> user-action-btn toggle-action-btn"
+                                        type="button"
+                                        data-user-id="<?= htmlspecialchars($user['id']) ?>"
+                                        data-status="<?= (int) $user['status_raw'] ?>"
+                                        title="<?= $isActive ? 'Khóa / Ngưng áp dụng' : 'Kích hoạt tài khoản' ?>">
+                                    <i class="bi bi-<?= $isActive ? 'lock' : 'unlock' ?>"></i>
+                                </button>
+                            <?php endif; ?>
+                            <a class="btn btn-sm btn-outline-primary user-action-btn" href="?edit=<?= $user['id'] ?>" title="Chỉnh sửa thông tin tài khoản">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <?php if (!$isMe): ?>
+                                <form method="post" class="d-inline" data-confirm-form="Bạn chắc chắn muốn xóa vĩnh viễn tài khoản người dùng '<?= htmlspecialchars($user['name']) ?>'? Thao tác này không thể hoàn tác.">
+                                    <input type="hidden" name="action" value="delete_user">
+                                    <input type="hidden" name="id" value="<?= $user['id'] ?>">
+                                    <button class="btn btn-sm btn-outline-danger user-action-btn" type="submit" title="Xóa tài khoản này">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            <tr id="noDataRow" class="<?= !empty($users) ? 'd-none' : '' ?>">
+                <td colspan="10" class="text-center text-secondary py-5">
+                    <i class="bi bi-person-x fs-2 d-block mb-2 text-muted"></i>
+                    Không tìm thấy tài khoản người dùng nào phù hợp với điều kiện tìm kiếm
+                </td>
+            </tr>
+            </tbody>
+        </table>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('userSearchInput');
+    const clearSearchBtn = document.getElementById('btnClearSearch');
     const tableBody = document.getElementById('usersTableBody');
     const noDataRow = document.getElementById('noDataRow');
-    if (!searchInput || !tableBody) return;
+    const visibleCountDisplay = document.getElementById('visibleCountDisplay');
+    const filterPills = document.querySelectorAll('.filter-pill-btn[data-filter-type="role"]');
+    const quickStatCards = document.querySelectorAll('.user-stat-card[data-quick-filter]');
+
+    let currentRoleFilter = 'all';
 
     function normalizeText(str) {
         return (str || '')
@@ -623,42 +980,114 @@ document.addEventListener('DOMContentLoaded', function () {
             .trim();
     }
 
-    function filterTable() {
-        const query = normalizeText(searchInput.value);
-        const rows = tableBody.querySelectorAll('tr:not(#noDataRow)');
+    function applyFilters() {
+        const query = normalizeText(searchInput ? searchInput.value : '');
+        const rows = tableBody ? tableBody.querySelectorAll('tr:not(#noDataRow)') : [];
         let visibleCount = 0;
 
         rows.forEach(row => {
-            const codeCell  = row.cells[0]?.textContent || '';
-            const nameCell  = row.cells[1]?.textContent || '';
-            const emailCell = row.cells[2]?.textContent || '';
-            const phoneCell = row.cells[3]?.textContent || '';
-            const userCell  = row.cells[4]?.textContent || '';
-            const textToMatch = normalizeText(codeCell + ' ' + nameCell + ' ' + emailCell + ' ' + phoneCell + ' ' + userCell);
+            const role = row.dataset.userRole || '';
+            const status = row.dataset.userStatus || '';
+            const textToMatch = normalizeText(row.textContent || '');
 
-            if (query === '' || textToMatch.includes(query)) {
+            const matchesSearch = (query === '' || textToMatch.includes(query));
+            let matchesRole = true;
+
+            if (currentRoleFilter === 'admin') {
+                matchesRole = (role === 'admin');
+            } else if (currentRoleFilter === 'user') {
+                matchesRole = (role === 'user');
+            } else if (currentRoleFilter === 'status-active') {
+                matchesRole = (status === '1');
+            }
+
+            if (matchesSearch && matchesRole) {
                 row.dataset.filteredOut = 'false';
+                row.style.display = '';
                 visibleCount++;
             } else {
                 row.dataset.filteredOut = 'true';
+                row.style.display = 'none';
             }
         });
 
         if (noDataRow) {
-            if (visibleCount === 0) {
-                noDataRow.classList.remove('d-none');
-            } else {
-                noDataRow.classList.add('d-none');
-            }
+            noDataRow.classList.toggle('d-none', visibleCount > 0);
         }
-
-        if (typeof refreshTablePaginations === 'function') {
-            refreshTablePaginations();
+        if (visibleCountDisplay) {
+            visibleCountDisplay.textContent = visibleCount;
+        }
+        if (clearSearchBtn) {
+            clearSearchBtn.style.display = (searchInput && searchInput.value.trim() !== '') ? 'block' : 'none';
         }
     }
 
-    searchInput.addEventListener('input', filterTable);
+    if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+    }
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function () {
+            if (searchInput) {
+                searchInput.value = '';
+                applyFilters();
+                searchInput.focus();
+            }
+        });
+    }
 
+    // Role Filter Pill buttons
+    filterPills.forEach(pill => {
+        pill.addEventListener('click', function () {
+            filterPills.forEach(p => p.classList.remove('active'));
+            this.classList.add('active');
+            currentRoleFilter = this.dataset.filterValue;
+
+            // Sync stat card highlight
+            quickStatCards.forEach(c => c.classList.remove('active-filter-card'));
+            applyFilters();
+        });
+    });
+
+    // Quick Stat Cards filter click
+    quickStatCards.forEach(card => {
+        card.addEventListener('click', function () {
+            const filterType = this.dataset.quickFilter;
+            quickStatCards.forEach(c => c.classList.remove('active-filter-card'));
+            this.classList.add('active-filter-card');
+
+            if (filterType === 'all') {
+                currentRoleFilter = 'all';
+                filterPills.forEach(p => p.classList.toggle('active', p.dataset.filterValue === 'all'));
+            } else if (filterType === 'role-admin') {
+                currentRoleFilter = 'admin';
+                filterPills.forEach(p => p.classList.toggle('active', p.dataset.filterValue === 'admin'));
+            } else if (filterType === 'role-user') {
+                currentRoleFilter = 'user';
+                filterPills.forEach(p => p.classList.toggle('active', p.dataset.filterValue === 'user'));
+            } else if (filterType === 'status-active') {
+                currentRoleFilter = 'status-active';
+                filterPills.forEach(p => p.classList.remove('active'));
+            }
+            applyFilters();
+        });
+    });
+
+    // Copy code to clipboard
+    document.querySelectorAll('.copy-code-badge').forEach(badge => {
+        badge.addEventListener('click', function () {
+            const text = this.dataset.clipboardText;
+            if (text && navigator.clipboard) {
+                navigator.clipboard.writeText(text);
+                const originalHtml = this.innerHTML;
+                this.innerHTML = `<span>${text}</span> <i class="bi bi-check-lg text-success ms-1"></i>`;
+                setTimeout(() => {
+                    this.innerHTML = originalHtml;
+                }, 1500);
+            }
+        });
+    });
+
+    // Toggle password view in table
     document.querySelectorAll('.toggle-pwd-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             const parent = this.closest('div');
@@ -671,20 +1100,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 textSpan.dataset.masked = 'false';
                 textSpan.textContent = textSpan.dataset.plain || '123456';
                 textSpan.classList.remove('text-muted');
-                textSpan.classList.add('fw-semibold', 'text-primary');
-                if (icon) icon.className = 'bi bi-eye-slash';
+                textSpan.classList.add('fw-bold', 'text-primary');
+                if (icon) icon.className = 'bi bi-eye-slash text-primary';
             } else {
                 textSpan.dataset.masked = 'true';
                 textSpan.textContent = '••••••••';
-                textSpan.classList.remove('fw-semibold', 'text-primary');
+                textSpan.classList.remove('fw-bold', 'text-primary');
                 textSpan.classList.add('text-muted');
                 if (icon) icon.className = 'bi bi-eye';
             }
         });
     });
 
+    // Modal Password Show/Hide Toggle & Random Generator
     const formPwdInput = document.getElementById('userFormPassword');
     const formPwdToggleBtn = document.getElementById('toggleUserFormPasswordBtn');
+    const btnGenPwd = document.getElementById('btnGenerateRandomPwd');
+
     if (formPwdInput && formPwdToggleBtn) {
         formPwdToggleBtn.addEventListener('click', function () {
             const isPassword = formPwdInput.type === 'password';
@@ -692,6 +1124,22 @@ document.addEventListener('DOMContentLoaded', function () {
             const icon = formPwdToggleBtn.querySelector('i');
             if (icon) {
                 icon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+            }
+        });
+    }
+
+    if (btnGenPwd && formPwdInput) {
+        btnGenPwd.addEventListener('click', function () {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+            let randomPwd = '';
+            for (let i = 0; i < 10; i++) {
+                randomPwd += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            formPwdInput.value = randomPwd;
+            formPwdInput.type = 'text';
+            if (formPwdToggleBtn) {
+                const icon = formPwdToggleBtn.querySelector('i');
+                if (icon) icon.className = 'bi bi-eye-slash';
             }
         });
     }
@@ -880,41 +1328,40 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(data => {
             if (btnElement) btnElement.disabled = false;
             if (data.success) {
-                // Update table row
                 const rows = document.querySelectorAll('#usersTableBody tr');
                 rows.forEach(row => {
                     const statusBtn = row.querySelector(`.toggle-status-btn[data-user-id="${userId}"]`);
                     const actionBtn = row.querySelector(`.toggle-action-btn[data-user-id="${userId}"]`);
                     if (statusBtn) {
+                        row.dataset.userStatus = data.new_status ? '1' : '0';
                         statusBtn.dataset.status = data.new_status;
                         statusBtn.title = data.new_status === 1 ? 'Bấm để ngưng áp dụng tài khoản' : 'Bấm để kích hoạt lại tài khoản';
                         const badge = statusBtn.querySelector('.status-badge');
                         if (badge) {
                             if (data.new_status === 1) {
-                                badge.className = 'badge text-bg-success px-2.5 py-1.5 status-badge';
-                                badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i><span class="status-label">Đang hoạt động</span> <i class="bi bi-arrow-repeat ms-1 opacity-75 small"></i>';
+                                badge.className = 'badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill status-badge d-inline-flex align-items-center gap-2';
+                                badge.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i><span class="status-label">Đang hoạt động</span> <i class="bi bi-arrow-repeat opacity-50 ms-1 small"></i>';
                             } else {
-                                badge.className = 'badge text-bg-warning text-dark px-2.5 py-1.5 status-badge';
-                                badge.innerHTML = '<i class="bi bi-dash-circle-fill me-1"></i><span class="status-label">Ngưng áp dụng</span> <i class="bi bi-arrow-repeat ms-1 opacity-75 small"></i>';
+                                badge.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill status-badge d-inline-flex align-items-center gap-2';
+                                badge.innerHTML = '<i class="bi bi-dash-circle-fill text-warning"></i><span class="status-label">Ngưng áp dụng</span> <i class="bi bi-arrow-repeat opacity-50 ms-1 small"></i>';
                             }
                         }
                     }
                     if (actionBtn) {
                         actionBtn.dataset.status = data.new_status;
                         actionBtn.title = data.new_status === 1 ? 'Khóa / Ngưng áp dụng' : 'Kích hoạt tài khoản';
-                        actionBtn.className = `btn btn-sm btn-outline-${data.new_status === 1 ? 'warning' : 'success'} toggle-action-btn`;
+                        actionBtn.className = `btn btn-sm btn-outline-${data.new_status === 1 ? 'warning' : 'success'} user-action-btn toggle-action-btn`;
                         actionBtn.innerHTML = `<i class="bi bi-${data.new_status === 1 ? 'lock' : 'unlock'}"></i>`;
                     }
                 });
 
                 // Update active metric card count if present
-                const activeCard = document.querySelector('.metric-green .count-up');
+                const activeCard = document.querySelector('.user-stat-card[data-quick-filter="status-active"] .count-up');
                 if (activeCard && typeof data.active_count !== 'undefined') {
                     activeCard.textContent = data.active_count;
                     activeCard.dataset.countTo = data.active_count;
                 }
 
-                // Show toast notification
                 showStatusToast(data.message || 'Cập nhật trạng thái thành công!');
             } else {
                 alert(data.message || 'Có lỗi xảy ra khi cập nhật trạng thái.');
@@ -947,13 +1394,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const toastEl = document.createElement('div');
-        toastEl.className = 'toast align-items-center text-bg-dark border-0 show shadow';
+        toastEl.className = 'toast align-items-center text-bg-dark border-0 show shadow-lg rounded-3';
         toastEl.setAttribute('role', 'alert');
         toastEl.setAttribute('aria-live', 'assertive');
         toastEl.setAttribute('aria-atomic', 'true');
         toastEl.innerHTML = `
             <div class="d-flex">
-                <div class="toast-body d-flex align-items-center gap-2">
+                <div class="toast-body d-flex align-items-center gap-2.5 py-2.5 px-3">
                     <i class="bi bi-check-circle-fill text-success fs-5"></i>
                     <span>${message}</span>
                 </div>
@@ -969,17 +1416,25 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<!-- MODAL: TẠO / SỬA NGƯỜI DÙNG -->
 <div class="modal fade management-form-modal" id="accountFormModal" tabindex="-1" aria-labelledby="accountFormModalLabel" aria-hidden="true" <?= $shouldOpenModal ? 'data-auto-open-modal' : '' ?>>
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title h5" id="accountFormModalLabel"><?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? 'Cập nhật người dùng' : 'Tạo người dùng mới' ?></h2>
+        <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            <div class="modal-header bg-light border-bottom py-3 px-4">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="stat-icon-wrapper stat-icon-blue ms-0 me-2" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                        <i class="bi bi-person-gear"></i>
+                    </div>
+                    <h2 class="modal-title h5 fw-bold mb-0 text-dark" id="accountFormModalLabel">
+                        <?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? 'Cập nhật thông tin người dùng' : 'Tạo mới người dùng hệ thống' ?>
+                    </h2>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <?php if ($error && !empty($failedFormData)): ?>
-                    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i><?= htmlspecialchars($error) ?>
+                    <div class="alert alert-danger alert-dismissible fade show mb-3 rounded-3 p-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2 fs-5 align-middle"></i><?= htmlspecialchars($error) ?>
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
                     </div>
                 <?php endif; ?>
@@ -988,66 +1443,97 @@ document.addEventListener('DOMContentLoaded', function () {
                     <input type="hidden" name="id" id="userFormId" value="<?= htmlspecialchars($formValues['id']) ?>">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label" for="userFormCode">Mã người dùng <span class="text-danger">*</span> <span class="badge bg-light text-primary border ms-1"><i class="bi bi-shield-check me-1"></i>Duy nhất</span></label>
-                            <input class="form-control" id="userFormCode" name="ma_nguoi_dung" value="<?= htmlspecialchars($formValues['MaNguoiDung']) ?>" placeholder="VD: <?= htmlspecialchars($suggestedUserCode) ?>" required autocomplete="off">
+                            <label class="form-label fw-semibold small mb-1.5" for="userFormCode">Mã tài khoản <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted px-3"><i class="bi bi-upc-scan"></i></span>
+                                <input class="form-control py-2" id="userFormCode" name="ma_nguoi_dung" value="<?= htmlspecialchars($formValues['MaNguoiDung']) ?>" placeholder="VD: <?= htmlspecialchars($suggestedUserCode) ?>" required autocomplete="off">
+                            </div>
                             <div class="invalid-feedback" id="userCodeFeedback">Mã người dùng này đã tồn tại trong hệ thống.</div>
-                            <div class="form-text text-muted small"><i class="bi bi-info-circle me-1"></i>Mã định danh duy nhất (PK).</div>
+                            <div class="form-text text-muted small mt-1"><i class="bi bi-info-circle me-1"></i>Mã định danh duy nhất (PK).</div>
                         </div>
                         <div class="col-md-8">
-                            <label class="form-label">Họ tên <span class="text-danger">*</span></label>
-                            <input class="form-control" name="ho_ten" value="<?= htmlspecialchars($formValues['HoTen']) ?>" placeholder="Nhập họ tên" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="userFormEmail">Email <span class="text-danger">*</span> <span class="badge bg-light text-primary border ms-1"><i class="bi bi-shield-check me-1"></i>Duy nhất</span></label>
-                            <input class="form-control" type="email" id="userFormEmail" name="email" value="<?= htmlspecialchars($formValues['Email']) ?>" placeholder="example@fbu.edu.vn" required autocomplete="off">
-                            <div class="invalid-feedback" id="userEmailFeedback">Email này đã tồn tại trong hệ thống.</div>
-                            <div class="form-text text-muted small" id="userEmailHelper"><i class="bi bi-info-circle me-1"></i>Email duy nhất trong toàn hệ thống.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Số điện thoại</label>
-                            <input class="form-control" name="sdt" value="<?= htmlspecialchars($formValues['SoDienThoai']) ?>" placeholder="VD: 0912345678">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="userFormUsername">Tên đăng nhập <span class="text-danger">*</span> <span class="badge bg-light text-primary border ms-1"><i class="bi bi-shield-check me-1"></i>Duy nhất</span></label>
-                            <input class="form-control" id="userFormUsername" name="ten_dang_nhap" value="<?= htmlspecialchars($formValues['TenDangNhap']) ?>" placeholder="Nhập tên đăng nhập" required autocomplete="off">
-                            <div class="invalid-feedback" id="userUsernameFeedback">Tên đăng nhập này đã tồn tại trong hệ thống.</div>
-                            <div class="form-text text-muted small"><i class="bi bi-info-circle me-1"></i>Tên đăng nhập duy nhất để truy cập.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label"><?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? 'Mật khẩu mới' : 'Mật khẩu' ?> <?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? '' : '<span class="text-danger">*</span>' ?></label>
+                            <label class="form-label fw-semibold small mb-1.5">Họ và tên <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <input class="form-control" name="password" id="userFormPassword" type="password" placeholder="<?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? 'Để trống nếu giữ nguyên' : 'Nhập mật khẩu' ?>" <?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? '' : 'required' ?>>
-                                <button class="btn btn-outline-secondary" type="button" id="toggleUserFormPasswordBtn" title="Hiện/Ẩn mật khẩu">
+                                <span class="input-group-text bg-light text-muted px-3"><i class="bi bi-person"></i></span>
+                                <input class="form-control py-2" name="ho_ten" value="<?= htmlspecialchars($formValues['HoTen']) ?>" placeholder="Nhập họ tên (VD: PGS.TS. Lê Hoàng Nam)" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small mb-1.5" for="userFormEmail">Email liên hệ <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted px-3"><i class="bi bi-envelope"></i></span>
+                                <input class="form-control py-2" type="email" id="userFormEmail" name="email" value="<?= htmlspecialchars($formValues['Email']) ?>" placeholder="example@fbu.edu.vn" required autocomplete="off">
+                            </div>
+                            <div class="invalid-feedback" id="userEmailFeedback">Email này đã tồn tại trong hệ thống.</div>
+                            <div class="form-text text-muted small mt-1" id="userEmailHelper"><i class="bi bi-shield-check me-1"></i>Email duy nhất trong toàn hệ thống.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small mb-1.5">Số điện thoại</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted px-3"><i class="bi bi-telephone"></i></span>
+                                <input class="form-control py-2" name="sdt" value="<?= htmlspecialchars($formValues['SoDienThoai']) ?>" placeholder="VD: 0912345678">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small mb-1.5" for="userFormUsername">Tên đăng nhập <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted px-3"><i class="bi bi-person-badge"></i></span>
+                                <input class="form-control py-2" id="userFormUsername" name="ten_dang_nhap" value="<?= htmlspecialchars($formValues['TenDangNhap']) ?>" placeholder="Nhập tên đăng nhập" required autocomplete="off">
+                            </div>
+                            <div class="invalid-feedback" id="userUsernameFeedback">Tên đăng nhập này đã tồn tại trong hệ thống.</div>
+                            <div class="form-text text-muted small mt-1"><i class="bi bi-info-circle me-1"></i>Dùng để đăng nhập vào hệ thống.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-1.5">
+                                <label class="form-label fw-semibold small mb-0"><?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? 'Mật khẩu mới' : 'Mật khẩu' ?> <?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? '' : '<span class="text-danger">*</span>' ?></label>
+                                <button type="button" class="btn btn-link btn-xs p-0 text-decoration-none" id="btnGenerateRandomPwd" style="font-size: 0.8rem;">
+                                    <i class="bi bi-magic me-1"></i>Tạo ngẫu nhiên
+                                </button>
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted px-3"><i class="bi bi-key"></i></span>
+                                <input class="form-control py-2" name="password" id="userFormPassword" type="password" placeholder="<?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? 'Để trống nếu giữ nguyên' : 'Nhập mật khẩu' ?>" <?= ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))) ? '' : 'required' ?>>
+                                <button class="btn btn-outline-secondary px-3" type="button" id="toggleUserFormPasswordBtn" title="Hiện/Ẩn mật khẩu">
                                     <i class="bi bi-eye"></i>
                                 </button>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Vai trò</label>
-                            <select class="form-select" name="vai_tro">
-                                <option value="admin" <?= ($formValues['VaiTro']) === 'admin' ? 'selected' : '' ?>>Quản trị viên</option>
-                                <option value="user" <?= ($formValues['VaiTro']) === 'user' ? 'selected' : '' ?>>Người dùng</option>
-                            </select>
+                            <label class="form-label fw-semibold small mb-1.5">Phân quyền vai trò</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted px-3"><i class="bi bi-shield-check"></i></span>
+                                <select class="form-select py-2" name="vai_tro">
+                                    <option value="admin" <?= ($formValues['VaiTro']) === 'admin' ? 'selected' : '' ?>>Quản trị viên (Toàn quyền)</option>
+                                    <option value="user" <?= ($formValues['VaiTro']) === 'user' ? 'selected' : '' ?>>Người dùng (Xem & tra cứu CSDL)</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Trạng thái</label>
-                            <select class="form-select" name="trang_thai">
-                                <option value="1" <?= (int) ($formValues['TrangThai']) === 1 ? 'selected' : '' ?>>Đang hoạt động</option>
-                                <option value="0" <?= (int) ($formValues['TrangThai']) === 0 ? 'selected' : '' ?>>Ngưng áp dụng</option>
-                            </select>
+                            <label class="form-label fw-semibold small mb-1.5">Trạng thái tài khoản</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted px-3"><i class="bi bi-toggle-on"></i></span>
+                                <select class="form-select py-2" name="trang_thai">
+                                    <option value="1" <?= (int) ($formValues['TrangThai']) === 1 ? 'selected' : '' ?>>Đang hoạt động (Kích hoạt)</option>
+                                    <option value="0" <?= (int) ($formValues['TrangThai']) === 0 ? 'selected' : '' ?>>Ngưng áp dụng (Tạm khóa)</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                    <div class="d-flex gap-2 justify-content-end mt-4">
+                    <div class="d-flex gap-3 justify-content-end mt-4 pt-3 border-top">
                         <?php if ($editingUser || (!empty($failedFormData) && !empty($failedFormData['id']))): ?>
-                            <a class="btn btn-outline-secondary" href="<?= base_url('admin/users.php') ?>">Hủy sửa</a>
+                            <a class="btn btn-outline-secondary px-3.5 py-2" href="<?= base_url('admin/users.php') ?>">Hủy sửa</a>
                         <?php else: ?>
-                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Hủy</button>
+                            <button class="btn btn-outline-secondary px-3.5 py-2" type="button" data-bs-dismiss="modal">Đóng</button>
                         <?php endif; ?>
-                        <button class="btn btn-primary" id="saveUserSubmitBtn" type="submit"><i class="bi bi-save me-1"></i> Lưu người dùng</button>
+                        <button class="btn btn-primary px-4 py-2 shadow-sm d-inline-flex align-items-center gap-2" id="saveUserSubmitBtn" type="submit">
+                            <i class="bi bi-check2-circle fs-6"></i>
+                            <span>Lưu thông tin người dùng</span>
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
 <?php include __DIR__ . '/../includes/footer.php'; ?>
