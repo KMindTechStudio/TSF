@@ -785,9 +785,9 @@ html[data-theme="dark"] .modern-pagination .page-item.disabled .page-link {
                                 <td class="text-center">
                                     <?php if (!empty($set['TepTinPDF'])): ?>
                                         <div class="d-inline-flex gap-1">
-                                            <button type="button" class="btn btn-sm btn-outline-danger btn-view-pdf" data-pdf-url="<?= base_url(htmlspecialchars($set['TepTinPDF'])) ?>" data-pdf-title="<?= htmlspecialchars($set['ThongTu'] . ' - ' . $set['TenBoTieuChuan']) ?>" title="Xem chi tiết file PDF trực tiếp">
+                                            <a class="btn btn-sm btn-outline-danger" href="<?= base_url('user/view.php?standard_set=' . urlencode($setId)) ?>" target="_blank" title="Xem chi tiết file PDF ở tab mới">
                                                 <i class="bi bi-file-earmark-pdf me-1"></i>Xem chi tiết
-                                            </button>
+                                            </a>
                                             <a class="btn btn-sm btn-light text-secondary" href="<?= base_url(htmlspecialchars($set['TepTinPDF'])) ?>" target="_blank" download title="Tải file PDF">
                                                 <i class="bi bi-download"></i>
                                             </a>
@@ -989,10 +989,14 @@ html[data-theme="dark"] .modern-pagination .page-item.disabled .page-link {
                                                                                                                                                 <?php if ($hasFile): ?>
                                                                                                                                                     <div class="d-inline-flex gap-1 align-items-center">
                                                                                                                                                         <?php if ($fileExt === 'pdf'): ?>
-                                                                                                                                                             <button class="btn btn-xs btn-outline-danger btn-view-pdf" type="button" data-pdf-url="<?= htmlspecialchars($fileUrl) ?>" data-pdf-title="<?= htmlspecialchars($mc['TenMinhChung']) ?>" title="Xem tệp PDF">
-                                                                                                                                                                 <i class="bi bi-file-earmark-pdf"></i> Xem
-                                                                                                                                                             </button>
-                                                                                                                                                        <?php endif; ?>
+                                                                                                                            <a class="btn btn-xs btn-outline-danger" href="<?= base_url('user/view.php?id=' . urlencode($mcId)) ?>" target="_blank" title="Xem tệp PDF ở tab mới">
+                                                                                                                                <i class="bi bi-file-earmark-pdf"></i> Xem
+                                                                                                                            </a>
+                                                                                                                        <?php else: ?>
+                                                                                                                            <a class="btn btn-xs btn-outline-secondary" href="<?= base_url('user/view.php?id=' . urlencode($mcId)) ?>" target="_blank" title="Xem tệp ở tab mới">
+                                                                                                                                <i class="bi bi-eye"></i> Xem
+                                                                                                                            </a>
+                                                                                                                        <?php endif; ?>
                                                                                                                                                         <a href="<?= htmlspecialchars($downloadUrl) ?>" class="btn btn-xs btn-outline-secondary" title="Tải tệp đính kèm">
                                                                                                                                                             <i class="bi bi-download"></i> Tải về
                                                                                                                                                         </a>
@@ -2010,6 +2014,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const downloadUrl = btn.dataset.downloadUrl || '#';
         const fileName = btn.dataset.fileName || '';
         const fileExt = btn.dataset.fileExt || '';
+        const viewUrl = btn.dataset.viewUrl || (hasFile ? `<?= base_url('user/view.php?id=') ?>${encodeURIComponent(id)}` : '#');
 
         setSafeText('view_ev_id_badge', id);
         setSafeText('view_ev_id', id);
@@ -2043,7 +2048,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             </div>
                         </div>
                         <div class="d-flex gap-2">
-                            ${isPdf ? `<button type="button" class="btn btn-sm btn-outline-danger btn-view-pdf" data-pdf-url="${escapeHtml(fileUrl)}" data-pdf-title="${escapeHtml(name)}"><i class="bi bi-eye me-1"></i>Xem PDF</button>` : ''}
+                            ${isPdf ? `<a href="${escapeHtml(viewUrl)}" target="_blank" class="btn btn-sm btn-outline-danger" title="Xem file PDF ở tab mới"><i class="bi bi-eye me-1"></i>Xem PDF</a>` : `<a href="${escapeHtml(viewUrl)}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Mở file ở tab mới"><i class="bi bi-box-arrow-up-right me-1"></i>Xem file</a>`}
                             <a href="${escapeHtml(downloadUrl)}" class="btn btn-sm btn-primary">
                                 <i class="bi bi-download me-1"></i>Tải về
                             </a>
