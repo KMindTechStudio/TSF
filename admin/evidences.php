@@ -33,6 +33,8 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
                 $ev['set_name'] ?? '',
                 $ev['issue_date_formatted'] ?? '',
                 $ev['issue_date'] ?? '',
+                $ev['updated'] ?? '',
+                $ev['user_name'] ?? '',
                 $ev['file_path'] ?? '',
             ]);
             if (!search_contains($haystack, $searchKeyword)) return false;
@@ -50,14 +52,16 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
     $stt = 1;
     foreach ($exportList as $ev) {
         $exportData[] = [
-            'stt'        => $stt++,
-            'code'       => $ev['code'],
-            'name'       => $ev['name'],
-            'standard'   => $ev['standard_name'] ? ($ev['ma_tieu_chuan'] . ' - ' . $ev['standard_name']) : '-',
-            'criterion'  => $ev['criterion_name'] ? ($ev['ma_tieu_chi'] . ' - ' . $ev['criterion_name']) : '-',
-            'issue_date' => !empty($ev['issue_date_formatted']) ? $ev['issue_date_formatted'] : (!empty($ev['issue_date']) ? date('d/m/Y', strtotime($ev['issue_date'])) : '-'),
-            'file_name'  => !empty($ev['file_path']) ? basename($ev['file_path']) : 'Không có',
-            'status'     => $ev['status'] ?? 'Đang hoạt động',
+            'stt'          => $stt++,
+            'code'         => $ev['code'],
+            'name'         => $ev['name'],
+            'standard'     => $ev['standard_name'] ? ($ev['ma_tieu_chuan'] . ' - ' . $ev['standard_name']) : '-',
+            'criterion'    => $ev['criterion_name'] ? ($ev['ma_tieu_chi'] . ' - ' . $ev['criterion_name']) : '-',
+            'issue_date'   => !empty($ev['issue_date_formatted']) ? $ev['issue_date_formatted'] : (!empty($ev['issue_date']) ? date('d/m/Y', strtotime($ev['issue_date'])) : '-'),
+            'updated_date' => !empty($ev['updated']) ? $ev['updated'] : '-',
+            'user_name'    => !empty($ev['user_name']) ? $ev['user_name'] : 'Quản trị viên',
+            'file_name'    => !empty($ev['file_path']) ? basename($ev['file_path']) : 'Không có',
+            'status'       => $ev['status'] ?? 'Đang hoạt động',
         ];
     }
 
@@ -68,6 +72,8 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
         ['key' => 'standard', 'label' => 'Tiêu chuẩn', 'align' => 'left', 'width' => '220px'],
         ['key' => 'criterion', 'label' => 'Tiêu chí', 'align' => 'left', 'width' => '220px'],
         ['key' => 'issue_date', 'label' => 'Ngày ban hành văn bản', 'align' => 'center', 'width' => '160px'],
+        ['key' => 'updated_date', 'label' => 'Ngày cập nhật', 'align' => 'center', 'width' => '150px'],
+        ['key' => 'user_name', 'label' => 'Người cập nhật', 'align' => 'left', 'width' => '180px'],
         ['key' => 'file_name', 'label' => 'File đính kèm', 'align' => 'left', 'width' => '180px'],
         ['key' => 'status', 'label' => 'Trạng thái', 'align' => 'center', 'width' => '130px'],
     ];
@@ -178,7 +184,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $title          = trim($_POST['ten_minh_chung'] ?? '');
         $ngayBanHanh    = trim($_POST['ngay_ban_hanh'] ?? '') ?: null;
         $maTieuChi      = trim($_POST['ma_tieu_chi'] ?? '') ?: null;
-        $userId         = $_SESSION['user_id'] ?? 'ND001';
+        $userId         = $_SESSION['user_id'] ?? (function_exists('current_user') ? current_user()['id'] : 'ND001');
         $status         = isset($_POST['trang_thai']) ? (int) $_POST['trang_thai'] : 1;
         $status         = in_array($status, [0, 1], true) ? $status : 1;
 
@@ -230,7 +236,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     }
 
                     if ($relativePath) {
-                        $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, TepTin = :file, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id WHERE MaMinhChung = :old_code');
+                        $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, TepTin = :file, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
                         $stmt->execute([
                             'new_code'      => $maMinhChung,
                             'title'         => $title,
@@ -243,7 +249,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                             'old_code'      => $rawId,
                         ]);
                     } else {
-                        $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id WHERE MaMinhChung = :old_code');
+                        $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
                         $stmt->execute([
                             'new_code'      => $maMinhChung,
                             'title'         => $title,
@@ -268,7 +274,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         throw new RuntimeException('Mã minh chứng "' . $maMinhChung . '" đã tồn tại. Vui lòng nhập mã khác.');
                     }
 
-                    $stmt = $pdo->prepare('INSERT INTO MinhChung (MaMinhChung, TenMinhChung, NgayBanHanh, TepTin, TrangThai, MaTieuChi, MaBoTieuChuan, MaNguoiDung) VALUES (:code, :title, :ngay_ban_hanh, :file, :status, :tchi, :set_id, :user_id)');
+                    $stmt = $pdo->prepare('INSERT INTO MinhChung (MaMinhChung, TenMinhChung, NgayBanHanh, TepTin, TrangThai, MaTieuChi, MaBoTieuChuan, MaNguoiDung, NgayCapNhat) VALUES (:code, :title, :ngay_ban_hanh, :file, :status, :tchi, :set_id, :user_id, NOW())');
                     $stmt->execute([
                         'code'          => $maMinhChung,
                         'title'         => $title,
@@ -307,7 +313,12 @@ $viewId = trim($_GET['view'] ?? '');
 
 $editingEvidence = null;
 if ($editId !== '') {
-    $stmt = $pdo->prepare('SELECT * FROM MinhChung WHERE MaMinhChung = :id LIMIT 1');
+    $stmt = $pdo->prepare('
+        SELECT m.*, u.HoTen AS user_name, u.TenDangNhap AS username, u.VaiTro AS user_role
+        FROM MinhChung m
+        LEFT JOIN NguoiDung u ON u.MaNguoiDung = m.MaNguoiDung
+        WHERE m.MaMinhChung = :id LIMIT 1
+    ');
     $stmt->execute(['id' => $editId]);
     $editingEvidence = $stmt->fetch();
 }
@@ -315,7 +326,7 @@ if ($editId !== '') {
 $viewingEvidence = null;
 if ($viewId !== '') {
     $stmt = $pdo->prepare('
-        SELECT m.*, u.HoTen AS user_name, tc.TenTieuChuan AS standard_name, tchi.TenTieuChi AS criterion_name, b.TenBoTieuChuan AS set_name
+        SELECT m.*, u.HoTen AS user_name, u.TenDangNhap AS username, u.VaiTro AS user_role, tc.TenTieuChuan AS standard_name, tchi.TenTieuChi AS criterion_name, b.TenBoTieuChuan AS set_name
         FROM MinhChung m
         LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = m.MaTieuChi
         LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan
@@ -668,10 +679,12 @@ html[data-theme="dark"] .evidence-card {
                         <tr>
                             <th class="text-center text-nowrap" style="width: 50px;">STT</th>
                             <th class="text-nowrap" style="width: 110px;">Mã minh chứng</th>
-                            <th style="width: 32%; min-width: 260px;">Tên minh chứng</th>
-                            <th style="width: 22%; min-width: 200px;">Tiêu chuẩn &amp; Tiêu chí</th>
-                            <th class="text-center text-nowrap" style="width: 125px;">Ngày ban hành</th>
-                            <th class="text-center text-nowrap" style="width: 140px;">File đính kèm</th>
+                            <th style="width: 25%; min-width: 230px;">Tên minh chứng</th>
+                            <th style="width: 18%; min-width: 180px;">Tiêu chuẩn &amp; Tiêu chí</th>
+                            <th class="text-center text-nowrap" style="width: 115px;">Ngày ban hành</th>
+                            <th class="text-center text-nowrap" style="width: 130px;">Ngày cập nhật</th>
+                            <th class="text-nowrap" style="width: 140px;">Người cập nhật</th>
+                            <th class="text-center text-nowrap" style="width: 120px;">File đính kèm</th>
                             <th class="text-center text-nowrap" style="width: 125px;">Trạng thái</th>
                             <th class="text-end text-nowrap" style="width: 110px;">Thao tác</th>
                         </tr>
@@ -681,6 +694,9 @@ html[data-theme="dark"] .evidence-card {
                     $stt = 1;
                     foreach ($filteredEvidences as $item): 
                         $formattedDate = !empty($item['issue_date_formatted']) ? $item['issue_date_formatted'] : (!empty($item['issue_date']) ? date('d/m/Y', strtotime($item['issue_date'])) : '-');
+                        $formattedUpdated = !empty($item['updated']) ? $item['updated'] : '-';
+                        $updaterName = !empty($item['user_name']) ? $item['user_name'] : 'Quản trị viên';
+                        $updaterRole = ($item['user_role'] ?? 'admin') === 'admin' ? 'Quản trị viên' : 'Người dùng';
                     ?>
                         <tr>
                             <td class="text-center text-secondary fw-semibold"><?= $stt++ ?></td>
@@ -716,6 +732,22 @@ html[data-theme="dark"] .evidence-card {
                                 <span class="badge bg-light text-secondary border px-2 py-1 fs-7">
                                     <i class="bi bi-calendar3 me-1 text-primary"></i><?= htmlspecialchars($formattedDate) ?>
                                 </span>
+                            </td>
+                            <td class="text-center text-nowrap">
+                                <span class="badge bg-light text-secondary border px-2 py-1 fs-7" title="Thời gian cập nhật gần nhất">
+                                    <i class="bi bi-clock-history me-1 text-info"></i><?= htmlspecialchars($formattedUpdated) ?>
+                                </span>
+                            </td>
+                            <td class="text-nowrap">
+                                <div class="d-flex flex-column">
+                                    <span class="fw-semibold text-dark fs-7 d-flex align-items-center gap-1" title="<?= htmlspecialchars($updaterName) ?>">
+                                        <i class="bi bi-person-fill text-primary" style="font-size: 0.85rem;"></i>
+                                        <span class="text-truncate" style="max-width: 130px;"><?= htmlspecialchars($updaterName) ?></span>
+                                    </span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-1.5 py-0 mt-0.5 align-self-start" style="font-size: 0.65rem;">
+                                        <?= htmlspecialchars($updaterRole) ?>
+                                    </span>
+                                </div>
                             </td>
                             <td class="text-center text-nowrap">
                                 <?php if (!empty($item['file_path'])): ?>
@@ -770,6 +802,10 @@ html[data-theme="dark"] .evidence-card {
                                         data-name="<?= htmlspecialchars($item['name']) ?>"
                                         data-date="<?= htmlspecialchars($item['issue_date'] ?? '') ?>"
                                         data-date-formatted="<?= htmlspecialchars($formattedDate) ?>"
+                                        data-updated="<?= htmlspecialchars($formattedUpdated) ?>"
+                                        data-user="<?= htmlspecialchars($updaterName) ?>"
+                                        data-user-role="<?= htmlspecialchars($updaterRole) ?>"
+                                        data-username="<?= htmlspecialchars($item['username'] ?? '') ?>"
                                         data-criterion="<?= htmlspecialchars($item['ma_tieu_chi'] ?? '') ?>"
                                         data-criterion-name="<?= htmlspecialchars($item['criterion_name'] ?? '') ?>"
                                         data-standard="<?= htmlspecialchars($item['ma_tieu_chuan'] ?? '') ?>"
@@ -789,6 +825,10 @@ html[data-theme="dark"] .evidence-card {
                                             data-id="<?= htmlspecialchars($item['code']) ?>"
                                             data-name="<?= htmlspecialchars($item['name']) ?>"
                                             data-date="<?= htmlspecialchars($item['issue_date'] ?? '') ?>"
+                                            data-updated="<?= htmlspecialchars($formattedUpdated) ?>"
+                                            data-user="<?= htmlspecialchars($updaterName) ?>"
+                                            data-user-role="<?= htmlspecialchars($updaterRole) ?>"
+                                            data-username="<?= htmlspecialchars($item['username'] ?? '') ?>"
                                             data-criterion="<?= htmlspecialchars($item['ma_tieu_chi'] ?? '') ?>"
                                             data-file="<?= htmlspecialchars($item['file_path'] ?? '') ?>"
                                             data-file-name="<?= htmlspecialchars(basename($item['file_path'] ?? '')) ?>"
@@ -807,7 +847,7 @@ html[data-theme="dark"] .evidence-card {
                         </tr>
                     <?php endforeach; ?>
                     <?php if (empty($filteredEvidences)): ?>
-                        <tr><td colspan="8" class="text-center text-secondary py-5"><i class="bi bi-inbox fs-2 d-block mb-2 text-muted"></i>Không tìm thấy dữ liệu minh chứng nào phù hợp với điều kiện lọc.</td></tr>
+                        <tr><td colspan="10" class="text-center text-secondary py-5"><i class="bi bi-inbox fs-2 d-block mb-2 text-muted"></i>Không tìm thấy dữ liệu minh chứng nào phù hợp với điều kiện lọc.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
@@ -842,6 +882,32 @@ html[data-theme="dark"] .evidence-card {
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Ngày ban hành văn bản <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" name="ngay_ban_hanh" id="form_ngay_ban_hanh" value="<?= htmlspecialchars($editingEvidence['NgayBanHanh'] ?? '') ?>" required>
+                        </div>
+
+                        <!-- Cụm Người cập nhật & Ngày cập nhật (Tự động) -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold"><i class="bi bi-person-badge text-primary me-1"></i>Người cập nhật (Tự động)</label>
+                            <div class="p-2.5 rounded bg-light border d-flex align-items-center justify-content-between" style="min-height: 42px;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary text-white font-monospace" id="form_display_user_role"><?= htmlspecialchars($currentUser['role_name'] ?? 'Quản trị viên') ?></span>
+                                    <span class="fw-semibold text-dark small" id="form_display_user_name"><?= htmlspecialchars($currentUser['name'] ?? 'Quản trị viên') ?></span>
+                                    <span class="text-muted small font-monospace" id="form_display_username">(<?= htmlspecialchars($currentUser['username'] ?? 'admin') ?>)</span>
+                                </div>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;"><i class="bi bi-check-circle-fill me-1"></i>Tự động</span>
+                            </div>
+                            <div class="form-text small text-muted">Tự động ghi nhận theo tài khoản Quản trị viên đang thao tác.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold"><i class="bi bi-clock-history text-success me-1"></i>Ngày cập nhật (Tự động)</label>
+                            <div class="p-2.5 rounded bg-light border d-flex align-items-center justify-content-between" style="min-height: 42px;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-calendar2-check-fill text-success"></i>
+                                    <span class="fw-bold text-dark small font-monospace" id="form_display_updated_date"><?= date('d/m/Y H:i:s') ?> (GMT+7)</span>
+                                </div>
+                                <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.72rem;"><i class="bi bi-globe-asia-australia me-1"></i>Giờ Việt Nam</span>
+                            </div>
+                            <div class="form-text small text-muted">Tự động lấy theo thời gian thực tế tại Việt Nam khi lưu.</div>
                         </div>
 
                         <!-- Cụm chọn Tiêu chí -> Tự động hiển thị Tiêu chuẩn -->
@@ -948,6 +1014,12 @@ html[data-theme="dark"] .evidence-card {
                             <span class="badge bg-primary px-2 py-1 font-monospace fs-7" id="view_detail_code"><?= htmlspecialchars($viewingEvidence['MaMinhChung'] ?? '') ?></span>
                             <span class="badge bg-light text-secondary border px-2 py-1 fs-7" id="view_detail_date">
                                 <i class="bi bi-calendar3 me-1 text-primary"></i>Ngày ban hành: <?= !empty($viewingEvidence['NgayBanHanh']) ? date('d/m/Y', strtotime($viewingEvidence['NgayBanHanh'])) : '-' ?>
+                            </span>
+                            <span class="badge bg-light text-secondary border px-2 py-1 fs-7" id="view_detail_updated_date">
+                                <i class="bi bi-clock-history me-1 text-info"></i>Ngày cập nhật: <?= !empty($viewingEvidence['NgayCapNhat']) ? date('d/m/Y H:i', strtotime($viewingEvidence['NgayCapNhat'])) : '-' ?>
+                            </span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fs-7" id="view_detail_user">
+                                <i class="bi bi-person-fill me-1"></i>Người cập nhật: <?= htmlspecialchars($viewingEvidence['user_name'] ?? 'Quản trị viên') ?>
                             </span>
                             <span id="view_detail_status">
                                 <?php if ((int)($viewingEvidence['TrangThai'] ?? 1) === 1): ?>
@@ -1100,6 +1172,36 @@ document.addEventListener('DOMContentLoaded', function () {
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
 
+    // Helper format thời gian thực tại Việt Nam (GMT+7)
+    function getVietnamTimeFormatted() {
+        const now = new Date();
+        const options = {
+            timeZone: 'Asia/Ho_Chi_Minh',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        };
+        try {
+            const parts = new Intl.DateTimeFormat('vi-VN', options).formatToParts(now);
+            const getVal = type => (parts.find(p => p.type === type) || {}).value || '';
+            return `${getVal('day')}/${getVal('month')}/${getVal('year')} ${getVal('hour')}:${getVal('minute')}:${getVal('second')}`;
+        } catch (e) {
+            return now.toLocaleString('vi-VN');
+        }
+    }
+
+    // Cập nhật đồng hồ thời gian thực tại Việt Nam trên form mỗi giây
+    setInterval(function () {
+        const timeDisplay = document.getElementById('form_display_updated_date');
+        if (timeDisplay) {
+            timeDisplay.textContent = getVietnamTimeFormatted() + ' (GMT+7)';
+        }
+    }, 1000);
+
     const modalFormEl = document.getElementById('evidenceFormModal');
     const modalForm = modalFormEl ? new bootstrap.Modal(modalFormEl) : null;
     const modalViewEl = document.getElementById('evidenceViewModal');
@@ -1149,6 +1251,11 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('form_evidence_file').value = '';
             document.getElementById('evidenceFormModalLabel').innerHTML = '<i class="bi bi-folder-plus fs-5 text-white me-2"></i>Thêm mới Minh chứng';
             document.getElementById('form_file_help_text').innerHTML = 'Hỗ trợ định dạng: <strong>PDF, PNG, JPG, JPEG, WEBP, DOCX</strong> (Tối đa 100MB).';
+            
+            const timeDisplay = document.getElementById('form_display_updated_date');
+            if (timeDisplay) {
+                timeDisplay.textContent = getVietnamTimeFormatted() + ' (GMT+7)';
+            }
             if (selectTieuChi) selectTieuChi.value = '';
             updateAutoStandardDisplay();
         });
@@ -1163,6 +1270,11 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('form_ngay_ban_hanh').value = data.date || '';
         document.getElementById('form_trang_thai').value = data.status || '1';
         document.getElementById('form_evidence_file').value = '';
+
+        const timeDisplay = document.getElementById('form_display_updated_date');
+        if (timeDisplay) {
+            timeDisplay.textContent = getVietnamTimeFormatted() + ' (GMT+7)';
+        }
 
         if (selectTieuChi) {
             selectTieuChi.value = data.criterion || '';
@@ -1202,6 +1314,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const name = this.dataset.name || '';
             const date = this.dataset.dateFormatted || (this.dataset.date || '-');
             const rawDate = this.dataset.date || '';
+            const updated = this.dataset.updated || '-';
+            const user = this.dataset.user || 'Quản trị viên';
             const criterion = this.dataset.criterion || '';
             const criterionName = this.dataset.criterionName || '';
             const standard = this.dataset.standard || '';
@@ -1226,6 +1340,16 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('view_detail_code').textContent = id;
             document.getElementById('view_detail_name').textContent = name;
             document.getElementById('view_detail_date').innerHTML = `<i class="bi bi-calendar3 me-1 text-primary"></i>Ngày ban hành: ${date}`;
+            
+            const updatedEl = document.getElementById('view_detail_updated_date');
+            if (updatedEl) {
+                updatedEl.innerHTML = `<i class="bi bi-clock-history me-1 text-info"></i>Ngày cập nhật: ${escapeHtml(updated)}`;
+            }
+            
+            const userEl = document.getElementById('view_detail_user');
+            if (userEl) {
+                userEl.innerHTML = `<i class="bi bi-person-fill me-1"></i>Người cập nhật: ${escapeHtml(user)}`;
+            }
 
             const statusEl = document.getElementById('view_detail_status');
             if (statusEl) {

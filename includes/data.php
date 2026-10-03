@@ -183,7 +183,11 @@ try {
             COALESCE(b.TenBoTieuChuan, bm.TenBoTieuChuan, '') AS set_name,
             m.MaNguoiDung,
             DATE_FORMAT(m.NgayCapNhat, '%d/%m/%Y %H:%i') AS updated_date,
-            u.HoTen AS user_name
+            m.NgayCapNhat,
+            m.NgayTao,
+            u.HoTen AS user_name,
+            u.TenDangNhap AS username,
+            u.VaiTro AS user_role
         FROM MinhChung m
         LEFT JOIN TieuChi tc ON tc.MaTieuChi = m.MaTieuChi
         LEFT JOIN TieuChuan tch ON tch.MaTieuChuan = tc.MaTieuChuan
@@ -194,7 +198,13 @@ try {
     ");
     foreach ($stmt->fetchAll() as $row) {
         $setCode = $row['set_id'] ?: 'N/A';
-        $userCode = $row['MaNguoiDung'] ?: 'N/A';
+        $userCode = $row['MaNguoiDung'] ?: 'ND001';
+
+        $updatedFormatted = !empty($row['updated_date']) 
+            ? $row['updated_date'] 
+            : (!empty($row['NgayCapNhat']) 
+                ? date('d/m/Y H:i', strtotime($row['NgayCapNhat'])) 
+                : (!empty($row['NgayTao']) ? date('d/m/Y H:i', strtotime($row['NgayTao'])) : date('d/m/Y H:i')));
 
         $evidences[] = [
             'id'                  => $row['id'],
@@ -205,7 +215,8 @@ try {
             'description'         => $row['description'] ?? '',
             'file_path'           => $row['file_path'] ?? '',
             'year'                => $row['academic_year'] ?? '',
-            'updated'             => $row['updated_date'] ?: 'Chưa cập nhật',
+            'updated'             => $updatedFormatted,
+            'updated_raw'         => $row['NgayCapNhat'] ?? '',
             'status_raw'          => (int) $row['status'],
             'status'              => (int) $row['status'] === 1 ? 'Đang hoạt động' : 'Không hoạt động',
             'ma_tieu_chi'     => $row['criterion_id'] ?? '',
@@ -220,7 +231,9 @@ try {
             'standard_set'    => $setCode . ($row['set_name'] ? (' - ' . $row['set_name']) : ''),
             'ma_nguoi_dung'   => $row['MaNguoiDung'],
             'user_code'       => $userCode,
-            'user_name'       => $row['user_name'] ?? 'Hệ thống',
+            'user_name'       => $row['user_name'] ?? 'Quản trị viên',
+            'username'        => $row['username'] ?? 'admin',
+            'user_role'       => $row['user_role'] ?? 'admin',
         ];
     }
 } catch (Throwable $e) {

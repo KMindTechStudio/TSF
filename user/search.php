@@ -206,7 +206,9 @@ $stmtAllMC = $pdo->query("
         m.MaTieuChi,
         m.MaBoTieuChuan,
         m.NgayCapNhat,
-        u.HoTen AS NguoiTao
+        DATE_FORMAT(m.NgayCapNhat, '%d/%m/%Y %H:%i') AS NgayCapNhatFormatted,
+        u.HoTen AS NguoiTao,
+        u.VaiTro AS VaiTroNguoiTao
     FROM MinhChung m
     LEFT JOIN NguoiDung u ON u.MaNguoiDung = m.MaNguoiDung
     ORDER BY m.MaMinhChung ASC
@@ -1621,10 +1623,12 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                         <th style="width: 90px;">Mã MC</th>
                                                                                                                                         <th style="min-width: 200px;">Tên Minh chứng</th>
                                                                                                                                         <th style="width: 100px;" class="text-center">Năm học</th>
-                                                                                                                                        <th style="width: 110px;" class="text-center">Ngày ban hành</th>
-                                                                                                                                        <th style="width: 130px;">Tệp đính kèm</th>
+                                                                                                                                        <th style="width: 105px;" class="text-center">Ngày ban hành</th>
+                                                                                                                                        <th style="width: 125px;" class="text-center">Ngày cập nhật</th>
+                                                                                                                                        <th style="width: 140px;">Người cập nhật</th>
+                                                                                                                                        <th style="width: 125px;">Tệp đính kèm</th>
                                                                                                                                         <th style="width: 95px;" class="text-center">Trạng thái</th>
-                                                                                                                                        <th style="width: 80px;" class="text-end">Chi tiết</th>
+                                                                                                                                        <th style="width: 75px;" class="text-end">Chi tiết</th>
                                                                                                                                     </tr>
                                                                                                                                 </thead>
                                                                                                                                 <tbody>
@@ -1645,6 +1649,11 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                         $fileUrl = $hasFile ? base_url($mcFile) : '#';
                                                                                                                                         $downloadUrl = base_url('user/download.php?id=' . urlencode($mcId));
                                                                                                                                     ?>
+                                                                                                                                        <?php
+                                                                                                                                        $updatedTime = !empty($mc['NgayCapNhatFormatted']) ? $mc['NgayCapNhatFormatted'] : (!empty($mc['NgayCapNhat']) ? date('d/m/Y H:i', strtotime($mc['NgayCapNhat'])) : '-');
+                                                                                                                                        $creatorName = !empty($mc['NguoiTao']) ? $mc['NguoiTao'] : 'Admin';
+                                                                                                                                        $creatorRole = !empty($mc['VaiTroNguoiTao']) ? $mc['VaiTroNguoiTao'] : '';
+                                                                                                                                        ?>
                                                                                                                                         <tr class="nested-evidence-row <?= $evMatchesSelf ? 'search-matched-row' : '' ?>" id="evidence-row-<?= htmlspecialchars($mcId) ?>">
                                                                                                                                             <td class="text-center text-muted small"><?= $mcIdx++ ?></td>
                                                                                                                                             <td class="fw-bold text-primary"><?= htmlspecialchars($mcId) ?></td>
@@ -1656,6 +1665,21 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                             </td>
                                                                                                                                             <td class="text-center small"><?= htmlspecialchars($mc['NamHoc'] ?: '-') ?></td>
                                                                                                                                             <td class="text-center small"><?= !empty($mc['NgayBanHanh']) ? date('d/m/Y', strtotime($mc['NgayBanHanh'])) : '-' ?></td>
+                                                                                                                                            <td class="text-center small text-muted">
+                                                                                                                                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                                                                                                                                    <i class="bi bi-clock text-secondary" style="font-size: 0.8rem;"></i>
+                                                                                                                                                    <span><?= htmlspecialchars($updatedTime) ?></span>
+                                                                                                                                                </div>
+                                                                                                                                            </td>
+                                                                                                                                            <td class="small">
+                                                                                                                                                <div class="d-flex align-items-center gap-1">
+                                                                                                                                                    <i class="bi bi-person-circle text-primary" style="font-size: 0.85rem;"></i>
+                                                                                                                                                    <span class="fw-medium text-dark"><?= htmlspecialchars($creatorName) ?></span>
+                                                                                                                                                </div>
+                                                                                                                                                <?php if (!empty($creatorRole)): ?>
+                                                                                                                                                    <span class="badge bg-light text-secondary border font-monospace" style="font-size: 0.65rem;"><?= htmlspecialchars($creatorRole) ?></span>
+                                                                                                                                                <?php endif; ?>
+                                                                                                                                            </td>
                                                                                                                                             <td>
                                                                                                                                                 <?php if ($hasFile): ?>
                                                                                                                                                     <div class="d-inline-flex gap-1 align-items-center">
@@ -1694,10 +1718,11 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                                     data-standard="<?= htmlspecialchars($tcId . ' - ' . $tc['TenTieuChuan']) ?>"
                                                                                                                                                     data-set="<?= htmlspecialchars($setId . ' - ' . $set['TenBoTieuChuan']) ?>"
                                                                                                                                                     data-date="<?= !empty($mc['NgayBanHanh']) ? date('d/m/Y', strtotime($mc['NgayBanHanh'])) : '-' ?>"
+                                                                                                                                                    data-updated="<?= htmlspecialchars($updatedTime) ?>"
                                                                                                                                                     data-namhoc="<?= htmlspecialchars($mc['NamHoc'] ?: '-') ?>"
                                                                                                                                                     data-desc="<?= htmlspecialchars($mc['MoTa'] ?: '-') ?>"
                                                                                                                                                     data-status="<?= $mcIsActive ? 'Hoạt động' : 'Tạm ẩn' ?>"
-                                                                                                                                                    data-creator="<?= htmlspecialchars($mc['NguoiTao'] ?: 'Hệ thống') ?>"
+                                                                                                                                                    data-creator="<?= htmlspecialchars($creatorName . (!empty($creatorRole) ? ' (' . $creatorRole . ')' : '')) ?>"
                                                                                                                                                     data-has-file="<?= $hasFile ? '1' : '0' ?>"
                                                                                                                                                     data-file-url="<?= htmlspecialchars($fileUrl) ?>"
                                                                                                                                                     data-download-url="<?= htmlspecialchars($downloadUrl) ?>"
@@ -2101,7 +2126,7 @@ html[data-theme="dark"] .badge-matched-locator {
 
                             <div class="col-lg-6">
                                 <div class="p-3 rounded-3 bg-light border h-100">
-                                    <div class="small fw-bold text-muted text-uppercase mb-3"><i class="bi bi-info-circle me-1 text-primary"></i>Thông tin ban hành</div>
+                                    <div class="small fw-bold text-muted text-uppercase mb-3"><i class="bi bi-info-circle me-1 text-primary"></i>Thông tin ban hành & Cập nhật</div>
                                     <div class="d-flex flex-column gap-2">
                                         <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
                                             <span class="text-muted small">Năm học:</span>
@@ -2111,8 +2136,12 @@ html[data-theme="dark"] .badge-matched-locator {
                                             <span class="text-muted small">Ngày ban hành:</span>
                                             <span class="fw-semibold text-dark" id="view_ev_date"></span>
                                         </div>
+                                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
+                                            <span class="text-muted small">Ngày cập nhật:</span>
+                                            <span class="fw-semibold text-dark" id="view_ev_updated"></span>
+                                        </div>
                                         <div class="d-flex justify-content-between align-items-center py-1">
-                                            <span class="text-muted small">Người tạo / tải lên:</span>
+                                            <span class="text-muted small">Người cập nhật:</span>
                                             <span class="fw-semibold text-dark" id="view_ev_creator"></span>
                                         </div>
                                     </div>
@@ -2610,9 +2639,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const criterion = btn.dataset.criterion || '-';
         const namhoc = btn.dataset.namhoc || '-';
         const date = btn.dataset.date || '-';
+        const updated = btn.dataset.updated || '-';
         const desc = btn.dataset.desc || '-';
         const status = btn.dataset.status || 'Hoạt động';
-        const creator = btn.dataset.creator || 'Hệ thống';
+        const creator = btn.dataset.creator || 'Admin';
         const hasFile = btn.dataset.hasFile === '1';
         const fileUrl = btn.dataset.fileUrl || '#';
         const downloadUrl = btn.dataset.downloadUrl || '#';
@@ -2628,6 +2658,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setSafeText('view_ev_criterion', criterion);
         setSafeText('view_ev_namhoc', namhoc);
         setSafeText('view_ev_date', date);
+        setSafeText('view_ev_updated', updated);
         setSafeText('view_ev_creator', creator);
         setSafeText('view_ev_desc', desc);
 

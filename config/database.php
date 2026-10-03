@@ -79,6 +79,10 @@ function db(): PDO
                 $pdo->exec("ALTER TABLE MinhChung MODIFY COLUMN MaMinhChung VARCHAR(50) NOT NULL;");
                 $pdo->exec("ALTER TABLE MinhChung MODIFY COLUMN MaBoTieuChuan VARCHAR(50) NULL;");
                 $pdo->exec("ALTER TABLE MinhChung MODIFY COLUMN MaNguoiDung VARCHAR(50) NULL;");
+                $cols = $pdo->query("SHOW COLUMNS FROM MinhChung LIKE 'NgayCapNhat'")->fetchAll();
+                if (empty($cols)) {
+                    $pdo->exec("ALTER TABLE MinhChung ADD COLUMN NgayCapNhat DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER MaNguoiDung");
+                }
                 $pdo->exec("ALTER TABLE BoTieuChuan MODIFY COLUMN MaBoTieuChuan VARCHAR(50) NOT NULL;");
                 $pdo->exec("ALTER TABLE NguoiDung MODIFY COLUMN MaNguoiDung VARCHAR(50) NOT NULL;");
                 $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
