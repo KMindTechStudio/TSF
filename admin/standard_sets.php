@@ -1552,7 +1552,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                 <th style="width: 50px;" class="text-center">Sổ</th>
                                                                 <th style="width: 120px;">Mã TC</th>
                                                                 <th style="min-width: 250px;">Tên Tiêu chuẩn</th>
-                                                                <th style="min-width: 200px;">Mô tả</th>
+                                                                <th style="min-width: 200px;">Nội dung</th>
                                                                 <th style="width: 120px;" class="text-center">Số tiêu chí</th>
                                                                 <th style="width: 160px;" class="text-end">Hành động</th>
                                                             </tr>
@@ -1966,12 +1966,12 @@ html[data-theme="dark"] .badge-matched-locator {
                             </select>
                         </div>
                         <div class="col-md-12">
-                            <label class="form-label fw-bold">Tải lên File dữ liệu</label>
+                            <label class="form-label fw-bold">Tệp đính kèm (PDF, DOCX, XLSX...)</label>
                             <input type="file" name="tep_tin_pdf" id="set_file_pdf" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,application/pdf,image/*">
                             <div class="form-text" id="pdf_help_text">Hỗ trợ định dạng: <strong>PDF, PNG, JPG, JPEG, WEBP, DOCX</strong> (tối đa 50MB). Xem trực tiếp trên tab trình duyệt hoặc popup.</div>
                         </div>
                         <div class="col-md-12">
-                            <label class="form-label fw-bold">Mô tả</label>
+                            <label class="form-label fw-bold">Nội dung</label>
                             <textarea name="mo_ta" id="set_mo_ta" class="form-control" rows="3" placeholder="Nhập tóm tắt nội dung bộ tiêu chuẩn..."></textarea>
                         </div>
                     </div>
@@ -2760,7 +2760,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const name = btn.dataset.name || '';
         const thongtu = btn.dataset.thongtu || 'Chưa có số hiệu';
         const date = btn.dataset.dateFormatted || (btn.dataset.date || '-');
-        const desc = btn.dataset.desc || 'Chưa có mô tả';
+        const desc = btn.dataset.desc || 'Chưa có nội dung';
         const status = btn.dataset.status === '1';
         const pdf = btn.dataset.pdf || '';
         const pdfUrl = btn.dataset.pdfUrl || '';
