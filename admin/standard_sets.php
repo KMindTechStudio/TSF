@@ -1187,9 +1187,9 @@ html[data-theme="dark"] .badge-matched-locator {
                             <span class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2 fs-6">
                                 <i class="bi bi-funnel-fill me-1"></i> Bộ lọc & Tìm kiếm tập trung
                             </span>
-                            <span class="text-secondary small d-none d-md-inline">
-                                Chọn điều kiện hoặc nhập từ khóa rồi nhấn nút <strong>Lọc</strong>
-                            </span>
+
+
+
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <button type="submit" form="filterForm" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm d-inline-flex align-items-center gap-1" id="btnSubmitFilterHeader" title="Áp dụng bộ lọc">
@@ -1225,9 +1225,9 @@ html[data-theme="dark"] .badge-matched-locator {
                                     <i class="bi bi-search"></i> Lọc
                                 </button>
                             </div>
-                            <div class="form-text small text-secondary mt-1">
-                                <i class="bi bi-info-circle text-primary"></i> Nhập từ khóa rồi bấm <strong>Lọc</strong> hoặc nhấn Enter
-                            </div>
+
+
+
                         </div>
 
                         <!-- CÁCH 2: CỤM 5 Ô CHỌN NHANH PHÂN CẤP LIÊN KẾT + NÚT LỌC -->
@@ -1312,9 +1312,9 @@ html[data-theme="dark"] .badge-matched-locator {
                                     </button>
                                 </div>
                             </div>
-                            <div class="form-text small text-secondary mt-1">
-                                <i class="bi bi-arrow-repeat text-info"></i> Các ô chọn tự động liên kết danh sách; chọn xong bấm nút <strong>Lọc</strong> để tải kết quả
-                            </div>
+
+
+
                         </div>
                     </form>
 
@@ -1473,7 +1473,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-1">
                                         <button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#modalAddStandard" data-set-id="<?= htmlspecialchars($setId) ?>" data-set-name="<?= htmlspecialchars($set['TenBoTieuChuan']) ?>" title="Thêm Tiêu chuẩn con vào bộ này">
-                                            <i class="bi bi-plus-circle me-1"></i>Thêm TC
+                                            <i class="bi bi-plus-circle me-1"></i>Tiêu chuẩn
                                         </button>
                                         <button class="btn btn-sm btn-outline-info btn-view-set-detail" type="button"
                                             data-id="<?= htmlspecialchars($setId) ?>"
@@ -1501,7 +1501,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                             data-desc="<?= htmlspecialchars($set['MoTa']) ?>"
                                             data-status="<?= $isActive ? '1' : '0' ?>"
                                             data-pdf="<?= htmlspecialchars($set['TepTinPDF']) ?>"
-                                            title="Sửa Thông tư / Bộ tiêu chuẩn">
+                                            title="Sửa Bộ tiêu chuẩn">
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                         <?php if (!empty($standards) || (int)($set['MinhChungCount'] ?? 0) > 0): ?>
@@ -1937,7 +1937,7 @@ html[data-theme="dark"] .badge-matched-locator {
                 <input type="hidden" name="old_tep_tin_pdf" id="set_old_pdf" value="">
 
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalStandardSetLabel"><i class="bi bi-collection me-2"></i>Thêm mới Thông tư / Bộ Tiêu chuẩn</h5>
+                    <h5 class="modal-title" id="modalStandardSetLabel"><i class="bi bi-collection me-2"></i>Thêm mới Bộ Tiêu chuẩn</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -1947,7 +1947,7 @@ html[data-theme="dark"] .badge-matched-locator {
                             <input type="text" name="ma_bo_tieu_chuan" id="set_ma_bo" class="form-control" placeholder="VD: BTC01, BTC_2026..." required>
                         </div>
                         <div class="col-md-8">
-                            <label class="form-label fw-bold">Số hiệu / Thông tư ban hành <span class="text-danger">*</span></label>
+                            <label class="form-label fw-bold">Số hiệu <span class="text-danger">*</span></label>
                             <input type="text" name="thong_tu" id="set_thong_tu" class="form-control" placeholder="VD: Thông tư 04/2016/TT-BGDĐT" required>
                         </div>
                         <div class="col-md-12">
@@ -1966,13 +1966,13 @@ html[data-theme="dark"] .badge-matched-locator {
                             </select>
                         </div>
                         <div class="col-md-12">
-                            <label class="form-label fw-bold">Tải lên File dữ liệu Thông tư / Tiêu chuẩn</label>
+                            <label class="form-label fw-bold">Tải lên File dữ liệu</label>
                             <input type="file" name="tep_tin_pdf" id="set_file_pdf" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,application/pdf,image/*">
                             <div class="form-text" id="pdf_help_text">Hỗ trợ định dạng: <strong>PDF, PNG, JPG, JPEG, WEBP, DOCX</strong> (tối đa 50MB). Xem trực tiếp trên tab trình duyệt hoặc popup.</div>
                         </div>
                         <div class="col-md-12">
-                            <label class="form-label fw-bold">Mô tả / Ghi chú</label>
-                            <textarea name="mo_ta" id="set_mo_ta" class="form-control" rows="3" placeholder="Nhập tóm tắt nội dung thông tư / bộ tiêu chuẩn..."></textarea>
+                            <label class="form-label fw-bold">Mô tả</label>
+                            <textarea name="mo_ta" id="set_mo_ta" class="form-control" rows="3" placeholder="Nhập tóm tắt nội dung bộ tiêu chuẩn..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -2002,7 +2002,7 @@ html[data-theme="dark"] .badge-matched-locator {
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label fw-bold">Thuộc Thông tư / Bộ tiêu chuẩn <span class="text-danger">*</span></label>
+                            <label class="form-label fw-bold">Thuộc Bộ tiêu chuẩn <span class="text-danger">*</span></label>
                             <select name="ma_bo_tieu_chuan" id="std_ma_bo" class="form-select" required>
                                 <?php foreach ($standardSetsList as $s): ?>
                                     <option value="<?= htmlspecialchars($s['MaBoTieuChuan']) ?>"><?= htmlspecialchars($s['MaBoTieuChuan'] . ' - ' . $s['TenBoTieuChuan']) ?></option>
@@ -2022,7 +2022,7 @@ html[data-theme="dark"] .badge-matched-locator {
                             <input type="text" name="ten_tieu_chuan" id="std_ten_tc" class="form-control" placeholder="VD: Tiêu chuẩn 1: Mục tiêu và chuẩn đầu ra của CTĐT" required>
                         </div>
                         <div class="col-md-12">
-                            <label class="form-label fw-bold">Mô tả / Yêu cầu tiêu chuẩn</label>
+                            <label class="form-label fw-bold">Nội dung</label>
                             <textarea name="mo_ta" id="std_mo_ta" class="form-control" rows="3" placeholder="Nhập mô tả nội dung tiêu chuẩn..."></textarea>
                         </div>
                     </div>
@@ -2077,7 +2077,7 @@ html[data-theme="dark"] .badge-matched-locator {
                             <input type="text" name="ten_tieu_chi" id="cri_ten_tchi" class="form-control" placeholder="VD: Tiêu chí 1.1: Mục tiêu của CTĐT được xác định rõ ràng..." required>
                         </div>
                         <div class="col-md-12">
-                            <label class="form-label fw-bold">Nội dung / Hướng dẫn tiêu chí</label>
+                            <label class="form-label fw-bold">Nội dung</label>
                             <textarea name="noi_dung" id="cri_noi_dung" class="form-control" rows="3" placeholder="Nhập nội dung chi tiết hoặc mốc đánh giá của tiêu chí..."></textarea>
                         </div>
                     </div>
@@ -2143,7 +2143,7 @@ html[data-theme="dark"] .badge-matched-locator {
                             <input type="text" name="ten_minh_chung" id="ev_ten_mc" class="form-control" placeholder="VD: Quyết định thành lập hội đồng đánh giá..." required>
                         </div>
                         <div class="col-md-12">
-                            <label class="form-label fw-bold">Mô tả / Trích yếu nội dung</label>
+                            <label class="form-label fw-bold">Nội dung</label>
                             <textarea name="mo_ta" id="ev_mo_ta" class="form-control" rows="2" placeholder="Nhập trích yếu hoặc tóm tắt minh chứng..."></textarea>
                         </div>
                         <div class="col-md-8">
@@ -2243,7 +2243,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                             <span class="fw-bold font-monospace text-primary" id="view_set_id"></span>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
-                                            <span class="text-muted small">Số hiệu / Thông tư:</span>
+                                            <span class="text-muted small">Số hiệu:</span>
                                             <span id="view_set_thongtu" class="badge bg-info-subtle text-dark border border-info-subtle fs-7 fw-semibold"></span>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
@@ -2338,7 +2338,7 @@ html[data-theme="dark"] .badge-matched-locator {
                             <!-- Mô tả trích yếu -->
                             <div class="col-12">
                                 <div class="p-3 rounded-3 bg-light border">
-                                    <div class="small fw-bold text-muted text-uppercase mb-2"><i class="bi bi-chat-left-quote me-1 text-primary"></i>Mô tả / Trích yếu nội dung</div>
+                                    <div class="small fw-bold text-muted text-uppercase mb-2"><i class="bi bi-chat-left-quote me-1 text-primary"></i>Nội dung</div>
                                     <div id="view_set_desc" class="text-secondary small" style="white-space: pre-wrap; line-height: 1.6;"></div>
                                 </div>
                             </div>
@@ -3039,7 +3039,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelectorAll('.btn-edit-set').forEach(btn => {
         btn.addEventListener('click', function () {
-            document.getElementById('modalStandardSetLabel').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Cập nhật Thông tư / Bộ Tiêu chuẩn';
+            document.getElementById('modalStandardSetLabel').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Cập nhật Bộ Tiêu chuẩn';
             document.getElementById('set_edit_id').value = this.dataset.id || '';
             document.getElementById('set_ma_bo').value = this.dataset.id || '';
             document.getElementById('set_ten_bo').value = this.dataset.name || '';
@@ -3065,7 +3065,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('formStandardSet').reset();
             document.getElementById('set_edit_id').value = '';
             document.getElementById('set_old_pdf').value = '';
-            document.getElementById('modalStandardSetLabel').innerHTML = '<i class="bi bi-collection me-2"></i>Thêm mới Thông tư / Bộ Tiêu chuẩn';
+            document.getElementById('modalStandardSetLabel').innerHTML = '<i class="bi bi-collection me-2"></i>Thêm mới Bộ Tiêu chuẩn';
             document.getElementById('pdf_help_text').textContent = 'Định dạng file PDF (tối đa 30MB). File này sẽ dùng để xem trực tiếp khi ấn nút "Xem chi tiết".';
         });
     }

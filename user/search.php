@@ -1145,9 +1145,9 @@ html[data-theme="dark"] .badge-matched-locator {
                             <span class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2 fs-6">
                                 <i class="bi bi-funnel-fill me-1"></i> Bộ lọc & Tìm kiếm tập trung
                             </span>
-                            <span class="text-secondary small d-none d-md-inline">
-                                Chọn điều kiện hoặc nhập từ khóa rồi nhấn nút <strong>Lọc</strong>
-                            </span>
+
+
+
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <button type="submit" form="filterForm" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm d-inline-flex align-items-center gap-1" id="btnSubmitFilterHeader" title="Áp dụng bộ lọc">
@@ -1183,9 +1183,9 @@ html[data-theme="dark"] .badge-matched-locator {
                                     <i class="bi bi-search"></i> Lọc
                                 </button>
                             </div>
-                            <div class="form-text small text-secondary mt-1">
-                                <i class="bi bi-info-circle text-primary"></i> Nhập từ khóa rồi bấm <strong>Lọc</strong> hoặc nhấn Enter
-                            </div>
+
+
+
                         </div>
 
                         <!-- CÁCH 2: CỤM 5 Ô CHỌN NHANH PHÂN CẤP LIÊN KẾT + NÚT LỌC -->
@@ -1270,9 +1270,9 @@ html[data-theme="dark"] .badge-matched-locator {
                                     </button>
                                 </div>
                             </div>
-                            <div class="form-text small text-secondary mt-1">
-                                <i class="bi bi-arrow-repeat text-info"></i> Các ô chọn tự động liên kết danh sách; chọn xong bấm nút <strong>Lọc</strong> để tải kết quả
-                            </div>
+
+
+
                         </div>
                     </form>
 
@@ -1870,7 +1870,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                             <span class="fw-bold font-monospace text-primary" id="view_set_id"></span>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
-                                            <span class="text-muted small">Số hiệu / Thông tư:</span>
+                                            <span class="text-muted small">Số hiệu:</span>
                                             <span id="view_set_thongtu" class="badge bg-info-subtle text-dark border border-info-subtle fs-7 fw-semibold"></span>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light-subtle">
@@ -1965,7 +1965,7 @@ html[data-theme="dark"] .badge-matched-locator {
                             <!-- Mô tả trích yếu -->
                             <div class="col-12">
                                 <div class="p-3 rounded-3 bg-light border">
-                                    <div class="small fw-bold text-muted text-uppercase mb-2"><i class="bi bi-chat-left-quote me-1 text-primary"></i>Mô tả / Trích yếu nội dung</div>
+                                    <div class="small fw-bold text-muted text-uppercase mb-2"><i class="bi bi-chat-left-quote me-1 text-primary"></i>Nội dung</div>
                                     <div id="view_set_desc" class="text-secondary small" style="white-space: pre-wrap; line-height: 1.6;"></div>
                                 </div>
                             </div>
@@ -2122,7 +2122,7 @@ html[data-theme="dark"] .badge-matched-locator {
                             <!-- Mô tả trích yếu -->
                             <div class="col-12">
                                 <div class="p-3 rounded-3 bg-light border">
-                                    <div class="small fw-bold text-muted text-uppercase mb-2"><i class="bi bi-chat-left-quote me-1 text-primary"></i>Mô tả / Trích yếu nội dung</div>
+                                    <div class="small fw-bold text-muted text-uppercase mb-2"><i class="bi bi-chat-left-quote me-1 text-primary"></i>Nội dung</div>
                                     <div id="view_ev_desc" class="text-secondary small" style="white-space: pre-wrap; line-height: 1.6;"></div>
                                 </div>
                             </div>
