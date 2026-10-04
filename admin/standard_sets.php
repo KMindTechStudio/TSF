@@ -440,7 +440,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 }
 
                 if ($relativePath) {
-                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, MoTa = :mota, TepTin = :file, NamHoc = :namhoc, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id WHERE MaMinhChung = :old_code');
+                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, MoTa = :mota, TepTin = :file, NamHoc = :namhoc, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
                     $stmt->execute([
                         'new_code'      => $maMC,
                         'title'         => $tenMC,
@@ -451,10 +451,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         'status'        => $status,
                         'tchi'          => $maTieuChi,
                         'set_id'        => $maBoTieuChuan,
+                        'user_id'       => $userId,
                         'old_code'      => $rawId,
                     ]);
                 } else {
-                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, MoTa = :mota, NamHoc = :namhoc, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id WHERE MaMinhChung = :old_code');
+                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, MoTa = :mota, NamHoc = :namhoc, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
                     $stmt->execute([
                         'new_code'      => $maMC,
                         'title'         => $tenMC,
@@ -464,6 +465,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         'status'        => $status,
                         'tchi'          => $maTieuChi,
                         'set_id'        => $maBoTieuChuan,
+                        'user_id'       => $userId,
                         'old_code'      => $rawId,
                     ]);
                 }
@@ -697,7 +699,8 @@ $stmtAllMC = $pdo->query("
         m.MaTieuChi,
         m.MaBoTieuChuan,
         m.NgayCapNhat,
-        u.HoTen AS NguoiTao
+        u.HoTen AS NguoiTao,
+        u.VaiTro AS VaiTroNguoiTao
     FROM MinhChung m
     LEFT JOIN NguoiDung u ON u.MaNguoiDung = m.MaNguoiDung
     ORDER BY m.MaMinhChung ASC
@@ -1770,7 +1773,8 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                         <th style="min-width: 200px;">Tên Minh chứng</th>
                                                                                                                                         <th style="width: 100px;" class="text-center">Năm học</th>
                                                                                                                                         <th style="width: 110px;" class="text-center">Ngày ban hành</th>
-                                                                                                                                        <th style="width: 130px;">Tệp đính kèm</th>
+                                                                                                                                        <th style="width: 140px;">Người tải lên</th>
+                                                                                                         <th style="width: 130px;">Tệp đính kèm</th>
                                                                                                                                         <th style="width: 95px;" class="text-center">Trạng thái</th>
                                                                                                                                         <th style="width: 90px;" class="text-end">Hành động</th>
                                                                                                                                     </tr>
@@ -1803,6 +1807,19 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                             </td>
                                                                                                                                             <td class="text-center small"><?= htmlspecialchars($mc['NamHoc'] ?: '-') ?></td>
                                                                                                                                             <td class="text-center small"><?= !empty($mc['NgayBanHanh']) ? date('d/m/Y', strtotime($mc['NgayBanHanh'])) : '-' ?></td>
+                                                                                                                <td class="small">
+                                                                                                                    <?php
+                                                                                                                    $creatorName = !empty($mc['NguoiTao']) ? $mc['NguoiTao'] : 'Quản trị viên';
+                                                                                                                    $creatorRole = !empty($mc['VaiTroNguoiTao']) ? (($mc['VaiTroNguoiTao'] === 'admin') ? 'Quản trị viên' : 'Người dùng') : '';
+                                                                                                                    ?>
+                                                                                                                    <div class="d-flex align-items-center gap-1" title="<?= htmlspecialchars($creatorName) ?>">
+                                                                                                                        <i class="bi bi-person-circle text-primary" style="font-size: 0.85rem;"></i>
+                                                                                                                        <span class="fw-medium text-dark text-truncate" style="max-width: 120px;"><?= htmlspecialchars($creatorName) ?></span>
+                                                                                                                    </div>
+                                                                                                                    <?php if (!empty($creatorRole)): ?>
+                                                                                                                        <span class="badge bg-light text-secondary border font-monospace mt-1" style="font-size: 0.65rem;"><?= htmlspecialchars($creatorRole) ?></span>
+                                                                                                                    <?php endif; ?>
+                                                                                                                </td>
                                                                                                                                             <td>
                                                                                                                                                 <?php if ($hasFile): ?>
                                                                                                                                                     <div class="d-inline-flex gap-1 align-items-center">
