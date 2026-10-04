@@ -482,7 +482,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     throw new RuntimeException('Mã minh chứng "' . $maMC . '" đã tồn tại.');
                 }
 
-                $stmt = $pdo->prepare('INSERT INTO MinhChung (MaMinhChung, TenMinhChung, NgayBanHanh, MoTa, TepTin, NamHoc, TrangThai, MaTieuChi, MaBoTieuChuan, MaNguoiDung) VALUES (:code, :title, :ngay_ban_hanh, :mota, :file, :namhoc, :status, :tchi, :set_id, :user_id)');
+                $stmt = $pdo->prepare('INSERT INTO MinhChung (MaMinhChung, TenMinhChung, NgayBanHanh, MoTa, TepTin, NamHoc, TrangThai, MaTieuChi, MaBoTieuChuan, MaNguoiDung, NgayCapNhat) VALUES (:code, :title, :ngay_ban_hanh, :mota, :file, :namhoc, :status, :tchi, :set_id, :user_id, NOW())');
                 $stmt->execute([
                     'code'          => $maMC,
                     'title'         => $tenMC,
@@ -1772,8 +1772,9 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                         <th style="width: 90px;">Mã MC</th>
                                                                                                                                         <th style="min-width: 200px;">Tên Minh chứng</th>
                                                                                                                                         <th style="width: 100px;" class="text-center">Năm học</th>
-                                                                                                                                        <th style="width: 110px;" class="text-center">Ngày ban hành</th>
-                                                                                                                                        <th style="width: 140px;">Người tải lên</th>
+                                                                                                                                        <th style="width: 105px;" class="text-center">Ngày ban hành</th>
+                                                                                                         <th style="width: 130px;" class="text-center">Ngày cập nhật</th>
+                                                                                                                                        <th style="width: 130px;" class="text-center">Mã người dùng</th>
                                                                                                          <th style="width: 130px;">Tệp đính kèm</th>
                                                                                                                                         <th style="width: 95px;" class="text-center">Trạng thái</th>
                                                                                                                                         <th style="width: 90px;" class="text-end">Hành động</th>
@@ -1807,18 +1808,24 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                             </td>
                                                                                                                                             <td class="text-center small"><?= htmlspecialchars($mc['NamHoc'] ?: '-') ?></td>
                                                                                                                                             <td class="text-center small"><?= !empty($mc['NgayBanHanh']) ? date('d/m/Y', strtotime($mc['NgayBanHanh'])) : '-' ?></td>
-                                                                                                                <td class="small">
-                                                                                                                    <?php
-                                                                                                                    $creatorName = !empty($mc['NguoiTao']) ? $mc['NguoiTao'] : 'Quản trị viên';
-                                                                                                                    $creatorRole = !empty($mc['VaiTroNguoiTao']) ? (($mc['VaiTroNguoiTao'] === 'admin') ? 'Quản trị viên' : 'Người dùng') : '';
+                                                                                                                <td class="text-center small text-nowrap">
+                                                                                                                    <?php 
+                                                                                                                    $rawUp = !empty($mc['NgayCapNhat']) ? $mc['NgayCapNhat'] : null;
+                                                                                                                    $formattedUp = $rawUp ? date('d/m/Y H:i', strtotime($rawUp)) : '-';
+                                                                                                                    $fullUp = $rawUp ? date('d/m/Y H:i:s', strtotime($rawUp)) : 'Chưa cập nhật';
                                                                                                                     ?>
-                                                                                                                    <div class="d-flex align-items-center gap-1" title="<?= htmlspecialchars($creatorName) ?>">
-                                                                                                                        <i class="bi bi-person-circle text-primary" style="font-size: 0.85rem;"></i>
-                                                                                                                        <span class="fw-medium text-dark text-truncate" style="max-width: 120px;"><?= htmlspecialchars($creatorName) ?></span>
-                                                                                                                    </div>
-                                                                                                                    <?php if (!empty($creatorRole)): ?>
-                                                                                                                        <span class="badge bg-light text-secondary border font-monospace mt-1" style="font-size: 0.65rem;"><?= htmlspecialchars($creatorRole) ?></span>
-                                                                                                                    <?php endif; ?>
+                                                                                                                    <span class="badge bg-light text-secondary border px-2 py-1" title="Thời gian cập nhật thực tế: <?= htmlspecialchars($fullUp) ?>">
+                                                                                                                        <i class="bi bi-clock-history me-1 text-info"></i><?= htmlspecialchars($formattedUp) ?>
+                                                                                                                    </span>
+                                                                                                                </td>
+                                                                                                                <td class="text-center small">
+                                                                                                                    <?php
+                                                                                                                    $userCode = !empty($mc['MaNguoiDung']) ? $mc['MaNguoiDung'] : 'ND001';
+                                                                                                                    $creatorName = !empty($mc['NguoiTao']) ? $mc['NguoiTao'] : 'Quản trị viên';
+                                                                                                                    ?>
+                                                                                                                    <span class="badge bg-light text-primary border font-monospace px-2 py-1" title="<?= htmlspecialchars($creatorName . ' (' . $userCode . ')') ?>">
+                                                                                                                        <i class="bi bi-person me-1"></i><?= htmlspecialchars($userCode) ?>
+                                                                                                                    </span>
                                                                                                                 </td>
                                                                                                                                             <td>
                                                                                                                                                 <?php if ($hasFile): ?>
