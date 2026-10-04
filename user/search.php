@@ -1458,7 +1458,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                             <div class="d-flex justify-content-between align-items-center mb-3">
                                                 <div class="d-flex align-items-center gap-2">
                                                     <i class="bi bi-diagram-3-fill text-primary"></i>
-                                                    <h6 class="mb-0 fw-bold text-dark">Quản lý Tiêu chuẩn</h6>
+                                                    <h6 class="mb-0 fw-bold text-dark">Cập nhật Tiêu chuẩn</h6>
                                                     <span class="badge bg-primary-subtle text-primary"><?= count($standards) ?> tiêu chuẩn</span>
                                                 </div>
                                             </div>
@@ -1534,7 +1534,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                                                                     <div class="d-flex align-items-center gap-2">
                                                                                         <i class="bi bi-list-task text-success"></i>
-                                                                                        <strong class="small text-dark">Quản lý Tiêu chí</strong>
+                                                                                        <strong class="small text-dark">Cập nhật Tiêu chí</strong>
                                                                                         <span class="badge bg-success-subtle text-success small"><?= count($criteria) ?> tiêu chí</span>
                                                                                     </div>
                                                                                 </div>
@@ -1605,7 +1605,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                                                                                                         <div class="d-flex align-items-center gap-2">
                                                                                                                             <i class="bi bi-files text-primary"></i>
-                                                                                                                            <strong class="small text-dark">Quản lý Minh chứng</strong>
+                                                                                                                            <strong class="small text-dark">Cập nhật Minh chứng</strong>
                                                                                                                             <span class="badge bg-primary-subtle text-primary small"><?= count($evidences) ?> minh chứng</span>
                                                                                                                         </div>
                                                                                                                     </div>

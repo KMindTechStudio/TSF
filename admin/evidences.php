@@ -396,8 +396,8 @@ $filteredEvidences = array_filter($evidences, function ($item) use ($filterKeywo
 });
 $filteredEvidences = array_values($filteredEvidences);
 
-$pageTitle = page_title('Quản lý Minh chứng');
-$heading   = 'Quản lý Minh chứng';
+$pageTitle = page_title('Cập nhật Minh chứng');
+$heading   = 'Cập nhật Minh chứng';
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -562,7 +562,7 @@ html[data-theme="dark"] .evidence-card {
                             <i class="bi bi-folder-check fs-4"></i>
                         </div>
                         <div>
-                            <h2 class="h5 mb-0 fw-bold text-dark">Quản lý Minh chứng</h2>
+                            <h2 class="h5 mb-0 fw-bold text-dark">Cập nhật Minh chứng</h2>
                             <span class="text-muted small">Quản lý các hồ sơ, văn bản minh chứng phục vụ kiểm định</span>
                         </div>
                     </div>

@@ -7,9 +7,9 @@
 
 - Đăng nhập.
 - Dashboard tổng quan.
-- Quản lý tiêu chuẩn.
-- Quản lý tiêu chí.
-- Quản lý minh chứng.
+- Cập nhật tiêu chuẩn.
+- Cập nhật tiêu chí.
+- Cập nhật minh chứng.
 - Quản lý người dùng.
 - Thống kê phục vụ kiểm định.
 - Tìm kiếm minh chứng.

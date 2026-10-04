@@ -93,7 +93,7 @@ try {
     $standardSets = [];
 }
 
-// ─── Standards (Quản lý Tiêu chuẩn) ──────────────────────────────────────────
+// ─── Standards (Cập nhật Tiêu chuẩn) ──────────────────────────────────────────
 $standards = [];
 try {
     $stmt = $pdo->query("
@@ -125,7 +125,7 @@ try {
     $standards = [];
 }
 
-// ─── Criteria (Quản lý Tiêu chí) ───────────────────────────────────────────
+// ─── Criteria (Cập nhật Tiêu chí) ───────────────────────────────────────────
 $criteria = [];
 try {
     $stmt = $pdo->query("
@@ -162,7 +162,7 @@ try {
     $criteria = [];
 }
 
-// ─── Evidences (Quản lý Minh chứng) ──────────────────────────────────────────
+// ─── Evidences (Cập nhật Minh chứng) ──────────────────────────────────────────
 $evidences = [];
 try {
     $stmt = $pdo->query("
