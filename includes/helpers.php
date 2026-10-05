@@ -658,7 +658,7 @@ function export_hierarchical_standards_excel(string $filename, array $filter = [
                 FROM MinhChung m_s
                 LEFT JOIN TieuChi tchi_m ON tchi_m.MaTieuChi = m_s.MaTieuChi
                 LEFT JOIN TieuChuan tc_m ON tc_m.MaTieuChuan = tchi_m.MaTieuChuan
-                WHERE m_s.MaMinhChung LIKE :kw_ev1 OR m_s.TenMinhChung LIKE :kw_ev2 OR m_s.MoTa LIKE :kw_ev3 OR m_s.NamHoc LIKE :kw_ev4
+                WHERE m_s.MaMinhChung LIKE :kw_ev1 OR m_s.TenMinhChung LIKE :kw_ev2 OR m_s.SoHieu LIKE :kw_ev_sohieu OR m_s.MoTa LIKE :kw_ev3 OR m_s.NamHoc LIKE :kw_ev4
             )
         )";
         $kwParam = "%$searchKeyword%";
@@ -676,6 +676,7 @@ function export_hierarchical_standards_excel(string $filename, array $filter = [
         $params['kw_ev2'] = $kwParam;
         $params['kw_ev3'] = $kwParam;
         $params['kw_ev4'] = $kwParam;
+        $params['kw_ev_sohieu'] = $kwParam;
     }
     if ($selectedSet !== '') {
         $clauses[] = "b.MaBoTieuChuan = :selected_set";
@@ -1118,7 +1119,7 @@ function export_hierarchical_standards_excel(string $filename, array $filter = [
                 $evIndex = 1;
                 foreach ($evs as $ev) {
                     $evId = $ev['MaMinhChung'];
-                    $evName = $ev['TenMinhChung'];
+                    $evName = $ev['TenMinhChung'] . (!empty($ev['SoHieu']) ? ' (Số hiệu: ' . $ev['SoHieu'] . ')' : '');
                     $evDate = $ev['NgayBanHanh'] ? date('d/m/Y', strtotime($ev['NgayBanHanh'])) : '-';
                     $evYear = $ev['NamHoc'] ?: '';
                     $evStatus = (int)$ev['TrangThai'] === 1 ? '✓ Đã duyệt' : '⊘ Tạm khóa';

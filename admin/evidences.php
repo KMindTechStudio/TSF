@@ -28,6 +28,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
             $haystack = implode(' ', [
                 $ev['code'] ?? '',
                 $ev['name'] ?? '',
+                $ev['so_hieu'] ?? '',
                 $ev['criterion_name'] ?? '',
                 $ev['standard_name'] ?? '',
                 $ev['set_name'] ?? '',
@@ -55,6 +56,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
             'stt'          => $stt++,
             'code'         => $ev['code'],
             'name'         => $ev['name'],
+            'so_hieu'      => !empty($ev['so_hieu']) ? $ev['so_hieu'] : '-',
             'standard'     => $ev['standard_name'] ? ($ev['ma_tieu_chuan'] . ' - ' . $ev['standard_name']) : '-',
             'criterion'    => $ev['criterion_name'] ? ($ev['ma_tieu_chi'] . ' - ' . $ev['criterion_name']) : '-',
             'issue_date'   => !empty($ev['issue_date_formatted']) ? $ev['issue_date_formatted'] : (!empty($ev['issue_date']) ? date('d/m/Y', strtotime($ev['issue_date'])) : '-'),
@@ -69,6 +71,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
         ['key' => 'stt', 'label' => 'STT', 'align' => 'center', 'width' => '60px'],
         ['key' => 'code', 'label' => 'Mã minh chứng', 'align' => 'center', 'width' => '130px'],
         ['key' => 'name', 'label' => 'Tên minh chứng', 'align' => 'left', 'width' => '300px'],
+        ['key' => 'so_hieu', 'label' => 'Số hiệu', 'align' => 'center', 'width' => '140px'],
         ['key' => 'standard', 'label' => 'Tiêu chuẩn', 'align' => 'left', 'width' => '220px'],
         ['key' => 'criterion', 'label' => 'Tiêu chí', 'align' => 'left', 'width' => '220px'],
         ['key' => 'issue_date', 'label' => 'Ngày ban hành văn bản', 'align' => 'center', 'width' => '160px'],
@@ -182,6 +185,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $rawId          = trim($_POST['id'] ?? '');
         $maMinhChung    = trim($_POST['ma_minh_chung'] ?? '');
         $title          = trim($_POST['ten_minh_chung'] ?? '');
+        $soHieu         = trim($_POST['so_hieu'] ?? '') ?: null;
         $ngayBanHanh    = trim($_POST['ngay_ban_hanh'] ?? '') ?: null;
         $maTieuChi      = trim($_POST['ma_tieu_chi'] ?? '') ?: null;
         $userId         = $_SESSION['user_id'] ?? (function_exists('current_user') ? current_user()['id'] : 'ND001');
@@ -236,10 +240,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     }
 
                     if ($relativePath) {
-                        $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, TepTin = :file, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
+                        $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, SoHieu = :so_hieu, NgayBanHanh = :ngay_ban_hanh, TepTin = :file, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
                         $stmt->execute([
                             'new_code'      => $maMinhChung,
                             'title'         => $title,
+                            'so_hieu'       => $soHieu,
                             'ngay_ban_hanh' => $ngayBanHanh,
                             'file'          => $relativePath,
                             'status'        => $status,
@@ -249,10 +254,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                             'old_code'      => $rawId,
                         ]);
                     } else {
-                        $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
+                        $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, SoHieu = :so_hieu, NgayBanHanh = :ngay_ban_hanh, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
                         $stmt->execute([
                             'new_code'      => $maMinhChung,
                             'title'         => $title,
+                            'so_hieu'       => $soHieu,
                             'ngay_ban_hanh' => $ngayBanHanh,
                             'status'        => $status,
                             'tchi'          => $maTieuChi,
@@ -274,10 +280,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         throw new RuntimeException('Mã minh chứng "' . $maMinhChung . '" đã tồn tại. Vui lòng nhập mã khác.');
                     }
 
-                    $stmt = $pdo->prepare('INSERT INTO MinhChung (MaMinhChung, TenMinhChung, NgayBanHanh, TepTin, TrangThai, MaTieuChi, MaBoTieuChuan, MaNguoiDung, NgayCapNhat) VALUES (:code, :title, :ngay_ban_hanh, :file, :status, :tchi, :set_id, :user_id, NOW())');
+                    $stmt = $pdo->prepare('INSERT INTO MinhChung (MaMinhChung, TenMinhChung, SoHieu, NgayBanHanh, TepTin, TrangThai, MaTieuChi, MaBoTieuChuan, MaNguoiDung, NgayCapNhat) VALUES (:code, :title, :so_hieu, :ngay_ban_hanh, :file, :status, :tchi, :set_id, :user_id, NOW())');
                     $stmt->execute([
                         'code'          => $maMinhChung,
                         'title'         => $title,
+                        'so_hieu'       => $soHieu,
                         'ngay_ban_hanh' => $ngayBanHanh,
                         'file'          => $relativePath,
                         'status'        => $status,
@@ -356,6 +363,7 @@ $filteredEvidences = array_filter($evidences, function ($item) use ($filterKeywo
         $haystack = implode(' ', [
             $item['code'] ?? '',
             $item['name'] ?? '',
+            $item['so_hieu'] ?? '',
             $item['criterion_name'] ?? '',
             $item['standard_name'] ?? '',
             $item['set_name'] ?? '',
@@ -680,6 +688,7 @@ html[data-theme="dark"] .evidence-card {
                             <th class="text-center text-nowrap" style="width: 50px;">STT</th>
                             <th class="text-nowrap" style="width: 110px;">Mã minh chứng</th>
                             <th style="width: 25%; min-width: 230px;">Tên minh chứng</th>
+                            <th class="text-center text-nowrap" style="width: 130px;">Số hiệu</th>
                             <th style="width: 18%; min-width: 180px;">Tiêu chuẩn &amp; Tiêu chí</th>
                             <th class="text-center text-nowrap" style="width: 115px;">Ngày ban hành</th>
                             <th class="text-center text-nowrap" style="width: 130px;">Ngày cập nhật</th>
@@ -707,6 +716,15 @@ html[data-theme="dark"] .evidence-card {
                                 <div class="fw-semibold text-dark fs-7" title="<?= htmlspecialchars($item['name']) ?>">
                                     <?= htmlspecialchars($item['name']) ?>
                                 </div>
+                            </td>
+                            <td class="text-center text-nowrap">
+                                <?php if (!empty($item['so_hieu'])): ?>
+                                    <span class="badge bg-light text-dark border font-monospace px-2 py-1 fs-7" title="Số hiệu văn bản: <?= htmlspecialchars($item['so_hieu']) ?>">
+                                        <?= htmlspecialchars($item['so_hieu']) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-muted small">-</span>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <?php if (!empty($item['ma_tieu_chi'])): ?>
@@ -773,7 +791,7 @@ html[data-theme="dark"] .evidence-card {
                                             data-current-status="<?= (int)($item['status_raw'] ?? 1) ?>"
                                             title="<?= ((int)($item['status_raw'] ?? 1) === 1) ? 'Đang hoạt động (Hiển thị cho Người dùng) - Bấm để chuyển sang Không hoạt động (Ẩn)' : 'Không hoạt động (Ẩn khỏi Người dùng) - Bấm để chuyển sang Đang hoạt động (Hiển thị)' ?>">
                                             <?php if ((int)($item['status_raw'] ?? 1) === 1): ?>
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fs-7 status-badge" style="cursor: pointer;">
+                                                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fs-7 status-badge" style="cursor: pointer;">
                                                     <i class="bi bi-toggle-on fs-6 me-1"></i>Đang hoạt động
                                                 </span>
                                             <?php else: ?>
@@ -800,6 +818,7 @@ html[data-theme="dark"] .evidence-card {
                                     <button type="button" class="btn btn-sm btn-outline-info btn-view-evidence-detail"
                                         data-id="<?= htmlspecialchars($item['code']) ?>"
                                         data-name="<?= htmlspecialchars($item['name']) ?>"
+                                        data-so-hieu="<?= htmlspecialchars($item['so_hieu'] ?? '') ?>"
                                         data-date="<?= htmlspecialchars($item['issue_date'] ?? '') ?>"
                                         data-date-formatted="<?= htmlspecialchars($formattedDate) ?>"
                                         data-updated="<?= htmlspecialchars($formattedUpdated) ?>"
@@ -824,6 +843,7 @@ html[data-theme="dark"] .evidence-card {
                                         <button type="button" class="btn btn-sm btn-outline-primary btn-edit-evidence-item"
                                             data-id="<?= htmlspecialchars($item['code']) ?>"
                                             data-name="<?= htmlspecialchars($item['name']) ?>"
+                                            data-so-hieu="<?= htmlspecialchars($item['so_hieu'] ?? '') ?>"
                                             data-date="<?= htmlspecialchars($item['issue_date'] ?? '') ?>"
                                             data-updated="<?= htmlspecialchars($formattedUpdated) ?>"
                                             data-user="<?= htmlspecialchars($updaterName) ?>"
@@ -847,7 +867,7 @@ html[data-theme="dark"] .evidence-card {
                         </tr>
                     <?php endforeach; ?>
                     <?php if (empty($filteredEvidences)): ?>
-                        <tr><td colspan="10" class="text-center text-secondary py-5"><i class="bi bi-inbox fs-2 d-block mb-2 text-muted"></i>Không tìm thấy dữ liệu minh chứng nào phù hợp với điều kiện lọc.</td></tr>
+                        <tr><td colspan="11" class="text-center text-secondary py-5"><i class="bi bi-inbox fs-2 d-block mb-2 text-muted"></i>Không tìm thấy dữ liệu minh chứng nào phù hợp với điều kiện lọc.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
@@ -878,6 +898,10 @@ html[data-theme="dark"] .evidence-card {
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Mã minh chứng <span class="text-danger">*</span></label>
                             <input class="form-control" name="ma_minh_chung" id="form_ma_minh_chung" value="<?= htmlspecialchars($editingEvidence['MaMinhChung'] ?? '') ?>" placeholder="VD: MC01, MC02..." required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Số hiệu văn bản</label>
+                            <input class="form-control font-monospace" name="so_hieu" id="form_so_hieu" value="<?= htmlspecialchars($editingEvidence['SoHieu'] ?? '') ?>" placeholder="VD: 123/QĐ-ĐHTCNH, 45/TB-KCNTT...">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Ngày ban hành văn bản <span class="text-danger">*</span></label>
@@ -1012,6 +1036,9 @@ html[data-theme="dark"] .evidence-card {
                     <div class="card-body p-4">
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                             <span class="badge bg-primary px-2 py-1 font-monospace fs-7" id="view_detail_code"><?= htmlspecialchars($viewingEvidence['MaMinhChung'] ?? '') ?></span>
+                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 font-monospace fs-7" id="view_detail_so_hieu">
+                                <i class="bi bi-tag-fill me-1"></i>Số hiệu: <?= htmlspecialchars($viewingEvidence['SoHieu'] ?? '') ?: 'Không có' ?>
+                            </span>
                             <span class="badge bg-light text-secondary border px-2 py-1 fs-7" id="view_detail_date">
                                 <i class="bi bi-calendar3 me-1 text-primary"></i>Ngày ban hành: <?= !empty($viewingEvidence['NgayBanHanh']) ? date('d/m/Y', strtotime($viewingEvidence['NgayBanHanh'])) : '-' ?>
                             </span>
@@ -1245,6 +1272,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('formEvidenceModal').reset();
             document.getElementById('form_evidence_id').value = '';
             document.getElementById('form_ma_minh_chung').value = '';
+            document.getElementById('form_so_hieu').value = '';
             document.getElementById('form_ten_minh_chung').value = '';
             document.getElementById('form_ngay_ban_hanh').value = '';
             document.getElementById('form_trang_thai').value = '1';
@@ -1266,6 +1294,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('evidenceFormModalLabel').innerHTML = '<i class="bi bi-pencil-square fs-5 text-white me-2"></i>Cập nhật thông tin Minh chứng';
         document.getElementById('form_evidence_id').value = data.id || '';
         document.getElementById('form_ma_minh_chung').value = data.id || '';
+        document.getElementById('form_so_hieu').value = data.soHieu || '';
         document.getElementById('form_ten_minh_chung').value = data.name || '';
         document.getElementById('form_ngay_ban_hanh').value = data.date || '';
         document.getElementById('form_trang_thai').value = data.status || '1';
@@ -1297,6 +1326,7 @@ document.addEventListener('DOMContentLoaded', function () {
             openEditModal({
                 id: this.dataset.id || '',
                 name: this.dataset.name || '',
+                soHieu: this.dataset.soHieu || '',
                 date: this.dataset.date || '',
                 criterion: this.dataset.criterion || '',
                 fileName: this.dataset.fileName || '',
@@ -1312,6 +1342,7 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function () {
             const id = this.dataset.id || '';
             const name = this.dataset.name || '';
+            const soHieu = this.dataset.soHieu || '';
             const date = this.dataset.dateFormatted || (this.dataset.date || '-');
             const rawDate = this.dataset.date || '';
             const updated = this.dataset.updated || '-';
@@ -1330,6 +1361,7 @@ document.addEventListener('DOMContentLoaded', function () {
             currentViewingData = {
                 id: id,
                 name: name,
+                soHieu: soHieu,
                 date: rawDate,
                 criterion: criterion,
                 fileName: fileName,
@@ -1338,6 +1370,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             document.getElementById('view_evidence_code_title').textContent = id;
             document.getElementById('view_detail_code').textContent = id;
+            const soHieuEl = document.getElementById('view_detail_so_hieu');
+            if (soHieuEl) {
+                soHieuEl.innerHTML = '<i class="bi bi-tag-fill me-1"></i>Số hiệu: ' + escapeHtml(soHieu || 'Không có');
+            }
             document.getElementById('view_detail_name').textContent = name;
             document.getElementById('view_detail_date').innerHTML = `<i class="bi bi-calendar3 me-1 text-primary"></i>Ngày ban hành: ${date}`;
             

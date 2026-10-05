@@ -84,6 +84,7 @@ CREATE TABLE TieuChi (
 CREATE TABLE MinhChung (
     MaMinhChung VARCHAR(50) NOT NULL PRIMARY KEY,
     TenMinhChung VARCHAR(255) NOT NULL,
+    SoHieu VARCHAR(100) NULL,
     NgayBanHanh DATE NULL,
     MoTa TEXT NULL,
     TepTin VARCHAR(500) NULL,

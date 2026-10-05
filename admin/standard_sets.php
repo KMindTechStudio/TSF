@@ -382,6 +382,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $rawId       = trim($_POST['id'] ?? '');
             $maMC        = trim($_POST['ma_minh_chung'] ?? '');
             $tenMC       = trim($_POST['ten_minh_chung'] ?? '');
+            $soHieu      = trim($_POST['so_hieu'] ?? '') ?: null;
             $ngayBanHanh = trim($_POST['ngay_ban_hanh'] ?? '') ?: null;
             $namHoc      = trim($_POST['nam_hoc'] ?? '') ?: null;
             $maTieuChi   = trim($_POST['ma_tieu_chi'] ?? '') ?: null;
@@ -440,10 +441,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 }
 
                 if ($relativePath) {
-                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, MoTa = :mota, TepTin = :file, NamHoc = :namhoc, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
+                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, SoHieu = :so_hieu, NgayBanHanh = :ngay_ban_hanh, MoTa = :mota, TepTin = :file, NamHoc = :namhoc, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
                     $stmt->execute([
                         'new_code'      => $maMC,
                         'title'         => $tenMC,
+                        'so_hieu'       => $soHieu,
                         'ngay_ban_hanh' => $ngayBanHanh,
                         'mota'          => $moTa,
                         'file'          => $relativePath,
@@ -455,10 +457,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         'old_code'      => $rawId,
                     ]);
                 } else {
-                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, NgayBanHanh = :ngay_ban_hanh, MoTa = :mota, NamHoc = :namhoc, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
+                    $stmt = $pdo->prepare('UPDATE MinhChung SET MaMinhChung = :new_code, TenMinhChung = :title, SoHieu = :so_hieu, NgayBanHanh = :ngay_ban_hanh, MoTa = :mota, NamHoc = :namhoc, TrangThai = :status, MaTieuChi = :tchi, MaBoTieuChuan = :set_id, MaNguoiDung = :user_id, NgayCapNhat = NOW() WHERE MaMinhChung = :old_code');
                     $stmt->execute([
                         'new_code'      => $maMC,
                         'title'         => $tenMC,
+                        'so_hieu'       => $soHieu,
                         'ngay_ban_hanh' => $ngayBanHanh,
                         'mota'          => $moTa,
                         'namhoc'        => $namHoc,
@@ -482,10 +485,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     throw new RuntimeException('Mã minh chứng "' . $maMC . '" đã tồn tại.');
                 }
 
-                $stmt = $pdo->prepare('INSERT INTO MinhChung (MaMinhChung, TenMinhChung, NgayBanHanh, MoTa, TepTin, NamHoc, TrangThai, MaTieuChi, MaBoTieuChuan, MaNguoiDung, NgayCapNhat) VALUES (:code, :title, :ngay_ban_hanh, :mota, :file, :namhoc, :status, :tchi, :set_id, :user_id, NOW())');
+                $stmt = $pdo->prepare('INSERT INTO MinhChung (MaMinhChung, TenMinhChung, SoHieu, NgayBanHanh, MoTa, TepTin, NamHoc, TrangThai, MaTieuChi, MaBoTieuChuan, MaNguoiDung, NgayCapNhat) VALUES (:code, :title, :so_hieu, :ngay_ban_hanh, :mota, :file, :namhoc, :status, :tchi, :set_id, :user_id, NOW())');
                 $stmt->execute([
                     'code'          => $maMC,
                     'title'         => $tenMC,
+                    'so_hieu'       => $soHieu,
                     'ngay_ban_hanh' => $ngayBanHanh,
                     'mota'          => $moTa,
                     'file'          => $relativePath,
@@ -723,6 +727,7 @@ $stmtAllMC = $pdo->query("
     SELECT 
         m.MaMinhChung,
         m.TenMinhChung,
+        m.SoHieu,
         m.NgayBanHanh,
         m.MoTa,
         m.TepTin,
@@ -1853,6 +1858,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                         <th style="width: 45px;" class="text-center">STT</th>
                                                                                                                                         <th style="width: 90px;">Mã MC</th>
                                                                                                                                         <th style="min-width: 200px;">Tên Minh chứng</th>
+                                                                                                         <th style="width: 110px;" class="text-center">Số hiệu</th>
                                                                                                                                         <th style="width: 100px;" class="text-center">Năm học</th>
                                                                                                                                         <th style="width: 105px;" class="text-center">Ngày ban hành</th>
                                                                                                          <th style="width: 130px;" class="text-center">Ngày cập nhật</th>
@@ -1873,6 +1879,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                         $evMatchesSelf = ($searchKeyword !== '' && (
                                                                                                                                             match_search_kw($mc['MaMinhChung'], $searchKeyword) ||
                                                                                                                                             match_search_kw($mc['TenMinhChung'], $searchKeyword) ||
+                                                                                                             match_search_kw($mc['SoHieu'] ?? '', $searchKeyword) ||
                                                                                                                                             match_search_kw($mc['MoTa'], $searchKeyword) ||
                                                                                                                                             match_search_kw($mc['NamHoc'], $searchKeyword) ||
                                                                                                                                             match_search_kw($mc['TepTin'], $searchKeyword)
@@ -1891,7 +1898,14 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                                     <small class="text-muted line-clamp-1"><?= highlight_search_text($mc['MoTa'], $searchKeyword) ?></small>
                                                                                                                                                 <?php endif; ?>
                                                                                                                                             </td>
-                                                                                                                                            <td class="text-center small"><?= highlight_search_text($mc['NamHoc'] ?: '-', $searchKeyword) ?></td>
+                                                                                                                                            <td class="text-center small font-monospace">
+                                                                                                                 <?php if (!empty($mc['SoHieu'])): ?>
+                                                                                                                     <span class="badge bg-light text-dark border"><?= highlight_search_text($mc['SoHieu'], $searchKeyword) ?></span>
+                                                                                                                 <?php else: ?>
+                                                                                                                     <span class="text-muted">-</span>
+                                                                                                                 <?php endif; ?>
+                                                                                                             </td>
+                                                                                                             <td class="text-center small"><?= highlight_search_text($mc['NamHoc'] ?: '-', $searchKeyword) ?></td>
                                                                                                                                             <td class="text-center small"><?= !empty($mc['NgayBanHanh']) ? date('d/m/Y', strtotime($mc['NgayBanHanh'])) : '-' ?></td>
                                                                                                                 <td class="text-center small text-nowrap">
                                                                                                                     <?php 
@@ -1940,6 +1954,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                                     <button class="btn btn-xs btn-outline-primary btn-edit-evidence" type="button"
                                                                                                                                                         data-id="<?= htmlspecialchars($mcId) ?>"
                                                                                                                                                         data-name="<?= htmlspecialchars($mc['TenMinhChung']) ?>"
+                                                                                                                         data-sohieu="<?= htmlspecialchars($mc['SoHieu'] ?? '') ?>"
                                                                                                                                                         data-date="<?= htmlspecialchars($mc['NgayBanHanh'] ?? '') ?>"
                                                                                                                                                         data-namhoc="<?= htmlspecialchars($mc['NamHoc'] ?? '') ?>"
                                                                                                                                                         data-mota="<?= htmlspecialchars($mc['MoTa'] ?? '') ?>"
@@ -3336,6 +3351,7 @@ document.addEventListener('DOMContentLoaded', function () {
         modalEvEl.addEventListener('hidden.bs.modal', function () {
             document.getElementById('formEvidence').reset();
             document.getElementById('ev_edit_id').value = '';
+            if (document.getElementById('ev_so_hieu')) document.getElementById('ev_so_hieu').value = '';
             document.getElementById('ev_current_file_text').innerHTML = 'Tối đa 100MB. Định dạng hỗ trợ: PDF, Word, Excel, ZIP.';
             document.getElementById('modalEvidenceLabel').innerHTML = '<i class="bi bi-file-earmark-plus me-2"></i>Thêm mới Minh chứng';
         });
@@ -3346,6 +3362,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('ev_edit_id').value = this.dataset.id || '';
             document.getElementById('ev_ma_mc').value = this.dataset.id || '';
             document.getElementById('ev_ten_mc').value = this.dataset.name || '';
+            if (document.getElementById('ev_so_hieu')) document.getElementById('ev_so_hieu').value = this.dataset.sohieu || '';
             document.getElementById('ev_ngay_ban_hanh').value = this.dataset.date || '';
             document.getElementById('ev_nam_hoc').value = this.dataset.namhoc || '';
             document.getElementById('ev_mo_ta').value = this.dataset.mota || '';

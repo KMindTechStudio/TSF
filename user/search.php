@@ -74,7 +74,7 @@ if ($searchKeyword !== '') {
             FROM MinhChung m_s
             LEFT JOIN TieuChi tchi_m ON tchi_m.MaTieuChi = m_s.MaTieuChi
             LEFT JOIN TieuChuan tc_m ON tc_m.MaTieuChuan = tchi_m.MaTieuChuan
-            WHERE m_s.MaMinhChung LIKE :kw_ev1 OR m_s.TenMinhChung LIKE :kw_ev2 OR m_s.MoTa LIKE :kw_ev3 OR m_s.NamHoc LIKE :kw_ev4 OR m_s.TepTin LIKE :kw_ev5
+            WHERE m_s.MaMinhChung LIKE :kw_ev1 OR m_s.TenMinhChung LIKE :kw_ev2 OR m_s.SoHieu LIKE :kw_ev_sohieu OR m_s.MoTa LIKE :kw_ev3 OR m_s.NamHoc LIKE :kw_ev4 OR m_s.TepTin LIKE :kw_ev5
         )
     )";
     $kwParam = "%$searchKeyword%";
@@ -93,6 +93,7 @@ if ($searchKeyword !== '') {
     $queryParams['kw_ev3'] = $kwParam;
     $queryParams['kw_ev4'] = $kwParam;
     $queryParams['kw_ev5'] = $kwParam;
+    $queryParams['kw_ev_sohieu'] = $kwParam;
 }
 
 if ($selectedStandardSet !== '') {
@@ -176,7 +177,7 @@ $standardSetsList = $stmtSets->fetchAll(PDO::FETCH_ASSOC);
 $allSetsForFilter = $pdo->query("SELECT MaBoTieuChuan, TenBoTieuChuan, ThongTu FROM BoTieuChuan ORDER BY TrangThai DESC, MaBoTieuChuan ASC")->fetchAll(PDO::FETCH_ASSOC);
 $allStandardsForFilter = $pdo->query("SELECT MaTieuChuan, TenTieuChuan, MaBoTieuChuan FROM TieuChuan ORDER BY MaBoTieuChuan ASC, ThuTu ASC, MaTieuChuan ASC")->fetchAll(PDO::FETCH_ASSOC);
 $allCriteriaForFilter = $pdo->query("SELECT tchi.MaTieuChi, tchi.TenTieuChi, tchi.MaTieuChuan, tc.MaBoTieuChuan FROM TieuChi tchi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan ORDER BY tchi.ThuTu ASC, tchi.MaTieuChi ASC")->fetchAll(PDO::FETCH_ASSOC);
-$allEvidencesForFilter = $pdo->query("SELECT m.MaMinhChung, m.TenMinhChung, m.MaTieuChi, m.MaBoTieuChuan, tc.MaTieuChuan FROM MinhChung m LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = m.MaTieuChi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan ORDER BY m.MaMinhChung ASC")->fetchAll(PDO::FETCH_ASSOC);
+$allEvidencesForFilter = $pdo->query("SELECT m.MaMinhChung, m.TenMinhChung, m.SoHieu, m.MaTieuChi, m.MaBoTieuChuan, tc.MaTieuChuan FROM MinhChung m LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = m.MaTieuChi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan ORDER BY m.MaMinhChung ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Filter query parameters for links
 $currentFilterParams = [];
@@ -230,6 +231,7 @@ $stmtAllMC = $pdo->query("
     SELECT 
         m.MaMinhChung,
         m.TenMinhChung,
+        m.SoHieu,
         m.NgayBanHanh,
         m.MoTa,
         m.TepTin,
@@ -1735,6 +1737,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                         <th style="width: 45px;" class="text-center">STT</th>
                                                                                                                                         <th style="width: 90px;">Mã MC</th>
                                                                                                                                         <th style="min-width: 200px;">Tên Minh chứng</th>
+                                                                                                         <th style="width: 110px;" class="text-center">Số hiệu</th>
                                                                                                                                         <th style="width: 100px;" class="text-center">Năm học</th>
                                                                                                                                         <th style="width: 105px;" class="text-center">Ngày ban hành</th>
                                                                                                                                         <th style="width: 125px;" class="text-center">Ngày cập nhật</th>
@@ -1770,7 +1773,14 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                                     <small class="text-muted line-clamp-1"><?= highlight_search_text($mc['MoTa'], $searchKeyword) ?></small>
                                                                                                                                                 <?php endif; ?>
                                                                                                                                             </td>
-                                                                                                                                            <td class="text-center small"><?= highlight_search_text($mc['NamHoc'] ?: '-', $searchKeyword) ?></td>
+                                                                                                                                            <td class="text-center small font-monospace">
+                                                                                                                 <?php if (!empty($mc['SoHieu'])): ?>
+                                                                                                                     <span class="badge bg-light text-dark border"><?= highlight_search_text($mc['SoHieu'], $searchKeyword) ?></span>
+                                                                                                                 <?php else: ?>
+                                                                                                                     <span class="text-muted">-</span>
+                                                                                                                 <?php endif; ?>
+                                                                                                             </td>
+                                                                                                             <td class="text-center small"><?= highlight_search_text($mc['NamHoc'] ?: '-', $searchKeyword) ?></td>
                                                                                                                                             <td class="text-center small"><?= !empty($mc['NgayBanHanh']) ? date('d/m/Y', strtotime($mc['NgayBanHanh'])) : '-' ?></td>
                                                                                                                                             <td class="text-center small text-muted">
                                                                                                                                                 <div class="d-flex align-items-center justify-content-center gap-1">
@@ -1817,6 +1827,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                                 <button class="btn btn-xs btn-outline-info btn-view-evidence-detail" type="button"
                                                                                                                                                     data-id="<?= htmlspecialchars($mcId) ?>"
                                                                                                                                                     data-name="<?= htmlspecialchars($mc['TenMinhChung']) ?>"
+                                                                                                                     data-sohieu="<?= htmlspecialchars($mc['SoHieu'] ?? '') ?>"
                                                                                                                                                     data-raw-set-id="<?= htmlspecialchars($setId) ?>"
                                                                                                                                                     data-raw-standard-id="<?= htmlspecialchars($tcId) ?>"
                                                                                                                                                     data-raw-criterion-id="<?= htmlspecialchars($tchiId) ?>"

@@ -169,6 +169,7 @@ try {
         SELECT
             m.MaMinhChung AS id,
             m.TenMinhChung AS title,
+            m.SoHieu AS document_number,
             m.NgayBanHanh AS issue_date,
             DATE_FORMAT(m.NgayBanHanh, '%d/%m/%Y') AS formatted_issue_date,
             m.MoTa AS description,
@@ -210,6 +211,8 @@ try {
             'id'                  => $row['id'],
             'code'                => $row['id'],
             'name'                => $row['title'],
+            'so_hieu'             => $row['document_number'] ?? '',
+            'document_number'     => $row['document_number'] ?? '',
             'issue_date'          => $row['issue_date'] ?? '',
             'issue_date_formatted'=> $row['formatted_issue_date'] ?? '',
             'description'         => $row['description'] ?? '',
