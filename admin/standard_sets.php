@@ -550,10 +550,41 @@ $whereClauses = [];
 $queryParams = [];
 
 if ($searchKeyword !== '') {
-    $whereClauses[] = "(b.MaBoTieuChuan LIKE :k1 OR b.TenBoTieuChuan LIKE :k2 OR b.ThongTu LIKE :k3)";
-    $queryParams['k1'] = "%$searchKeyword%";
-    $queryParams['k2'] = "%$searchKeyword%";
-    $queryParams['k3'] = "%$searchKeyword%";
+    $whereClauses[] = "(
+        (b.MaBoTieuChuan LIKE :kw_b1 OR b.TenBoTieuChuan LIKE :kw_b2 OR b.ThongTu LIKE :kw_b3 OR b.MoTa LIKE :kw_b4)
+        OR b.MaBoTieuChuan IN (
+            SELECT tc_s.MaBoTieuChuan FROM TieuChuan tc_s 
+            WHERE tc_s.MaTieuChuan LIKE :kw_tc1 OR tc_s.TenTieuChuan LIKE :kw_tc2 OR tc_s.MoTa LIKE :kw_tc3
+        )
+        OR b.MaBoTieuChuan IN (
+            SELECT tc_c.MaBoTieuChuan FROM TieuChuan tc_c 
+            JOIN TieuChi tchi_c ON tchi_c.MaTieuChuan = tc_c.MaTieuChuan 
+            WHERE tchi_c.MaTieuChi LIKE :kw_crit1 OR tchi_c.TenTieuChi LIKE :kw_crit2 OR tchi_c.NoiDung LIKE :kw_crit3
+        )
+        OR b.MaBoTieuChuan IN (
+            SELECT DISTINCT COALESCE(m_s.MaBoTieuChuan, tc_m.MaBoTieuChuan)
+            FROM MinhChung m_s
+            LEFT JOIN TieuChi tchi_m ON tchi_m.MaTieuChi = m_s.MaTieuChi
+            LEFT JOIN TieuChuan tc_m ON tc_m.MaTieuChuan = tchi_m.MaTieuChuan
+            WHERE m_s.MaMinhChung LIKE :kw_ev1 OR m_s.TenMinhChung LIKE :kw_ev2 OR m_s.MoTa LIKE :kw_ev3 OR m_s.NamHoc LIKE :kw_ev4 OR m_s.TepTin LIKE :kw_ev5
+        )
+    )";
+    $kwParam = "%$searchKeyword%";
+    $queryParams['kw_b1'] = $kwParam;
+    $queryParams['kw_b2'] = $kwParam;
+    $queryParams['kw_b3'] = $kwParam;
+    $queryParams['kw_b4'] = $kwParam;
+    $queryParams['kw_tc1'] = $kwParam;
+    $queryParams['kw_tc2'] = $kwParam;
+    $queryParams['kw_tc3'] = $kwParam;
+    $queryParams['kw_crit1'] = $kwParam;
+    $queryParams['kw_crit2'] = $kwParam;
+    $queryParams['kw_crit3'] = $kwParam;
+    $queryParams['kw_ev1'] = $kwParam;
+    $queryParams['kw_ev2'] = $kwParam;
+    $queryParams['kw_ev3'] = $kwParam;
+    $queryParams['kw_ev4'] = $kwParam;
+    $queryParams['kw_ev5'] = $kwParam;
 }
 
 if ($selectedStandardSet !== '') {
@@ -1383,29 +1414,33 @@ html[data-theme="dark"] .badge-matched-locator {
                             $formattedDate = $set['NgayBanHanh'] ? date('d/m/Y', strtotime($set['NgayBanHanh'])) : '-';
                             $sttNumber = $index + 1 + $offset;
                         
-                            // Kiểm tra khớp từ khóa tìm kiếm Cấp 1 (Bộ Tiêu chuẩn)
-                            $setMatchesSelf = $searchKeyword !== '' && (
+                            // Kiểm tra khớp từ khóa tìm kiếm & bộ lọc Cấp 1 (Bộ Tiêu chuẩn)
+                            $setMatchesSelf = ($searchKeyword !== '' && (
                                 match_search_kw($set['MaBoTieuChuan'], $searchKeyword) ||
                                 match_search_kw($set['TenBoTieuChuan'], $searchKeyword) ||
                                 match_search_kw($set['ThongTu'], $searchKeyword) ||
                                 match_search_kw($set['MoTa'], $searchKeyword)
-                            );
+                            )) || ($selectedStandardSet === $setId);
+
                             $setHasMatchingChild = false;
-                            if ($searchKeyword !== '' && !empty($standards)) {
+                            if (!empty($standards)) {
                                 foreach ($standards as $tc_chk) {
-                                    if (match_search_kw($tc_chk['MaTieuChuan'], $searchKeyword) || match_search_kw($tc_chk['TenTieuChuan'], $searchKeyword) || match_search_kw($tc_chk['MoTa'], $searchKeyword)) {
+                                    $tcMatches = ($searchKeyword !== '' && (match_search_kw($tc_chk['MaTieuChuan'], $searchKeyword) || match_search_kw($tc_chk['TenTieuChuan'], $searchKeyword) || match_search_kw($tc_chk['MoTa'], $searchKeyword))) || ($selectedStandard !== '' && $selectedStandard === $tc_chk['MaTieuChuan']);
+                                    if ($tcMatches) {
                                         $setHasMatchingChild = true;
                                         break;
                                     }
                                     $cri_chk_list = $allCriteriaByStandard[$tc_chk['MaTieuChuan']] ?? [];
                                     foreach ($cri_chk_list as $cri_chk) {
-                                        if (match_search_kw($cri_chk['MaTieuChi'], $searchKeyword) || match_search_kw($cri_chk['TenTieuChi'], $searchKeyword) || match_search_kw($cri_chk['NoiDung'], $searchKeyword)) {
+                                        $criMatches = ($searchKeyword !== '' && (match_search_kw($cri_chk['MaTieuChi'], $searchKeyword) || match_search_kw($cri_chk['TenTieuChi'], $searchKeyword) || match_search_kw($cri_chk['NoiDung'], $searchKeyword))) || ($selectedCriterion !== '' && $selectedCriterion === $cri_chk['MaTieuChi']);
+                                        if ($criMatches) {
                                             $setHasMatchingChild = true;
                                             break 2;
                                         }
                                         $ev_chk_list = $allEvidencesByCriterion[$cri_chk['MaTieuChi']] ?? [];
                                         foreach ($ev_chk_list as $ev_chk) {
-                                            if (match_search_kw($ev_chk['MaMinhChung'], $searchKeyword) || match_search_kw($ev_chk['TenMinhChung'], $searchKeyword) || match_search_kw($ev_chk['MoTa'], $searchKeyword) || match_search_kw($ev_chk['NamHoc'], $searchKeyword)) {
+                                            $evMatches = ($searchKeyword !== '' && (match_search_kw($ev_chk['MaMinhChung'], $searchKeyword) || match_search_kw($ev_chk['TenMinhChung'], $searchKeyword) || match_search_kw($ev_chk['MoTa'], $searchKeyword) || match_search_kw($ev_chk['NamHoc'], $searchKeyword) || match_search_kw($ev_chk['TepTin'], $searchKeyword))) || ($selectedEvidence !== '' && $selectedEvidence === $ev_chk['MaMinhChung']);
+                                            if ($evMatches) {
                                                 $setHasMatchingChild = true;
                                                 break 3;
                                             }
@@ -1413,7 +1448,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                     }
                                 }
                             }
-                            $isSetOpen = ($selectedStandardSet === $setId) || ($searchKeyword !== '' && ($setMatchesSelf || $setHasMatchingChild));
+                            $isSetOpen = ($selectedStandardSet === $setId) || ($setMatchesSelf && $searchKeyword !== '') || $setHasMatchingChild;
                         ?>
                             <!-- LEVEL 1: THÔNG TƯ / BỘ TIÊU CHUẨN ROW -->
                             <tr class="table-set-row <?= $isActive ? 'is-active-set' : '' ?> <?= $setMatchesSelf ? 'search-matched-row' : '' ?>" id="set-row-<?= htmlspecialchars($setId) ?>">
@@ -1427,13 +1462,13 @@ html[data-theme="dark"] .badge-matched-locator {
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center gap-3">
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-2 px-2 fs-7 fw-bold text-nowrap"><?= htmlspecialchars($setId) ?></span>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-2 px-2 fs-7 fw-bold text-nowrap"><?= highlight_search_text($setId, $searchKeyword) ?></span>
                                         <div class="flex-grow-1">
                                             <a class="fw-bold text-decoration-none text-dark d-block mb-1" href="javascript:void(0)" data-bs-toggle="collapse" data-bs-target="#collapse-set-<?= htmlspecialchars($setId) ?>">
-                                                <?= htmlspecialchars($set['TenBoTieuChuan']) ?>
+                                                <?= highlight_search_text($set['TenBoTieuChuan'], $searchKeyword) ?>
                                             </a>
                                             <?php if ($set['MoTa']): ?>
-                                                <small class="text-muted line-clamp-1 mb-1 d-block"><?= htmlspecialchars($set['MoTa']) ?></small>
+                                                <small class="text-muted line-clamp-1 mb-1 d-block"><?= highlight_search_text($set['MoTa'], $searchKeyword) ?></small>
                                             <?php endif; ?>
                                             <div class="d-flex flex-wrap gap-2 align-items-center">
                                                 <span class="badge bg-secondary-subtle text-secondary small"><i class="bi bi-folder2 me-1"></i><?= count($standards) ?> Tiêu chuẩn</span>
@@ -1565,29 +1600,32 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                 $tcId = $tc['MaTieuChuan'];
                                                                 $criteria = $allCriteriaByStandard[$tcId] ?? [];
                                                             
-                                                                // Kiểm tra khớp từ khóa tìm kiếm Cấp 2 (Tiêu chuẩn)
-                                                                $stdMatchesSelf = $searchKeyword !== '' && (
+                                                                // Kiểm tra khớp từ khóa tìm kiếm & bộ lọc Cấp 2 (Tiêu chuẩn)
+                                                                $stdMatchesSelf = ($searchKeyword !== '' && (
                                                                     match_search_kw($tc['MaTieuChuan'], $searchKeyword) ||
                                                                     match_search_kw($tc['TenTieuChuan'], $searchKeyword) ||
                                                                     match_search_kw($tc['MoTa'], $searchKeyword)
-                                                                );
+                                                                )) || ($selectedStandard === $tcId);
+
                                                                 $stdHasMatchingChild = false;
-                                                                if ($searchKeyword !== '' && !empty($criteria)) {
+                                                                if (!empty($criteria)) {
                                                                     foreach ($criteria as $cri_chk) {
-                                                                        if (match_search_kw($cri_chk['MaTieuChi'], $searchKeyword) || match_search_kw($cri_chk['TenTieuChi'], $searchKeyword) || match_search_kw($cri_chk['NoiDung'], $searchKeyword)) {
+                                                                        $criMatches = ($searchKeyword !== '' && (match_search_kw($cri_chk['MaTieuChi'], $searchKeyword) || match_search_kw($cri_chk['TenTieuChi'], $searchKeyword) || match_search_kw($cri_chk['NoiDung'], $searchKeyword))) || ($selectedCriterion !== '' && $selectedCriterion === $cri_chk['MaTieuChi']);
+                                                                        if ($criMatches) {
                                                                             $stdHasMatchingChild = true;
                                                                             break;
                                                                         }
                                                                         $ev_chk_list = $allEvidencesByCriterion[$cri_chk['MaTieuChi']] ?? [];
                                                                         foreach ($ev_chk_list as $ev_chk) {
-                                                                            if (match_search_kw($ev_chk['MaMinhChung'], $searchKeyword) || match_search_kw($ev_chk['TenMinhChung'], $searchKeyword) || match_search_kw($ev_chk['MoTa'], $searchKeyword) || match_search_kw($ev_chk['NamHoc'], $searchKeyword)) {
+                                                                            $evMatches = ($searchKeyword !== '' && (match_search_kw($ev_chk['MaMinhChung'], $searchKeyword) || match_search_kw($ev_chk['TenMinhChung'], $searchKeyword) || match_search_kw($ev_chk['MoTa'], $searchKeyword) || match_search_kw($ev_chk['NamHoc'], $searchKeyword) || match_search_kw($ev_chk['TepTin'], $searchKeyword))) || ($selectedEvidence !== '' && $selectedEvidence === $ev_chk['MaMinhChung']);
+                                                                            if ($evMatches) {
                                                                                 $stdHasMatchingChild = true;
                                                                                 break 2;
                                                                             }
                                                                         }
                                                                     }
                                                                 }
-                                                                $isStdOpen = ($selectedStandard === $tcId) || ($searchKeyword !== '' && ($stdMatchesSelf || $stdHasMatchingChild));
+                                                                $isStdOpen = ($selectedStandard === $tcId) || ($stdMatchesSelf && $searchKeyword !== '') || $stdHasMatchingChild;
                                                             ?>
                                                                 <tr class="nested-standard-row <?= $stdMatchesSelf ? 'search-matched-row' : '' ?>" id="standard-row-<?= htmlspecialchars($tcId) ?>">
                                                                     <td class="text-center">
@@ -1595,13 +1633,13 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                             <i class="bi bi-chevron-right" style="font-size: 0.75rem;"></i>
                                                                         </button>
                                                                     </td>
-                                                                    <td class="fw-bold text-primary"><?= htmlspecialchars($tcId) ?></td>
+                                                                    <td class="fw-bold text-primary"><?= highlight_search_text($tcId, $searchKeyword) ?></td>
                                                                     <td class="fw-semibold">
                                                                         <a class="text-decoration-none text-dark" href="javascript:void(0)" data-bs-toggle="collapse" data-bs-target="#collapse-standard-<?= htmlspecialchars($tcId) ?>">
-                                                                            <?= htmlspecialchars($tc['TenTieuChuan']) ?>
+                                                                            <?= highlight_search_text($tc['TenTieuChuan'], $searchKeyword) ?>
                                                                         </a>
                                                                     </td>
-                                                                    <td class="small text-secondary"><?= htmlspecialchars($tc['MoTa'] ?: '-') ?></td>
+                                                                    <td class="small text-secondary"><?= highlight_search_text($tc['MoTa'] ?: '-', $searchKeyword) ?></td>
                                                                     <td class="text-center">
                                                                         <span class="badge bg-secondary-subtle text-secondary"><?= count($criteria) ?> tiêu chí</span>
                                                                     </td>
@@ -1672,22 +1710,24 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                     $tchiId = $tchi['MaTieuChi'];
                                                                                                     $evidences = $allEvidencesByCriterion[$tchiId] ?? [];
                                                                                                 
-                                                                                                    // Kiểm tra khớp từ khóa tìm kiếm Cấp 3 (Tiêu chí)
-                                                                                                    $critMatchesSelf = $searchKeyword !== '' && (
+                                                                                                    // Kiểm tra khớp từ khóa tìm kiếm & bộ lọc Cấp 3 (Tiêu chí)
+                                                                                                    $critMatchesSelf = ($searchKeyword !== '' && (
                                                                                                         match_search_kw($tchi['MaTieuChi'], $searchKeyword) ||
                                                                                                         match_search_kw($tchi['TenTieuChi'], $searchKeyword) ||
                                                                                                         match_search_kw($tchi['NoiDung'], $searchKeyword)
-                                                                                                    );
+                                                                                                    )) || ($selectedCriterion === $tchiId);
+
                                                                                                     $critHasMatchingChild = false;
-                                                                                                    if ($searchKeyword !== '' && !empty($evidences)) {
+                                                                                                    if (!empty($evidences)) {
                                                                                                         foreach ($evidences as $ev_chk) {
-                                                                                                            if (match_search_kw($ev_chk['MaMinhChung'], $searchKeyword) || match_search_kw($ev_chk['TenMinhChung'], $searchKeyword) || match_search_kw($ev_chk['MoTa'], $searchKeyword) || match_search_kw($ev_chk['NamHoc'], $searchKeyword)) {
+                                                                                                            $evMatches = ($searchKeyword !== '' && (match_search_kw($ev_chk['MaMinhChung'], $searchKeyword) || match_search_kw($ev_chk['TenMinhChung'], $searchKeyword) || match_search_kw($ev_chk['MoTa'], $searchKeyword) || match_search_kw($ev_chk['NamHoc'], $searchKeyword) || match_search_kw($ev_chk['TepTin'], $searchKeyword))) || ($selectedEvidence !== '' && $selectedEvidence === $ev_chk['MaMinhChung']);
+                                                                                                            if ($evMatches) {
                                                                                                                 $critHasMatchingChild = true;
                                                                                                                 break;
                                                                                                             }
                                                                                                         }
                                                                                                     }
-                                                                                                    $isCritOpen = ($selectedCriterion === $tchiId) || ($searchKeyword !== '' && ($critMatchesSelf || $critHasMatchingChild));
+                                                                                                    $isCritOpen = ($selectedCriterion === $tchiId) || ($critMatchesSelf && $searchKeyword !== '') || $critHasMatchingChild;
                                                                                                 ?>
                                                                                                     <tr class="nested-criterion-row <?= $critMatchesSelf ? 'search-matched-row' : '' ?>" id="criterion-row-<?= htmlspecialchars($tchiId) ?>">
                                                                                                         <td class="text-center">
@@ -1695,13 +1735,13 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                 <i class="bi bi-chevron-right" style="font-size: 0.75rem;"></i>
                                                                                                             </button>
                                                                                                         </td>
-                                                                                                        <td class="fw-bold text-success"><?= htmlspecialchars($tchiId) ?></td>
+                                                                                                        <td class="fw-bold text-success"><?= highlight_search_text($tchiId, $searchKeyword) ?></td>
                                                                                                         <td class="fw-semibold">
                                                                                                             <a class="text-decoration-none text-dark" href="javascript:void(0)" data-bs-toggle="collapse" data-bs-target="#collapse-criterion-<?= htmlspecialchars($tchiId) ?>">
-                                                                                                                <?= htmlspecialchars($tchi['TenTieuChi']) ?>
+                                                                                                                <?= highlight_search_text($tchi['TenTieuChi'], $searchKeyword) ?>
                                                                                                             </a>
                                                                                                         </td>
-                                                                                                        <td class="small text-secondary"><?= htmlspecialchars($tchi['NoiDung'] ?: '-') ?></td>
+                                                                                                        <td class="small text-secondary"><?= highlight_search_text($tchi['NoiDung'] ?: '-', $searchKeyword) ?></td>
                                                                                                         <td class="text-center">
                                                                                                             <span class="badge <?= !empty($evidences) ? 'bg-primary' : 'bg-light text-muted border' ?>">
                                                                                                                 <?= count($evidences) ?> minh chứng
@@ -1787,26 +1827,29 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                         $mcId = $mc['MaMinhChung'];
                                                                                                                                         $mcFile = $mc['TepTin'];
                                                                                                                                         
-                                                                                                                                        $evMatchesSelf = $searchKeyword !== '' && (
+                                                                                                                                        // Kiểm tra khớp từ khóa tìm kiếm & bộ lọc Cấp 4 (Minh chứng)
+                                                                                                                                        $evMatchesSelf = ($searchKeyword !== '' && (
                                                                                                                                             match_search_kw($mc['MaMinhChung'], $searchKeyword) ||
                                                                                                                                             match_search_kw($mc['TenMinhChung'], $searchKeyword) ||
                                                                                                                                             match_search_kw($mc['MoTa'], $searchKeyword) ||
-                                                                                                                                            match_search_kw($mc['NamHoc'], $searchKeyword)
-                                                                                                                                        );$mcIsActive = (int)($mc['TrangThai'] ?? 1) === 1;
+                                                                                                                                            match_search_kw($mc['NamHoc'], $searchKeyword) ||
+                                                                                                                                            match_search_kw($mc['TepTin'], $searchKeyword)
+                                                                                                                                        )) || ($selectedEvidence === $mcId);
+                                                                                                                                        $mcIsActive = (int)($mc['TrangThai'] ?? 1) === 1;
                                                                                                                                         $hasFile = !empty($mcFile) && file_exists(__DIR__ . '/../' . $mcFile);
                                                                                                                                         $fileExt = $hasFile ? strtolower(pathinfo($mcFile, PATHINFO_EXTENSION)) : '';
                                                                                                                                         $fileUrl = $hasFile ? base_url($mcFile) : '#';
                                                                                                                                     ?>
                                                                                                                                         <tr class="nested-evidence-row <?= $evMatchesSelf ? 'search-matched-row' : '' ?>" id="evidence-row-<?= htmlspecialchars($mcId) ?>">
                                                                                                                                             <td class="text-center text-muted small"><?= $mcIdx++ ?></td>
-                                                                                                                                            <td class="fw-bold text-primary"><?= htmlspecialchars($mcId) ?></td>
+                                                                                                                                            <td class="fw-bold text-primary"><?= highlight_search_text($mcId, $searchKeyword) ?></td>
                                                                                                                                             <td>
-                                                                                                                                                <div class="fw-medium text-dark"><?= htmlspecialchars($mc['TenMinhChung']) ?></div>
+                                                                                                                                                <div class="fw-medium text-dark"><?= highlight_search_text($mc['TenMinhChung'], $searchKeyword) ?></div>
                                                                                                                                                 <?php if (!empty($mc['MoTa'])): ?>
-                                                                                                                                                    <small class="text-muted line-clamp-1"><?= htmlspecialchars($mc['MoTa']) ?></small>
+                                                                                                                                                    <small class="text-muted line-clamp-1"><?= highlight_search_text($mc['MoTa'], $searchKeyword) ?></small>
                                                                                                                                                 <?php endif; ?>
                                                                                                                                             </td>
-                                                                                                                                            <td class="text-center small"><?= htmlspecialchars($mc['NamHoc'] ?: '-') ?></td>
+                                                                                                                                            <td class="text-center small"><?= highlight_search_text($mc['NamHoc'] ?: '-', $searchKeyword) ?></td>
                                                                                                                                             <td class="text-center small"><?= !empty($mc['NgayBanHanh']) ? date('d/m/Y', strtotime($mc['NgayBanHanh'])) : '-' ?></td>
                                                                                                                 <td class="text-center small text-nowrap">
                                                                                                                     <?php 
@@ -2655,6 +2698,81 @@ document.addEventListener('DOMContentLoaded', function () {
         btnResetAll.addEventListener('click', function () {
             window.location.href = window.location.pathname;
         });
+    }
+
+    // ==============================================
+    // 0.1. TÌM KIẾM TRỰC QUAN & ĐIỀU HƯỚNG VỊ TRÍ KHỚP (SEARCH MATCH NAVIGATOR)
+    // ==============================================
+    const searchAlert = document.getElementById('searchResultsAlert');
+    const matchCountText = document.getElementById('searchMatchCountText');
+    const matchBadge = document.getElementById('matchCurrentIndexBadge');
+    const btnPrevMatch = document.getElementById('btnPrevMatch');
+    const btnNextMatch = document.getElementById('btnNextMatch');
+
+    if (searchAlert) {
+        const matchedRows = Array.from(document.querySelectorAll('.search-matched-row'));
+        const totalMatches = matchedRows.length;
+        let currentMatchIndex = 0;
+
+        function focusMatch(index) {
+            if (totalMatches === 0) return;
+            matchedRows.forEach(r => r.classList.remove('current-focus-match'));
+            const targetRow = matchedRows[index];
+            if (!targetRow) return;
+
+            // Tự động mở toàn bộ các cây cha của dòng khớp
+            let parent = targetRow.parentElement;
+            while (parent && parent !== document.body) {
+                if (parent.classList.contains('collapse') && !parent.classList.contains('show')) {
+                    bootstrap.Collapse.getOrCreateInstance(parent, { toggle: false }).show();
+                }
+                parent = parent.parentElement;
+            }
+
+            targetRow.classList.add('current-focus-match');
+            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            if (matchBadge) {
+                matchBadge.textContent = `${index + 1} / ${totalMatches}`;
+            }
+        }
+
+        if (totalMatches > 0) {
+            if (matchCountText) {
+                matchCountText.textContent = `(Tìm thấy ${totalMatches} vị trí khớp)`;
+            }
+            if (matchBadge) {
+                matchBadge.textContent = `1 / ${totalMatches}`;
+            }
+
+            // Tự động trỏ đến dòng khớp đầu tiên
+            setTimeout(() => {
+                focusMatch(0);
+            }, 300);
+
+            if (btnNextMatch) {
+                btnNextMatch.addEventListener('click', function () {
+                    currentMatchIndex = (currentMatchIndex + 1) % totalMatches;
+                    focusMatch(currentMatchIndex);
+                });
+            }
+
+            if (btnPrevMatch) {
+                btnPrevMatch.addEventListener('click', function () {
+                    currentMatchIndex = (currentMatchIndex - 1 + totalMatches) % totalMatches;
+                    focusMatch(currentMatchIndex);
+                });
+            }
+        } else {
+            if (matchCountText) {
+                matchCountText.textContent = '(Không tìm thấy kết quả phù hợp trên trang này)';
+            }
+            if (matchBadge) {
+                matchBadge.textContent = '0 / 0';
+            }
+            if (btnNextMatch) btnNextMatch.disabled = true;
+            if (btnPrevMatch) btnPrevMatch.disabled = true;
+        }
     }
 
     // 1. Setup Tree Toggle Icons & Collapsible Rows
