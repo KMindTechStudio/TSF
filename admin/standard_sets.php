@@ -2250,21 +2250,25 @@ html[data-theme="dark"] .badge-matched-locator {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label fw-bold">Mã Minh chứng <span class="text-danger">*</span></label>
                             <input type="text" name="ma_minh_chung" id="ev_ma_mc" class="form-control" placeholder="VD: MC01, MC02..." required>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Số hiệu văn bản</label>
+                            <input type="text" name="so_hieu" id="ev_so_hieu" class="form-control font-monospace" placeholder="VD: 123/QĐ-ĐHTCNH, 45/TB-KCNTT...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Tên Minh chứng <span class="text-danger">*</span></label>
+                            <input type="text" name="ten_minh_chung" id="ev_ten_mc" class="form-control" placeholder="VD: Quyết định thành lập hội đồng đánh giá..." required>
+                        </div>
+                        <div class="col-md-3">
                             <label class="form-label fw-bold">Năm học</label>
                             <input type="text" name="nam_hoc" id="ev_nam_hoc" class="form-control" placeholder="VD: 2025-2026, 2024-2025...">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label fw-bold">Ngày ban hành</label>
                             <input type="date" name="ngay_ban_hanh" id="ev_ngay_ban_hanh" class="form-control">
-                        </div>
-                        <div class="col-md-12">
-                            <label class="form-label fw-bold">Tên Minh chứng <span class="text-danger">*</span></label>
-                            <input type="text" name="ten_minh_chung" id="ev_ten_mc" class="form-control" placeholder="VD: Quyết định thành lập hội đồng đánh giá..." required>
                         </div>
                         <div class="col-md-12">
                             <label class="form-label fw-bold">Nội dung</label>
