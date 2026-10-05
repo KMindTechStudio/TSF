@@ -719,7 +719,7 @@ html[data-theme="dark"] .evidence-card {
                             </td>
                             <td class="text-center text-nowrap">
                                 <?php if (!empty($item['so_hieu'])): ?>
-                                    <span class="badge bg-light text-dark border font-monospace px-2 py-1 fs-7" title="Số hiệu văn bản: <?= htmlspecialchars($item['so_hieu']) ?>">
+                                    <span class="badge bg-light text-dark border font-monospace px-2 py-1 fs-7" title="Số hiệu: <?= htmlspecialchars($item['so_hieu']) ?>">
                                         <?= htmlspecialchars($item['so_hieu']) ?>
                                     </span>
                                 <?php else: ?>
@@ -900,7 +900,7 @@ html[data-theme="dark"] .evidence-card {
                             <input class="form-control" name="ma_minh_chung" id="form_ma_minh_chung" value="<?= htmlspecialchars($editingEvidence['MaMinhChung'] ?? '') ?>" placeholder="VD: MC01, MC02..." required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">Số hiệu văn bản</label>
+                            <label class="form-label fw-bold">Số hiệu</label>
                             <input class="form-control font-monospace" name="so_hieu" id="form_so_hieu" value="<?= htmlspecialchars($editingEvidence['SoHieu'] ?? '') ?>" placeholder="VD: 123/QĐ-ĐHTCNH, 45/TB-KCNTT...">
                         </div>
                         <div class="col-md-6">

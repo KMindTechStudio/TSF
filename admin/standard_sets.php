@@ -2255,7 +2255,7 @@ html[data-theme="dark"] .badge-matched-locator {
                             <input type="text" name="ma_minh_chung" id="ev_ma_mc" class="form-control" placeholder="VD: MC01, MC02..." required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">Số hiệu văn bản</label>
+                            <label class="form-label fw-bold">Số hiệu</label>
                             <input type="text" name="so_hieu" id="ev_so_hieu" class="form-control font-monospace" placeholder="VD: 123/QĐ-ĐHTCNH, 45/TB-KCNTT...">
                         </div>
                         <div class="col-md-6">
