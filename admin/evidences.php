@@ -854,11 +854,8 @@ html[data-theme="dark"] .criteria-badge-item {
                     </div>
 
                     <form method="get" action="" class="row g-3" id="evidenceFilterForm">
-                        <!-- Cách 1: Ô tìm kiếm theo Mã minh chứng & Tên minh chứng -->
+                        <!-- Ô tìm kiếm theo Mã minh chứng & Tên minh chứng -->
                         <div class="col-12 col-xl-4">
-                            <label for="filterKeyword" class="form-label fw-bold small text-primary mb-1 d-flex align-items-center gap-1">
-                                <i class="bi bi-search"></i> Cách 1: Tìm kiếm theo Mã minh chứng &amp; Tên minh chứng
-                            </label>
                             <div class="input-group">
                                 <span class="input-group-text bg-white border-end-0 text-muted ps-3"><i class="bi bi-search"></i></span>
                                 <input type="text" class="form-control bg-white border-start-0 border-end-0 ps-0" id="filterKeyword" name="q" placeholder="Nhập mã minh chứng (MC001...) hoặc tên minh chứng..." value="<?= htmlspecialchars($filterKeyword) ?>" autocomplete="off">
@@ -868,11 +865,8 @@ html[data-theme="dark"] .criteria-badge-item {
                             </div>
                         </div>
 
-                        <!-- Cách 2: Lọc theo cột Tiêu chuẩn & Tiêu chí -->
+                        <!-- Lọc theo cột Tiêu chuẩn & Tiêu chí -->
                         <div class="col-12 col-xl-8">
-                            <label class="form-label fw-bold small text-primary mb-1 d-flex align-items-center gap-1">
-                                <i class="bi bi-diagram-3"></i> Cách 2: Lọc theo cột Tiêu chuẩn &amp; Tiêu chí
-                            </label>
                             <div class="row g-2">
                                 <div class="col-12 col-sm-6 col-md-3">
                                     <select class="form-select form-select-sm bg-white" name="standard_set" id="filterStandardSet" onchange="this.form.submit()">
