@@ -1298,11 +1298,8 @@ html[data-theme="dark"] .badge-matched-locator {
                     </div>
 
                     <form id="filterForm" method="get" action="" class="row g-3">
-                        <!-- CÁCH 1: Ô NHẬP TỪ KHÓA TÌM NHANH -->
+                        <!-- Ô NHẬP TỪ KHÓA TÌM NHANH -->
                         <div class="col-12 col-xxl-3 col-xl-3">
-                            <label for="filterKeyword" class="form-label fw-bold small text-primary mb-1 d-flex align-items-center gap-1">
-                                <i class="bi bi-search"></i> Tìm kiếm
-                            </label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-end-0 text-muted">
                                     <i class="bi bi-search"></i>
@@ -1326,11 +1323,8 @@ html[data-theme="dark"] .badge-matched-locator {
 
                         </div>
 
-                        <!-- CÁCH 2: CỤM 5 Ô CHỌN NHANH PHÂN CẤP LIÊN KẾT + NÚT LỌC -->
+                        <!-- CỤM Ô CHỌN NHANH PHÂN CẤP LIÊN KẾT + NÚT LỌC -->
                         <div class="col-12 col-xxl-9 col-xl-9">
-                            <label class="form-label fw-bold small text-primary mb-1 d-flex align-items-center gap-1">
-                                <i class="bi bi-diagram-3"></i> Tìm kiếm phân cấp
-                            </label>
                             <div class="row g-2 align-items-center">
                                 <!-- Dropdown 1: Tiêu chuẩn -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl">
