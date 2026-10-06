@@ -66,10 +66,11 @@ try {
             b.TepTinPDF,
             b.TrangThai,
             COUNT(DISTINCT tc.MaTieuChuan) AS standard_count,
-            COUNT(DISTINCT m.MaMinhChung) AS evidence_count
+            COUNT(DISTINCT COALESCE(mctc.MaMinhChung, m.MaMinhChung)) AS evidence_count
         FROM BoTieuChuan b
         LEFT JOIN TieuChuan tc ON tc.MaBoTieuChuan = b.MaBoTieuChuan
         LEFT JOIN TieuChi tchi ON tchi.MaTieuChuan = tc.MaTieuChuan
+        LEFT JOIN minh_chung_tieu_chi mctc ON mctc.MaTieuChi = tchi.MaTieuChi
         LEFT JOIN MinhChung m ON (m.MaBoTieuChuan = b.MaBoTieuChuan OR m.MaTieuChi = tchi.MaTieuChi)
         GROUP BY b.MaBoTieuChuan, b.TenBoTieuChuan, b.ThongTu, b.NgayBanHanh, b.MoTa, b.TepTinPDF, b.TrangThai
         ORDER BY b.TrangThai DESC, b.MaBoTieuChuan ASC
@@ -165,6 +166,37 @@ try {
 // ─── Evidences (Cập nhật Minh chứng) ──────────────────────────────────────────
 $evidences = [];
 try {
+    // 1. Fetch many-to-many associations
+    $mctcMap = [];
+    try {
+        $stmtMctc = $pdo->query("
+            SELECT 
+                mctc.MaMinhChung,
+                mctc.MaTieuChi,
+                c.TenTieuChi AS criterion_name,
+                tc.MaTieuChuan AS standard_id,
+                tc.TenTieuChuan AS standard_name,
+                tc.MaBoTieuChuan AS set_id,
+                COALESCE(b.TenBoTieuChuan, '') AS set_name
+            FROM minh_chung_tieu_chi mctc
+            JOIN TieuChi c ON c.MaTieuChi = mctc.MaTieuChi
+            LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = c.MaTieuChuan
+            LEFT JOIN BoTieuChuan b ON b.MaBoTieuChuan = tc.MaBoTieuChuan
+            ORDER BY c.ThuTu ASC, c.MaTieuChi ASC
+        ");
+        foreach ($stmtMctc->fetchAll() as $link) {
+            $mctcMap[$link['MaMinhChung']][] = [
+                'id'            => $link['MaTieuChi'],
+                'code'          => $link['MaTieuChi'],
+                'name'          => $link['criterion_name'],
+                'standard_id'   => $link['standard_id'] ?? '',
+                'standard_name' => $link['standard_name'] ?? '',
+                'set_id'        => $link['set_id'] ?? '',
+                'set_name'      => $link['set_name'] ?? '',
+            ];
+        }
+    } catch (Throwable $ex) {}
+
     $stmt = $pdo->query("
         SELECT
             m.MaMinhChung AS id,
@@ -198,7 +230,32 @@ try {
         ORDER BY m.MaMinhChung ASC
     ");
     foreach ($stmt->fetchAll() as $row) {
-        $setCode = $row['set_id'] ?: 'N/A';
+        $linkedCriteria = $mctcMap[$row['id']] ?? [];
+        if (empty($linkedCriteria) && !empty($row['criterion_id'])) {
+            $linkedCriteria[] = [
+                'id'            => $row['criterion_id'],
+                'code'          => $row['criterion_id'],
+                'name'          => $row['criterion_name'],
+                'standard_id'   => $row['standard_id'] ?? '',
+                'standard_name' => $row['standard_name'] ?? '',
+                'set_id'        => $row['set_id'] ?? '',
+                'set_name'      => $row['set_name'] ?? '',
+            ];
+        }
+
+        $criteriaIds = array_values(array_unique(array_column($linkedCriteria, 'id')));
+        $standardIds = array_values(array_unique(array_filter(array_column($linkedCriteria, 'standard_id'))));
+        $setIds      = array_values(array_unique(array_filter(array_column($linkedCriteria, 'set_id'))));
+
+        $primaryCrit = !empty($linkedCriteria) ? $linkedCriteria[0] : null;
+        $primaryCritId = $primaryCrit ? $primaryCrit['id'] : ($row['criterion_id'] ?? '');
+        $primaryCritName = $primaryCrit ? $primaryCrit['name'] : ($row['criterion_name'] ?? '');
+        $primaryStdId = $primaryCrit ? $primaryCrit['standard_id'] : ($row['standard_id'] ?? '');
+        $primaryStdName = $primaryCrit ? $primaryCrit['standard_name'] : ($row['standard_name'] ?? '');
+        $primarySetId = $primaryCrit ? $primaryCrit['set_id'] : ($row['set_id'] ?? '');
+        $primarySetName = $primaryCrit ? $primaryCrit['set_name'] : ($row['set_name'] ?? '');
+
+        $setCode = $primarySetId ?: ($row['set_id'] ?: 'N/A');
         $userCode = $row['MaNguoiDung'] ?: 'ND001';
 
         $updatedFormatted = !empty($row['updated_date']) 
@@ -222,21 +279,29 @@ try {
             'updated_raw'         => $row['NgayCapNhat'] ?? '',
             'status_raw'          => (int) $row['status'],
             'status'              => (int) $row['status'] === 1 ? 'Đang hoạt động' : 'Không hoạt động',
-            'ma_tieu_chi'     => $row['criterion_id'] ?? '',
-            'criterion_code'  => $row['criterion_id'] ?? '',
-            'criterion_name'  => $row['criterion_name'] ?? '',
-            'ma_tieu_chuan'   => $row['standard_id'] ?? '',
-            'standard_code'   => $row['standard_id'] ?? '',
-            'standard_name'   => $row['standard_name'] ?? '',
-            'ma_bo_tieu_chuan'=> $row['set_id'] ?? '',
-            'set_code'        => $setCode,
-            'set_name'        => $row['set_name'] ?? '',
-            'standard_set'    => $setCode . ($row['set_name'] ? (' - ' . $row['set_name']) : ''),
-            'ma_nguoi_dung'   => $row['MaNguoiDung'],
-            'user_code'       => $userCode,
-            'user_name'       => $row['user_name'] ?? 'Quản trị viên',
-            'username'        => $row['username'] ?? 'admin',
-            'user_role'       => $row['user_role'] ?? 'admin',
+            
+            // Multiple criteria & standards support
+            'criteria'            => $linkedCriteria,
+            'criteria_ids'        => $criteriaIds,
+            'standard_ids'        => $standardIds,
+            'set_ids'             => $setIds,
+
+            // Primary / Backward-compatible fields
+            'ma_tieu_chi'         => $primaryCritId,
+            'criterion_code'      => $primaryCritId,
+            'criterion_name'      => $primaryCritName,
+            'ma_tieu_chuan'       => $primaryStdId,
+            'standard_code'       => $primaryStdId,
+            'standard_name'       => $primaryStdName,
+            'ma_bo_tieu_chuan'    => $primarySetId,
+            'set_code'            => $setCode,
+            'set_name'            => $primarySetName,
+            'standard_set'        => $setCode . ($primarySetName ? (' - ' . $primarySetName) : ''),
+            'ma_nguoi_dung'       => $row['MaNguoiDung'],
+            'user_code'           => $userCode,
+            'user_name'           => $row['user_name'] ?? 'Quản trị viên',
+            'username'            => $row['username'] ?? 'admin',
+            'user_role'           => $row['user_role'] ?? 'admin',
         ];
     }
 } catch (Throwable $e) {

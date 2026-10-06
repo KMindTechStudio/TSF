@@ -398,9 +398,30 @@ function highlight_search_text(?string $text, string $keyword): string
     if ($kw === '') {
         return $escaped;
     }
-    $escapedKw = htmlspecialchars($kw, ENT_QUOTES, 'UTF-8');
-    $kwRegex = preg_quote($escapedKw, '/');
-    return preg_replace('/(' . $kwRegex . ')/iu', '<mark class="search-matched-text">$1</mark>', $escaped);
+    
+    $patterns = [
+        'a' => '[aàáảãạăằắẳẵặâầấẩẫậAÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬ]',
+        'e' => '[eèéẻẽẹêềếểễệEÈÉẺẼẸÊỀẾỂỄỆ]',
+        'i' => '[iìíỉĩịIÌÍỈĨỊ]',
+        'o' => '[oòóỏõọôồốổỗộơờớởỡợOÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢ]',
+        'u' => '[uùúủũụưừứửữựUÙÚỦŨỤƯỪỨỬỮỰ]',
+        'y' => '[yỳýỷỹỵYỲÝỶỸỴ]',
+        'd' => '[dđDĐ]',
+    ];
+    $kwNormalized = normalize_search_text($kw);
+    $kwRegexParts = [];
+    $len = mb_strlen($kwNormalized, 'UTF-8');
+    for ($i = 0; $i < $len; $i++) {
+        $char = mb_substr($kwNormalized, $i, 1, 'UTF-8');
+        if (isset($patterns[$char])) {
+            $kwRegexParts[] = $patterns[$char];
+        } else {
+            $kwRegexParts[] = preg_quote($char, '/');
+        }
+    }
+    $regex = implode('', $kwRegexParts);
+    
+    return preg_replace('/(' . $regex . ')/iu', '<mark class="search-matched-text">$1</mark>', $escaped) ?? $escaped;
 }
 
 function user_initials(string $name): string
@@ -656,7 +677,8 @@ function export_hierarchical_standards_excel(string $filename, array $filter = [
             OR b.MaBoTieuChuan IN (
                 SELECT DISTINCT COALESCE(m_s.MaBoTieuChuan, tc_m.MaBoTieuChuan)
                 FROM MinhChung m_s
-                LEFT JOIN TieuChi tchi_m ON tchi_m.MaTieuChi = m_s.MaTieuChi
+                LEFT JOIN minh_chung_tieu_chi mctc_s ON mctc_s.MaMinhChung = m_s.MaMinhChung
+                LEFT JOIN TieuChi tchi_m ON tchi_m.MaTieuChi = COALESCE(mctc_s.MaTieuChi, m_s.MaTieuChi)
                 LEFT JOIN TieuChuan tc_m ON tc_m.MaTieuChuan = tchi_m.MaTieuChuan
                 WHERE m_s.MaMinhChung LIKE :kw_ev1 OR m_s.TenMinhChung LIKE :kw_ev2 OR m_s.SoHieu LIKE :kw_ev_sohieu OR m_s.MoTa LIKE :kw_ev3 OR m_s.NamHoc LIKE :kw_ev4
             )
@@ -691,7 +713,7 @@ function export_hierarchical_standards_excel(string $filename, array $filter = [
         $params['selected_crit'] = $selectedCrit;
     }
     if ($selectedEv !== '') {
-        $clauses[] = "b.MaBoTieuChuan IN (SELECT DISTINCT COALESCE(m.MaBoTieuChuan, tc.MaBoTieuChuan) FROM MinhChung m LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = m.MaTieuChi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan WHERE m.MaMinhChung = :selected_ev)";
+        $clauses[] = "b.MaBoTieuChuan IN (SELECT DISTINCT COALESCE(m.MaBoTieuChuan, tc.MaBoTieuChuan) FROM MinhChung m LEFT JOIN minh_chung_tieu_chi mctc ON mctc.MaMinhChung = m.MaMinhChung LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = COALESCE(mctc.MaTieuChi, m.MaTieuChi) LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan WHERE m.MaMinhChung = :selected_ev)";
         $params['selected_ev'] = $selectedEv;
     }
     if ($selectedStatus !== null) {
@@ -708,8 +730,9 @@ function export_hierarchical_standards_excel(string $filename, array $filter = [
     $allStandards = $pdo->query("SELECT * FROM TieuChuan ORDER BY ThuTu ASC, MaTieuChuan ASC")->fetchAll(PDO::FETCH_ASSOC);
     $allCriteria = $pdo->query("SELECT * FROM TieuChi ORDER BY ThuTu ASC, MaTieuChi ASC")->fetchAll(PDO::FETCH_ASSOC);
     $allEvidences = $pdo->query("
-        SELECT m.*, u.HoTen AS NguoiTao 
+        SELECT m.*, COALESCE(mctc.MaTieuChi, m.MaTieuChi) AS AssignedTieuChi, u.HoTen AS NguoiTao 
         FROM MinhChung m 
+        LEFT JOIN minh_chung_tieu_chi mctc ON mctc.MaMinhChung = m.MaMinhChung 
         LEFT JOIN NguoiDung u ON u.MaNguoiDung = m.MaNguoiDung 
         ORDER BY m.MaMinhChung ASC
     ")->fetchAll(PDO::FETCH_ASSOC);
@@ -726,9 +749,17 @@ function export_hierarchical_standards_excel(string $filename, array $filter = [
     }
 
     $evidencesByCrit = [];
+    $seenEvCrit = [];
     foreach ($allEvidences as $mc) {
-        if (!empty($mc['MaTieuChi'])) {
-            $evidencesByCrit[$mc['MaTieuChi']][] = $mc;
+        if (!empty($mc['AssignedTieuChi']) || !empty($mc['MaTieuChi'])) {
+        $critId = $mc['AssignedTieuChi'] ?? $mc['MaTieuChi'];
+        if (!empty($critId)) {
+            $k = $critId . '_' . $mc['MaMinhChung'];
+            if (!isset($seenEvCrit[$k])) {
+                $seenEvCrit[$k] = true;
+                $evidencesByCrit[$critId][] = $mc;
+            }
+        }
         }
     }
 

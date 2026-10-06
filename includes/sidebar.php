@@ -12,6 +12,7 @@
             <p>Quản trị hệ thống</p>
             <a class="<?= is_active('dashboard.php') ?>" href="<?= base_url('admin/dashboard.php') ?>"><i class="bi bi-speedometer2"></i> Dashboard</a>
             <a class="<?= is_active('standard_sets.php') ?>" href="<?= base_url('admin/standard_sets.php') ?>"><i class="bi bi-collection"></i> Quản lý Bộ Tiêu chuẩn động</a>
+            <a class="<?= is_active('evidences.php') ?>" href="<?= base_url('admin/evidences.php') ?>"><i class="bi bi-folder-check"></i> Quản lý Minh chứng</a>
             <a class="<?= is_active('users.php') ?>" href="<?= base_url('admin/users.php') ?>"><i class="bi bi-people"></i> Quản lý Người dùng</a>
         </nav>
     <?php else: ?>

@@ -385,11 +385,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $soHieu      = trim($_POST['so_hieu'] ?? '') ?: null;
             $ngayBanHanh = trim($_POST['ngay_ban_hanh'] ?? '') ?: null;
             $namHoc      = trim($_POST['nam_hoc'] ?? '') ?: null;
-            $maTieuChi   = trim($_POST['ma_tieu_chi'] ?? '') ?: null;
             $moTa        = trim($_POST['mo_ta'] ?? '');
             $userId      = $_SESSION['user_id'] ?? 'ND001';
             $status      = isset($_POST['trang_thai']) ? (int)$_POST['trang_thai'] : 1;
             $status      = in_array($status, [0, 1], true) ? $status : 1;
+
+            $rawTChi     = $_POST['ma_tieu_chi'] ?? [];
+            if (!is_array($rawTChi)) {
+                $rawTChi = [$rawTChi];
+            }
+            $maTieuChiList = array_values(array_unique(array_filter(array_map('trim', $rawTChi))));
+            $maTieuChi     = !empty($maTieuChiList) ? $maTieuChiList[0] : null;
 
             if ($maMC === '') {
                 throw new RuntimeException('Vui lòng nhập Mã minh chứng.');
@@ -397,14 +403,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if ($tenMC === '') {
                 throw new RuntimeException('Vui lòng nhập Tên minh chứng.');
             }
-            if (!$maTieuChi) {
-                throw new RuntimeException('Vui lòng chọn Tiêu chí cha.');
+            if (empty($maTieuChiList)) {
+                throw new RuntimeException('Vui lòng chọn ít nhất một Tiêu chuẩn / Tiêu chí cho minh chứng.');
             }
 
-            // Lấy MaBoTieuChuan từ MaTieuChi
-            $stmtSet = $pdo->prepare('SELECT tc.MaBoTieuChuan FROM TieuChi tchi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan WHERE tchi.MaTieuChi = :tchi LIMIT 1');
-            $stmtSet->execute(['tchi' => $maTieuChi]);
-            $maBoTieuChuan = $stmtSet->fetchColumn() ?: null;
+            // Lấy MaBoTieuChuan từ MaTieuChi đầu tiên
+            $maBoTieuChuan = null;
+            if ($maTieuChi) {
+                $stmtSet = $pdo->prepare('SELECT tc.MaBoTieuChuan FROM TieuChi tchi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan WHERE tchi.MaTieuChi = :tchi LIMIT 1');
+                $stmtSet->execute(['tchi' => $maTieuChi]);
+                $maBoTieuChuan = $stmtSet->fetchColumn() ?: null;
+            }
 
             $file = $_FILES['evidence_file'] ?? null;
             $maxUploadMb = 100;
@@ -475,6 +484,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 if ($maMC !== $rawId) {
                     $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
                 }
+
+                // Đồng bộ quan hệ nhiều tiêu chí vào bảng minh_chung_tieu_chi
+                $delMCTC = $pdo->prepare('DELETE FROM minh_chung_tieu_chi WHERE MaMinhChung = :mc');
+                $delMCTC->execute(['mc' => $rawId]);
+                if ($rawId !== $maMC) {
+                    $delMCTC->execute(['mc' => $maMC]);
+                }
+                $insMCTC = $pdo->prepare('INSERT IGNORE INTO minh_chung_tieu_chi (MaMinhChung, MaTieuChi) VALUES (:mc, :tc)');
+                foreach ($maTieuChiList as $tcCode) {
+                    $insMCTC->execute(['mc' => $maMC, 'tc' => $tcCode]);
+                }
+
                 log_activity('cap_nhat', 'minh_chung', 0, $maMC . ' - ' . $tenMC);
                 $success = 'Cập nhật minh chứng thành công.';
             } else {
@@ -499,6 +520,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     'set_id'        => $maBoTieuChuan,
                     'user_id'       => $userId,
                 ]);
+
+                // Thêm quan hệ nhiều tiêu chí vào bảng minh_chung_tieu_chi
+                $insMCTC = $pdo->prepare('INSERT IGNORE INTO minh_chung_tieu_chi (MaMinhChung, MaTieuChi) VALUES (:mc, :tc)');
+                foreach ($maTieuChiList as $tcCode) {
+                    $insMCTC->execute(['mc' => $maMC, 'tc' => $tcCode]);
+                }
+
                 log_activity('them_moi', 'minh_chung', 0, $maMC . ' - ' . $tenMC);
                 $success = 'Thêm mới minh chứng thành công.';
             }
@@ -518,6 +546,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
             $filePath = $evData['TepTin'] ?? null;
             $pdo->prepare('DELETE FROM download_logs WHERE MaMinhChung = :id')->execute(['id' => $id]);
+            $pdo->prepare('DELETE FROM minh_chung_tieu_chi WHERE MaMinhChung = :id')->execute(['id' => $id]);
             $delStmt = $pdo->prepare('DELETE FROM MinhChung WHERE MaMinhChung = :id');
             $delStmt->execute(['id' => $id]);
 
@@ -653,11 +682,12 @@ $querySets = "
         b.TrangThai,
         COUNT(DISTINCT tc.MaTieuChuan) AS total_standards,
         COUNT(DISTINCT tchi.MaTieuChi) AS total_criteria,
-        COUNT(DISTINCT m.MaMinhChung) AS total_evidences
+        COUNT(DISTINCT COALESCE(mctc.MaMinhChung, m.MaMinhChung)) AS total_evidences
     FROM BoTieuChuan b
     LEFT JOIN TieuChuan tc ON tc.MaBoTieuChuan = b.MaBoTieuChuan
     LEFT JOIN TieuChi tchi ON tchi.MaTieuChuan = tc.MaTieuChuan
-    LEFT JOIN MinhChung m ON (m.MaBoTieuChuan = b.MaBoTieuChuan OR m.MaTieuChi = tchi.MaTieuChi)
+    LEFT JOIN minh_chung_tieu_chi mctc ON mctc.MaTieuChi = tchi.MaTieuChi
+    LEFT JOIN MinhChung m ON (m.MaBoTieuChuan = b.MaBoTieuChuan OR m.MaTieuChi = tchi.MaTieuChi OR m.MaMinhChung = mctc.MaMinhChung)
 " . $whereSql . " GROUP BY b.MaBoTieuChuan, b.TenBoTieuChuan, b.ThongTu, b.NgayBanHanh, b.MoTa, b.TepTinPDF, b.TrangThai ORDER BY b.TrangThai DESC, b.MaBoTieuChuan ASC LIMIT :offset, :perPage";
 
 $stmtSets = $pdo->prepare($querySets);
@@ -673,7 +703,14 @@ $standardSetsList = $stmtSets->fetchAll(PDO::FETCH_ASSOC);
 $allSetsForFilter = $pdo->query("SELECT MaBoTieuChuan, TenBoTieuChuan, ThongTu FROM BoTieuChuan ORDER BY TrangThai DESC, MaBoTieuChuan ASC")->fetchAll(PDO::FETCH_ASSOC);
 $allStandardsForFilter = $pdo->query("SELECT MaTieuChuan, TenTieuChuan, MaBoTieuChuan FROM TieuChuan ORDER BY MaBoTieuChuan ASC, ThuTu ASC, MaTieuChuan ASC")->fetchAll(PDO::FETCH_ASSOC);
 $allCriteriaForFilter = $pdo->query("SELECT tchi.MaTieuChi, tchi.TenTieuChi, tchi.MaTieuChuan, tc.MaBoTieuChuan FROM TieuChi tchi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan ORDER BY tchi.ThuTu ASC, tchi.MaTieuChi ASC")->fetchAll(PDO::FETCH_ASSOC);
-$allEvidencesForFilter = $pdo->query("SELECT m.MaMinhChung, m.TenMinhChung, m.MaTieuChi, m.MaBoTieuChuan, tc.MaTieuChuan FROM MinhChung m LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = m.MaTieuChi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan ORDER BY m.MaMinhChung ASC")->fetchAll(PDO::FETCH_ASSOC);
+$allEvidencesForFilter = $pdo->query("
+    SELECT DISTINCT m.MaMinhChung, m.TenMinhChung, COALESCE(mctc.MaTieuChi, m.MaTieuChi) AS MaTieuChi, m.MaBoTieuChuan, tc.MaTieuChuan 
+    FROM MinhChung m 
+    LEFT JOIN minh_chung_tieu_chi mctc ON mctc.MaMinhChung = m.MaMinhChung
+    LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = COALESCE(mctc.MaTieuChi, m.MaTieuChi) 
+    LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan 
+    ORDER BY m.MaMinhChung ASC
+")->fetchAll(PDO::FETCH_ASSOC);
 
 // Filter query parameters for links
 $currentFilterParams = [];
@@ -711,8 +748,9 @@ $stmtAllTChi = $pdo->query("
         tchi.NoiDung,
         tchi.ThuTu,
         tchi.MaTieuChuan,
-        COUNT(DISTINCT m.MaMinhChung) AS total_evidences
+        COUNT(DISTINCT COALESCE(mctc.MaMinhChung, m.MaMinhChung)) AS total_evidences
     FROM TieuChi tchi
+    LEFT JOIN minh_chung_tieu_chi mctc ON mctc.MaTieuChi = tchi.MaTieuChi
     LEFT JOIN MinhChung m ON m.MaTieuChi = tchi.MaTieuChi
     GROUP BY tchi.MaTieuChi, tchi.TenTieuChi, tchi.NoiDung, tchi.ThuTu, tchi.MaTieuChuan
     ORDER BY tchi.ThuTu ASC, tchi.MaTieuChi ASC
@@ -722,7 +760,16 @@ foreach ($stmtAllTChi->fetchAll(PDO::FETCH_ASSOC) as $tchi) {
     $allCriteriaByStandard[$tchi['MaTieuChuan']][] = $tchi;
 }
 
-// 4. Fetch Evidences grouped by Criterion
+// Map of all criteria relations per evidence
+$mctcMap = [];
+try {
+    $mctcRows = $pdo->query("SELECT MaMinhChung, MaTieuChi FROM minh_chung_tieu_chi ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($mctcRows as $r) {
+        $mctcMap[$r['MaMinhChung']][] = $r['MaTieuChi'];
+    }
+} catch (Throwable $e) {}
+
+// 4. Fetch Evidences grouped by Criterion (supporting Many-to-Many via minh_chung_tieu_chi)
 $stmtAllMC = $pdo->query("
     SELECT 
         m.MaMinhChung,
@@ -733,19 +780,28 @@ $stmtAllMC = $pdo->query("
         m.TepTin,
         m.NamHoc,
         m.TrangThai,
-        m.MaTieuChi,
+        COALESCE(mctc.MaTieuChi, m.MaTieuChi) AS AssignedTieuChi,
+        m.MaTieuChi AS PrimaryTieuChi,
         m.MaBoTieuChuan,
         m.NgayCapNhat,
         u.HoTen AS NguoiTao,
         u.VaiTro AS VaiTroNguoiTao
     FROM MinhChung m
+    LEFT JOIN minh_chung_tieu_chi mctc ON mctc.MaMinhChung = m.MaMinhChung
     LEFT JOIN NguoiDung u ON u.MaNguoiDung = m.MaNguoiDung
     ORDER BY m.MaMinhChung ASC
 ");
 $allEvidencesByCriterion = [];
+$seenEvidencePerCriterion = [];
 foreach ($stmtAllMC->fetchAll(PDO::FETCH_ASSOC) as $mc) {
-    if (!empty($mc['MaTieuChi'])) {
-        $allEvidencesByCriterion[$mc['MaTieuChi']][] = $mc;
+    $assignedTc = $mc['AssignedTieuChi'] ?? $mc['PrimaryTieuChi'];
+    if (!empty($assignedTc)) {
+        $key = $assignedTc . '_' . $mc['MaMinhChung'];
+        if (!isset($seenEvidencePerCriterion[$key])) {
+            $seenEvidencePerCriterion[$key] = true;
+            $mc['all_criteria_ids'] = $mctcMap[$mc['MaMinhChung']] ?? (!empty($mc['PrimaryTieuChi']) ? [$mc['PrimaryTieuChi']] : []);
+            $allEvidencesByCriterion[$assignedTc][] = $mc;
+        }
     }
 }
 
@@ -1961,6 +2017,7 @@ html[data-theme="dark"] .badge-matched-locator {
                                                                                                                                                         data-status="<?= $mcIsActive ? '1' : '0' ?>"
                                                                                                                                                         data-file="<?= htmlspecialchars($mc['TepTin'] ?? '') ?>"
                                                                                                                                                         data-criterion-id="<?= htmlspecialchars($tchiId) ?>"
+                                                                                                                        data-criterion-ids="<?= htmlspecialchars(json_encode($mc['all_criteria_ids'] ?? [$tchiId])) ?>"
                                                                                                                                                         title="Sửa Minh chứng">
                                                                                                                                                         <i class="bi bi-pencil"></i>
                                                                                                                                                     </button>
@@ -2232,23 +2289,50 @@ html[data-theme="dark"] .badge-matched-locator {
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label fw-bold">Thuộc Tiêu chí <span class="text-danger">*</span></label>
-                            <select name="ma_tieu_chi" id="ev_ma_tchi" class="form-select" required>
-                                <?php foreach ($allStandardsBySet as $setK => $standardsList): ?>
-                                    <?php foreach ($standardsList as $tcItem): 
-                                        $critList = $allCriteriaByStandard[$tcItem['MaTieuChuan']] ?? [];
-                                        if (empty($critList)) continue;
-                                    ?>
-                                        <optgroup label="[<?= htmlspecialchars($setK) ?>] <?= htmlspecialchars($tcItem['MaTieuChuan']) ?> - <?= htmlspecialchars($tcItem['TenTieuChuan']) ?>">
-                                            <?php foreach ($critList as $cItem): ?>
-                                                <option value="<?= htmlspecialchars($cItem['MaTieuChi']) ?>">
-                                                    <?= htmlspecialchars($cItem['MaTieuChi'] . ' - ' . $cItem['TenTieuChi']) ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </optgroup>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label fw-bold mb-0">
+                                    <i class="bi bi-diagram-3-fill text-primary me-1"></i>Thuộc Tiêu chuẩn &amp; Tiêu chí <span class="text-danger">*</span>
+                                    <small class="text-muted fw-normal">(Có thể chọn 1 hoặc nhiều Tiêu chuẩn / Tiêu chí)</small>
+                                </label>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="ev_modal_selected_criteria_count">Đã chọn: 0 tiêu chí</span>
+                            </div>
+                            
+                            <div class="border rounded-3 p-2 bg-light criteria-selection-box" style="max-height: 220px; overflow-y: auto; background-color: #f8fafc;">
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                    <input type="text" class="form-control bg-white border-start-0" id="evModalCriteriaSearchInput" placeholder="Tìm nhanh theo mã hoặc tên tiêu chí/tiêu chuẩn...">
+                                </div>
+                                <div id="evModalCriteriaCheckboxContainer" class="d-flex flex-column gap-2">
+                                    <?php foreach ($allStandardsBySet as $setK => $standardsList): ?>
+                                        <?php foreach ($standardsList as $tcItem): 
+                                            $critList = $allCriteriaByStandard[$tcItem['MaTieuChuan']] ?? [];
+                                            if (empty($critList)) continue;
+                                        ?>
+                                            <div class="ev-modal-criteria-group p-2 rounded-2 bg-white border shadow-xs">
+                                                <div class="d-flex align-items-center justify-content-between pb-1 mb-1 border-bottom">
+                                                    <span class="fw-bold text-primary small d-flex align-items-center gap-1">
+                                                        <i class="bi bi-folder2 text-primary"></i> [<?= htmlspecialchars($setK) ?>] <?= htmlspecialchars($tcItem['MaTieuChuan'] . ' - ' . $tcItem['TenTieuChuan']) ?>
+                                                    </span>
+                                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none ev-btn-toggle-group-criteria" style="font-size: 0.72rem;">
+                                                        Chọn tất cả
+                                                    </button>
+                                                </div>
+                                                <div class="d-flex flex-column gap-1 ps-1">
+                                                    <?php foreach ($critList as $cItem): ?>
+                                                        <div class="form-check ev-criteria-item-row py-0.5">
+                                                            <input class="form-check-input ev-modal-criteria-checkbox" type="checkbox" name="ma_tieu_chi[]" value="<?= htmlspecialchars($cItem['MaTieuChi']) ?>" id="ev_chk_crit_<?= htmlspecialchars($cItem['MaTieuChi']) ?>">
+                                                            <label class="form-check-label small user-select-none" for="ev_chk_crit_<?= htmlspecialchars($cItem['MaTieuChi']) ?>">
+                                                                <strong class="text-dark font-monospace"><?= htmlspecialchars($cItem['MaTieuChi']) ?></strong>: <?= htmlspecialchars($cItem['TenTieuChi']) ?>
+                                                            </label>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
                                     <?php endforeach; ?>
-                                <?php endforeach; ?>
-                            </select>
+                                </div>
+                            </div>
+                            <div class="form-text small text-muted mt-1"><i class="bi bi-info-circle text-info me-1"></i>Minh chứng sẽ xuất hiện ở tất cả các Tiêu chuẩn / Tiêu chí được chọn.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Mã Minh chứng <span class="text-danger">*</span></label>
@@ -3339,18 +3423,69 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // 7. Modal Add / Edit Evidence (Minh chứng)
+    // 7. Modal Add / Edit Evidence (Minh chứng - Nhiều tiêu chí)
     const modalEvEl = document.getElementById('modalAddEvidence');
     const modalEv = modalEvEl ? new bootstrap.Modal(modalEvEl) : null;
+    const evCheckboxes = document.querySelectorAll('.ev-modal-criteria-checkbox');
+    const evCountBadge = document.getElementById('ev_modal_selected_criteria_count');
+    const evSearchInput = document.getElementById('evModalCriteriaSearchInput');
+
+    function updateEvModalCriteriaCount() {
+        if (!evCountBadge) return;
+        const checkedCount = document.querySelectorAll('.ev-modal-criteria-checkbox:checked').length;
+        evCountBadge.textContent = 'Đã chọn: ' + checkedCount + ' tiêu chí';
+    }
+
+    if (evCheckboxes.length > 0) {
+        evCheckboxes.forEach(chk => {
+            chk.addEventListener('change', updateEvModalCriteriaCount);
+        });
+    }
+
+    // Toggle group criteria
+    document.querySelectorAll('.ev-btn-toggle-group-criteria').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const card = this.closest('.ev-modal-criteria-group');
+            if (!card) return;
+            const groupCheckboxes = card.querySelectorAll('.ev-modal-criteria-checkbox');
+            const allChecked = Array.from(groupCheckboxes).every(c => c.checked);
+            groupCheckboxes.forEach(c => {
+                c.checked = !allChecked;
+            });
+            this.textContent = allChecked ? 'Chọn tất cả' : 'Bỏ chọn';
+            updateEvModalCriteriaCount();
+        });
+    });
+
+    // Quick search criteria in modal
+    if (evSearchInput) {
+        evSearchInput.addEventListener('input', function () {
+            const kw = this.value.toLowerCase().trim();
+            document.querySelectorAll('.ev-modal-criteria-group').forEach(group => {
+                let anyVisibleInGroup = false;
+                group.querySelectorAll('.ev-criteria-item-row').forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (kw === '' || text.includes(kw)) {
+                        row.style.display = '';
+                        anyVisibleInGroup = true;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                group.style.display = anyVisibleInGroup ? '' : 'none';
+            });
+        });
+    }
 
     if (modalEvEl) {
         modalEvEl.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             if (!button || button.classList.contains('btn-edit-evidence')) return;
             const critId = button.getAttribute('data-criterion-id');
-            if (critId && document.getElementById('ev_ma_tchi')) {
-                document.getElementById('ev_ma_tchi').value = critId;
-            }
+            evCheckboxes.forEach(chk => {
+                chk.checked = (critId && chk.value === critId);
+            });
+            updateEvModalCriteriaCount();
         });
         modalEvEl.addEventListener('hidden.bs.modal', function () {
             document.getElementById('formEvidence').reset();
@@ -3358,6 +3493,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (document.getElementById('ev_so_hieu')) document.getElementById('ev_so_hieu').value = '';
             document.getElementById('ev_current_file_text').innerHTML = 'Tối đa 100MB. Định dạng hỗ trợ: PDF, Word, Excel, ZIP.';
             document.getElementById('modalEvidenceLabel').innerHTML = '<i class="bi bi-file-earmark-plus me-2"></i>Thêm mới Minh chứng';
+            evCheckboxes.forEach(chk => { chk.checked = false; });
+            if (evSearchInput) {
+                evSearchInput.value = '';
+                document.querySelectorAll('.ev-modal-criteria-group').forEach(g => { g.style.display = ''; });
+                document.querySelectorAll('.ev-criteria-item-row').forEach(r => { r.style.display = ''; });
+            }
+            updateEvModalCriteriaCount();
         });
     }
 
@@ -3371,9 +3513,23 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('ev_nam_hoc').value = this.dataset.namhoc || '';
             document.getElementById('ev_mo_ta').value = this.dataset.mota || '';
             document.getElementById('ev_trang_thai').value = this.dataset.status || '1';
-            if (this.dataset.criterionId && document.getElementById('ev_ma_tchi')) {
-                document.getElementById('ev_ma_tchi').value = this.dataset.criterionId;
+
+            // Check all associated criteria
+            let targetCritIds = [];
+            try {
+                if (this.dataset.criterionIds) {
+                    targetCritIds = JSON.parse(this.dataset.criterionIds);
+                }
+            } catch (e) {}
+            if (!Array.isArray(targetCritIds) || targetCritIds.length === 0) {
+                if (this.dataset.criterionId) targetCritIds = [this.dataset.criterionId];
             }
+
+            evCheckboxes.forEach(chk => {
+                chk.checked = targetCritIds.includes(chk.value);
+            });
+            updateEvModalCriteriaCount();
+
             if (this.dataset.file) {
                 document.getElementById('ev_current_file_text').innerHTML = '<span class="text-primary"><i class="bi bi-paperclip"></i> Tệp hiện tại: <strong>' + this.dataset.file.split('/').pop() + '</strong> (Chọn tệp mới nếu muốn thay thế)</span>';
             } else {
@@ -3383,6 +3539,50 @@ document.addEventListener('DOMContentLoaded', function () {
             if (modalEv) modalEv.show();
         });
     });
+
+    // =========================================================================
+    // Auto-scroll and highlight target document from hash or query parameters
+    // =========================================================================
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetEv = urlParams.get('evidence');
+    const targetCrit = urlParams.get('criterion');
+    const targetStd = urlParams.get('standard');
+    const hash = window.location.hash;
+
+    let targetRowEl = null;
+    let targetLabel = '';
+
+    if (hash && hash.startsWith('#') && hash.length > 1) {
+        try {
+            targetRowEl = document.querySelector(hash);
+            if (targetRowEl) targetLabel = 'Vị trí bạn chọn';
+        } catch (e) {}
+    }
+    if (!targetRowEl && targetEv) {
+        targetRowEl = document.getElementById('evidence-row-' + targetEv);
+        targetLabel = 'Minh chứng ' + targetEv;
+    }
+    if (!targetRowEl && targetCrit) {
+        targetRowEl = document.getElementById('criterion-row-' + targetCrit);
+        targetLabel = 'Tiêu chí ' + targetCrit;
+    }
+    if (!targetRowEl && targetStd) {
+        targetRowEl = document.getElementById('standard-row-' + targetStd);
+        targetLabel = 'Tiêu chuẩn ' + targetStd;
+    }
+
+    if (targetRowEl) {
+        let parent = targetRowEl.parentElement;
+        while (parent && parent !== document.body) {
+            if (parent.classList.contains('collapse') && !parent.classList.contains('show')) {
+                bootstrap.Collapse.getOrCreateInstance(parent, { toggle: false }).show();
+            }
+            parent = parent.parentElement;
+        }
+        setTimeout(() => {
+            triggerHighlightTargetAdmin(targetRowEl, targetLabel || 'Vị trí tài liệu');
+        }, 350);
+    }
 });
 </script>
 

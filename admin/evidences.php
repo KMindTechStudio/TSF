@@ -25,6 +25,12 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
 
     $exportList = array_filter($evidences, function ($ev) use ($searchKeyword, $filterStandardSet, $filterStandard, $filterCriterion, $filterStatus, $filterHasFile) {
         if ($searchKeyword !== '') {
+            $allCritNames = '';
+            if (!empty($ev['criteria'])) {
+                foreach ($ev['criteria'] as $c) {
+                    $allCritNames .= ' ' . ($c['id'] ?? '') . ' ' . ($c['name'] ?? '') . ' ' . ($c['standard_id'] ?? '') . ' ' . ($c['standard_name'] ?? '') . ' ' . ($c['set_name'] ?? '');
+                }
+            }
             $haystack = implode(' ', [
                 $ev['code'] ?? '',
                 $ev['name'] ?? '',
@@ -32,6 +38,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
                 $ev['criterion_name'] ?? '',
                 $ev['standard_name'] ?? '',
                 $ev['set_name'] ?? '',
+                $allCritNames,
                 $ev['issue_date_formatted'] ?? '',
                 $ev['issue_date'] ?? '',
                 $ev['updated'] ?? '',
@@ -40,9 +47,18 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
             ]);
             if (!search_contains($haystack, $searchKeyword)) return false;
         }
-        if ($filterStandardSet !== '' && ($ev['ma_bo_tieu_chuan'] ?? '') !== $filterStandardSet) return false;
-        if ($filterStandard !== '' && ($ev['ma_tieu_chuan'] ?? '') !== $filterStandard) return false;
-        if ($filterCriterion !== '' && ($ev['ma_tieu_chi'] ?? '') !== $filterCriterion) return false;
+        if ($filterStandardSet !== '') {
+            $hasSet = in_array($filterStandardSet, $ev['set_ids'] ?? [], true) || ($ev['ma_bo_tieu_chuan'] ?? '') === $filterStandardSet;
+            if (!$hasSet) return false;
+        }
+        if ($filterStandard !== '') {
+            $hasStd = in_array($filterStandard, $ev['standard_ids'] ?? [], true) || ($ev['ma_tieu_chuan'] ?? '') === $filterStandard;
+            if (!$hasStd) return false;
+        }
+        if ($filterCriterion !== '') {
+            $hasCrit = in_array($filterCriterion, $ev['criteria_ids'] ?? [], true) || ($ev['ma_tieu_chi'] ?? '') === $filterCriterion;
+            if (!$hasCrit) return false;
+        }
         if ($filterStatus !== '' && (string)($ev['status_raw'] ?? 1) !== $filterStatus) return false;
         if ($filterHasFile === 'yes' && empty($ev['file_path'])) return false;
         if ($filterHasFile === 'no' && !empty($ev['file_path'])) return false;
@@ -52,13 +68,28 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
     $exportData = [];
     $stt = 1;
     foreach ($exportList as $ev) {
+        $stdLabels = [];
+        $critLabels = [];
+        if (!empty($ev['criteria'])) {
+            foreach ($ev['criteria'] as $c) {
+                if (!empty($c['standard_name'])) {
+                    $stdLabels[] = $c['standard_id'] . ' - ' . $c['standard_name'];
+                }
+                if (!empty($c['name'])) {
+                    $critLabels[] = $c['id'] . ' - ' . $c['name'];
+                }
+            }
+        }
+        $stdText = !empty($stdLabels) ? implode(' | ', array_unique($stdLabels)) : ($ev['standard_name'] ? ($ev['ma_tieu_chuan'] . ' - ' . $ev['standard_name']) : '-');
+        $critText = !empty($critLabels) ? implode(' | ', array_unique($critLabels)) : ($ev['criterion_name'] ? ($ev['ma_tieu_chi'] . ' - ' . $ev['criterion_name']) : '-');
+
         $exportData[] = [
             'stt'          => $stt++,
             'code'         => $ev['code'],
             'name'         => $ev['name'],
             'so_hieu'      => !empty($ev['so_hieu']) ? $ev['so_hieu'] : '-',
-            'standard'     => $ev['standard_name'] ? ($ev['ma_tieu_chuan'] . ' - ' . $ev['standard_name']) : '-',
-            'criterion'    => $ev['criterion_name'] ? ($ev['ma_tieu_chi'] . ' - ' . $ev['criterion_name']) : '-',
+            'standard'     => $stdText,
+            'criterion'    => $critText,
             'issue_date'   => !empty($ev['issue_date_formatted']) ? $ev['issue_date_formatted'] : (!empty($ev['issue_date']) ? date('d/m/Y', strtotime($ev['issue_date'])) : '-'),
             'updated_date' => !empty($ev['updated']) ? $ev['updated'] : '-',
             'user_name'    => !empty($ev['user_name']) ? $ev['user_name'] : 'Quản trị viên',
@@ -110,8 +141,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $filePath = $evidenceData['TepTin'] ?? null;
                 $evidenceTitle = $evidenceData['TenMinhChung'] ?? '';
 
-                // 1. Xóa nhật ký tải tệp tin liên quan
+                // 1. Xóa nhật ký tải tệp tin liên quan & liên kết nhiều tiêu chí
                 $pdo->prepare('DELETE FROM download_logs WHERE MaMinhChung = :id')->execute(['id' => $evidenceId]);
+                $pdo->prepare('DELETE FROM minh_chung_tieu_chi WHERE MaMinhChung = :id')->execute(['id' => $evidenceId]);
 
                 // 2. Xóa hoàn toàn bản ghi minh chứng trong CSDL
                 $delStmt = $pdo->prepare('DELETE FROM MinhChung WHERE MaMinhChung = :id');
@@ -187,12 +219,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $title          = trim($_POST['ten_minh_chung'] ?? '');
         $soHieu         = trim($_POST['so_hieu'] ?? '') ?: null;
         $ngayBanHanh    = trim($_POST['ngay_ban_hanh'] ?? '') ?: null;
-        $maTieuChi      = trim($_POST['ma_tieu_chi'] ?? '') ?: null;
+        
+        $rawTChi        = $_POST['ma_tieu_chi'] ?? [];
+        if (!is_array($rawTChi)) {
+            $rawTChi = [$rawTChi];
+        }
+        $maTieuChiList  = array_values(array_unique(array_filter(array_map('trim', $rawTChi))));
+        $maTieuChi      = !empty($maTieuChiList) ? $maTieuChiList[0] : null;
+
         $userId         = $_SESSION['user_id'] ?? (function_exists('current_user') ? current_user()['id'] : 'ND001');
         $status         = isset($_POST['trang_thai']) ? (int) $_POST['trang_thai'] : 1;
         $status         = in_array($status, [0, 1], true) ? $status : 1;
 
-        // Tự động tìm Bộ tiêu chuẩn từ Tiêu chí được chọn
+        // Tự động tìm Bộ tiêu chuẩn từ Tiêu chí đầu tiên được chọn
         $maBoTieuChuan = null;
         if ($maTieuChi) {
             $stmtSet = $pdo->prepare('SELECT tc.MaBoTieuChuan FROM TieuChi tchi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan WHERE tchi.MaTieuChi = :tchi LIMIT 1');
@@ -206,6 +245,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $error = 'Vui lòng nhập Mã minh chứng.';
         } elseif ($title === '') {
             $error = 'Vui lòng nhập Tên minh chứng.';
+        } elseif (empty($maTieuChiList)) {
+            $error = 'Vui lòng chọn ít nhất một Tiêu chuẩn / Tiêu chí cho minh chứng.';
         } elseif ($file && $file['error'] === UPLOAD_ERR_OK && (int) $file['size'] > $maxUploadBytes) {
             $error = 'Dung lượng tệp tin tải lên vượt quá giới hạn tối đa cho phép (' . $maxUploadMb . 'MB).';
         } else {
@@ -270,6 +311,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     if ($maMinhChung !== $rawId) {
                         $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
                     }
+
+                    // Đồng bộ liên kết nhiều Tiêu chí trong minh_chung_tieu_chi
+                    $delMCTC = $pdo->prepare('DELETE FROM minh_chung_tieu_chi WHERE MaMinhChung = :mc');
+                    $delMCTC->execute(['mc' => $rawId]);
+                    if ($rawId !== $maMinhChung) {
+                        $delMCTC->execute(['mc' => $maMinhChung]);
+                    }
+                    $insMCTC = $pdo->prepare('INSERT IGNORE INTO minh_chung_tieu_chi (MaMinhChung, MaTieuChi) VALUES (:mc, :tc)');
+                    foreach ($maTieuChiList as $tcCode) {
+                        $insMCTC->execute(['mc' => $maMinhChung, 'tc' => $tcCode]);
+                    }
+
                     log_activity('cap_nhat', 'minh_chung', 0, $maMinhChung . ' - ' . $title);
                     $success = 'Cập nhật minh chứng thành công.';
                 } else {
@@ -292,6 +345,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         'set_id'        => $maBoTieuChuan,
                         'user_id'       => $userId,
                     ]);
+
+                    // Thêm liên kết nhiều Tiêu chí vào minh_chung_tieu_chi
+                    $insMCTC = $pdo->prepare('INSERT IGNORE INTO minh_chung_tieu_chi (MaMinhChung, MaTieuChi) VALUES (:mc, :tc)');
+                    foreach ($maTieuChiList as $tcCode) {
+                        $insMCTC->execute(['mc' => $maMinhChung, 'tc' => $tcCode]);
+                    }
+
                     log_activity('them_moi', 'minh_chung', 0, $maMinhChung . ' - ' . $title);
                     $success = 'Thêm mới minh chứng thành công.';
                 }
@@ -319,6 +379,7 @@ $editId = $isCreatingEvidence ? '' : trim($_GET['edit'] ?? '');
 $viewId = trim($_GET['view'] ?? '');
 
 $editingEvidence = null;
+$editingCriteriaIds = [];
 if ($editId !== '') {
     $stmt = $pdo->prepare('
         SELECT m.*, u.HoTen AS user_name, u.TenDangNhap AS username, u.VaiTro AS user_role
@@ -328,9 +389,19 @@ if ($editId !== '') {
     ');
     $stmt->execute(['id' => $editId]);
     $editingEvidence = $stmt->fetch();
+
+    if ($editingEvidence) {
+        $stmtMCTC = $pdo->prepare('SELECT MaTieuChi FROM minh_chung_tieu_chi WHERE MaMinhChung = :id');
+        $stmtMCTC->execute(['id' => $editId]);
+        $editingCriteriaIds = $stmtMCTC->fetchAll(PDO::FETCH_COLUMN);
+        if (empty($editingCriteriaIds) && !empty($editingEvidence['MaTieuChi'])) {
+            $editingCriteriaIds = [$editingEvidence['MaTieuChi']];
+        }
+    }
 }
 
 $viewingEvidence = null;
+$viewingCriteriaList = [];
 if ($viewId !== '') {
     $stmt = $pdo->prepare('
         SELECT m.*, u.HoTen AS user_name, u.TenDangNhap AS username, u.VaiTro AS user_role, tc.TenTieuChuan AS standard_name, tchi.TenTieuChi AS criterion_name, b.TenBoTieuChuan AS set_name
@@ -343,6 +414,30 @@ if ($viewId !== '') {
     ');
     $stmt->execute(['id' => $viewId]);
     $viewingEvidence = $stmt->fetch();
+
+    if ($viewingEvidence) {
+        $stmtV = $pdo->prepare('
+            SELECT mctc.MaTieuChi AS id, c.TenTieuChi AS name, tc.MaTieuChuan AS standard_id, tc.TenTieuChuan AS standard_name, tc.MaBoTieuChuan AS set_id, COALESCE(b.TenBoTieuChuan, "") AS set_name
+            FROM minh_chung_tieu_chi mctc
+            JOIN TieuChi c ON c.MaTieuChi = mctc.MaTieuChi
+            LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = c.MaTieuChuan
+            LEFT JOIN BoTieuChuan b ON b.MaBoTieuChuan = tc.MaBoTieuChuan
+            WHERE mctc.MaMinhChung = :id
+            ORDER BY c.ThuTu ASC, c.MaTieuChi ASC
+        ');
+        $stmtV->execute(['id' => $viewId]);
+        $viewingCriteriaList = $stmtV->fetchAll();
+        if (empty($viewingCriteriaList) && !empty($viewingEvidence['MaTieuChi'])) {
+            $viewingCriteriaList[] = [
+                'id' => $viewingEvidence['MaTieuChi'],
+                'name' => $viewingEvidence['criterion_name'],
+                'standard_id' => $viewingEvidence['MaTieuChuan'] ?? '',
+                'standard_name' => $viewingEvidence['standard_name'] ?? '',
+                'set_id' => $viewingEvidence['MaBoTieuChuan'] ?? '',
+                'set_name' => $viewingEvidence['set_name'] ?? '',
+            ];
+        }
+    }
 }
 
 $filterKeyword    = trim($_GET['q'] ?? $_GET['search'] ?? '');
@@ -360,6 +455,12 @@ $countHasFile = count(array_filter($evidences, fn($ev) => !empty($ev['file_path'
 // Lọc danh sách minh chứng
 $filteredEvidences = array_filter($evidences, function ($item) use ($filterKeyword, $filterStandardSet, $filterStandard, $filterCriterion, $filterStatus, $filterHasFile) {
     if ($filterKeyword !== '') {
+        $allCritNames = '';
+        if (!empty($item['criteria'])) {
+            foreach ($item['criteria'] as $c) {
+                $allCritNames .= ' ' . ($c['id'] ?? '') . ' ' . ($c['name'] ?? '') . ' ' . ($c['standard_id'] ?? '') . ' ' . ($c['standard_name'] ?? '') . ' ' . ($c['set_name'] ?? '');
+            }
+        }
         $haystack = implode(' ', [
             $item['code'] ?? '',
             $item['name'] ?? '',
@@ -367,6 +468,7 @@ $filteredEvidences = array_filter($evidences, function ($item) use ($filterKeywo
             $item['criterion_name'] ?? '',
             $item['standard_name'] ?? '',
             $item['set_name'] ?? '',
+            $allCritNames,
             $item['issue_date_formatted'] ?? '',
             $item['issue_date'] ?? '',
             $item['file_path'] ?? '',
@@ -376,16 +478,19 @@ $filteredEvidences = array_filter($evidences, function ($item) use ($filterKeywo
         }
     }
 
-    if ($filterStandardSet !== '' && ($item['ma_bo_tieu_chuan'] ?? '') !== $filterStandardSet) {
-        return false;
+    if ($filterStandardSet !== '') {
+        $hasSet = in_array($filterStandardSet, $item['set_ids'] ?? [], true) || ($item['ma_bo_tieu_chuan'] ?? '') === $filterStandardSet;
+        if (!$hasSet) return false;
     }
 
-    if ($filterStandard !== '' && ($item['ma_tieu_chuan'] ?? '') !== $filterStandard) {
-        return false;
+    if ($filterStandard !== '') {
+        $hasStd = in_array($filterStandard, $item['standard_ids'] ?? [], true) || ($item['ma_tieu_chuan'] ?? '') === $filterStandard;
+        if (!$hasStd) return false;
     }
 
-    if ($filterCriterion !== '' && ($item['ma_tieu_chi'] ?? '') !== $filterCriterion) {
-        return false;
+    if ($filterCriterion !== '') {
+        $hasCrit = in_array($filterCriterion, $item['criteria_ids'] ?? [], true) || ($item['ma_tieu_chi'] ?? '') === $filterCriterion;
+        if (!$hasCrit) return false;
     }
 
     if ($filterStatus !== '' && (string)($item['status_raw'] ?? 1) !== $filterStatus) {
@@ -404,8 +509,8 @@ $filteredEvidences = array_filter($evidences, function ($item) use ($filterKeywo
 });
 $filteredEvidences = array_values($filteredEvidences);
 
-$pageTitle = page_title('Cập nhật Minh chứng');
-$heading   = 'Cập nhật Minh chứng';
+$pageTitle = page_title('Quản lý Minh chứng');
+$heading   = 'Quản lý Minh chứng';
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -430,16 +535,24 @@ html[data-theme="dark"] .evidence-card {
     transform: translateY(-3px);
     box-shadow: 0 10px 25px rgba(18, 48, 95, 0.08) !important;
 }
+.fs-8 {
+    font-size: 0.75rem !important;
+}
 .table thead th {
     white-space: nowrap !important;
     background-color: #f8fafc !important;
     color: #475569;
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-    padding-top: 14px;
-    padding-bottom: 14px;
+    letter-spacing: 0.02em;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+.table tbody td {
+    padding: 8px;
 }
 .table tbody tr {
     transition: background-color 0.15s ease;
@@ -449,7 +562,8 @@ html[data-theme="dark"] .evidence-card {
 }
 .evidence-title-cell {
     word-break: break-word;
-    line-height: 1.5;
+    line-height: 1.4;
+    font-size: 0.82rem;
 }
 .btn-status-toggle {
     cursor: pointer;
@@ -466,11 +580,144 @@ html[data-theme="dark"] .evidence-card {
     user-select: none;
 }
 .btn-status-toggle:hover .status-badge {
-    transform: scale(1.08);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 .btn-status-toggle:active .status-badge {
-    transform: scale(0.95);
+    transform: scale(0.96);
+}
+.evidence-criteria-cell {
+    max-width: 220px;
+}
+.evidence-code-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.evidence-code-link:hover {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+.criteria-badge-std {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    font-size: 0.68rem;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    transition: all 0.18s ease;
+    cursor: pointer;
+}
+.criteria-badge-std:hover {
+    background-color: #2563eb;
+    color: #ffffff !important;
+    border-color: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+.criteria-badge-item {
+    background-color: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    font-size: 0.68rem;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: all 0.18s ease;
+    cursor: pointer;
+}
+.criteria-badge-item:hover {
+    background-color: #16a34a;
+    color: #ffffff !important;
+    border-color: #15803d;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+}
+.tooltip .tooltip-inner {
+    max-width: 320px;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+/* Search Highlight & Location Indicator */
+.search-matched-row {
+    background-color: #fefce8 !important;
+    border-left: 4px solid #f59e0b !important;
+    position: relative;
+    transition: all 0.3s ease;
+    animation: rowHighlightPulse 1s ease-out;
+}
+@keyframes rowHighlightPulse {
+    0% { background-color: #fef08a !important; }
+    60% { background-color: #fef9c3 !important; }
+    100% { background-color: #fefce8 !important; }
+}
+.search-matched-row:hover {
+    background-color: #fef08a !important;
+}
+.search-matched-row.current-focus-match {
+    background-color: #fde047 !important;
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.45) !important;
+    z-index: 5;
+    animation: searchPulseGlow 1.5s infinite ease-in-out;
+}
+@keyframes searchPulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+.search-matched-text {
+    background: #fef08a;
+    color: #854d0e;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 4px;
+    border-bottom: 2px solid #f59e0b;
+    display: inline;
+}
+html[data-theme="dark"] .table thead th {
+    background-color: #0d1e36 !important;
+    color: #94a3b8;
+}
+html[data-theme="dark"] .table tbody tr:hover {
+    background-color: #1e3a5f !important;
+}
+html[data-theme="dark"] .search-matched-row {
+    background-color: #2b1d0c !important;
+    border-left: 4px solid #f59e0b !important;
+}
+html[data-theme="dark"] .search-matched-row.current-focus-match {
+    background-color: #451a03 !important;
+    box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.5) !important;
+}
+html[data-theme="dark"] .search-matched-text {
+    background: #78350f;
+    color: #fef08a;
+    border-bottom-color: #fde047;
+}
+html[data-theme="dark"] .criteria-badge-std {
+    background-color: #1e3a8a !important;
+    color: #93c5fd !important;
+    border-color: #2563eb !important;
+}
+html[data-theme="dark"] .criteria-badge-item {
+    background-color: #064e3b !important;
+    color: #86efac !important;
+    border-color: #059669 !important;
 }
 </style>
 
@@ -570,8 +817,8 @@ html[data-theme="dark"] .evidence-card {
                             <i class="bi bi-folder-check fs-4"></i>
                         </div>
                         <div>
-                            <h2 class="h5 mb-0 fw-bold text-dark">Cập nhật Minh chứng</h2>
-                            <span class="text-muted small">Quản lý các hồ sơ, văn bản minh chứng phục vụ kiểm định</span>
+                            <h2 class="h5 mb-0 fw-bold text-dark">Quản lý Minh chứng</h2>
+                            <span class="text-muted small">Quản lý toàn bộ hồ sơ, văn bản minh chứng phục vụ kiểm định</span>
                         </div>
                     </div>
                 </div>
@@ -619,7 +866,6 @@ html[data-theme="dark"] .evidence-card {
                                     <a href="<?= base_url('admin/evidences.php') ?>" class="btn btn-white border border-start-0 text-muted" title="Xóa từ khóa"><i class="bi bi-x-circle-fill"></i></a>
                                 <?php endif; ?>
                             </div>
-                            <div class="form-text small text-secondary mt-1"><i class="bi bi-lightning-charge text-warning"></i> Nhấn Enter hoặc nút Tìm kiếm bên phải</div>
                         </div>
 
                         <!-- Cách 2: Lọc theo cột Tiêu chuẩn & Tiêu chí -->
@@ -671,8 +917,7 @@ html[data-theme="dark"] .evidence-card {
                                     </select>
                                 </div>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center mt-2">
-                                <span class="form-text small text-secondary"><i class="bi bi-funnel text-info"></i> Tự động lọc theo Tiêu chuẩn &amp; Tiêu chí đã chọn</span>
+                            <div class="d-flex justify-content-end align-items-center mt-2">
                                 <button class="btn btn-sm btn-primary px-4 rounded-pill shadow-xs" type="submit"><i class="bi bi-search me-1"></i> Áp dụng</button>
                             </div>
                         </div>
@@ -680,22 +925,48 @@ html[data-theme="dark"] .evidence-card {
                 </div>
             </div>
 
+            <!-- ======================= THANH ĐIỀU HƯỚNG VỊ TRÍ KẾT QUẢ TÌM KIẾM ======================= -->
+            <?php if ($filterKeyword !== ''): ?>
+                <div class="alert alert-warning border-0 shadow-sm rounded-4 py-2.5 px-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2" id="searchResultsAlert" style="background: #fffbeb; border-left: 4px solid #f59e0b !important;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="p-1.5 rounded-3 bg-warning text-dark"><i class="bi bi-search fs-6"></i></span>
+                        <div>
+                            <span class="fw-bold text-dark fs-7">Kết quả tìm kiếm cho từ khóa:</span>
+                            <span class="badge bg-warning text-dark font-monospace px-2 py-1 fs-7">"<?= htmlspecialchars($filterKeyword) ?>"</span>
+                            <span class="text-secondary small ms-1" id="searchMatchCountText">(Tìm thấy <strong><?= count($filteredEvidences) ?></strong> minh chứng phù hợp)</span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <?php if (count($filteredEvidences) > 1): ?>
+                            <div class="d-flex align-items-center gap-1 bg-white px-2 py-1 rounded-pill border shadow-xs">
+                                <span class="text-muted small fs-8 me-1"><i class="bi bi-geo-alt-fill text-warning me-0.5"></i>Vị trí:</span>
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle font-monospace fs-8" id="matchCurrentIndexBadge">1 / <?= count($filteredEvidences) ?></span>
+                                <button type="button" class="btn btn-sm btn-light border-0 p-0 px-1 text-secondary" id="btnPrevMatch" title="Đến kết quả trước (Lên trên)"><i class="bi bi-chevron-up"></i></button>
+                                <button type="button" class="btn btn-sm btn-light border-0 p-0 px-1 text-secondary" id="btnNextMatch" title="Đến kết quả tiếp theo (Xuống dưới)"><i class="bi bi-chevron-down"></i></button>
+                            </div>
+                        <?php endif; ?>
+                        <a href="<?= base_url('admin/evidences.php') ?>" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Xóa từ khóa tìm kiếm">
+                            <i class="bi bi-x-circle me-1"></i>Xóa tìm kiếm
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <!-- Evidence Table -->
             <div class="table-responsive border rounded-3 overflow-hidden shadow-xs">
                 <table class="table align-middle mb-0 table-hover" data-page-size="10" style="width: 100%;">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-center text-nowrap" style="width: 50px;">STT</th>
-                            <th class="text-nowrap" style="width: 110px;">Mã minh chứng</th>
-                            <th style="width: 25%; min-width: 230px;">Tên minh chứng</th>
-                            <th class="text-center text-nowrap" style="width: 130px;">Số hiệu</th>
-                            <th style="width: 18%; min-width: 180px;">Tiêu chuẩn &amp; Tiêu chí</th>
-                            <th class="text-center text-nowrap" style="width: 115px;">Ngày ban hành</th>
-                            <th class="text-center text-nowrap" style="width: 130px;">Ngày cập nhật</th>
-                            <th class="text-nowrap" style="width: 140px;">Người cập nhật</th>
-                            <th class="text-center text-nowrap" style="width: 120px;">File đính kèm</th>
-                            <th class="text-center text-nowrap" style="width: 125px;">Trạng thái</th>
-                            <th class="text-end text-nowrap" style="width: 110px;">Thao tác</th>
+                            <th class="text-center text-nowrap" style="width: 45px;">STT</th>
+                            <th class="text-center text-nowrap" style="width: 100px;">Mã MC</th>
+                            <th style="min-width: 180px;">Tên minh chứng</th>
+                            <th class="text-center text-nowrap" style="width: 110px;">Số hiệu</th>
+                            <th style="width: 175px; min-width: 150px;">Tiêu chuẩn &amp; Tiêu chí</th>
+                            <th class="text-center text-nowrap" style="width: 100px;">Ngày BH</th>
+                            <th class="text-nowrap" style="width: 130px;">Cập nhật</th>
+                            <th class="text-center text-nowrap" style="width: 85px;">File</th>
+                            <th class="text-center text-nowrap" style="width: 110px;">Trạng thái</th>
+                            <th class="text-end text-nowrap" style="width: 95px;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="evidencesTableBody">
@@ -707,78 +978,135 @@ html[data-theme="dark"] .evidence-card {
                         $updaterName = !empty($item['user_name']) ? $item['user_name'] : 'Quản trị viên';
                         $updaterRole = ($item['user_role'] ?? 'admin') === 'admin' ? 'Quản trị viên' : 'Người dùng';
                     ?>
-                        <tr>
-                            <td class="text-center text-secondary fw-semibold"><?= $stt++ ?></td>
-                            <td>
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fs-7 fw-bold font-monospace"><?= htmlspecialchars($item['code']) ?></span>
+                        <tr class="<?= $filterKeyword !== '' ? 'search-matched-row' : '' ?>" id="evidence-row-<?= htmlspecialchars($item['code']) ?>" data-evidence-code="<?= htmlspecialchars($item['code']) ?>">
+                            <td class="text-center text-secondary fw-semibold fs-8"><?= $stt++ ?></td>
+                            <td class="text-center text-nowrap">
+                                <a href="<?= base_url('admin/standard_sets.php?evidence=' . urlencode($item['code']) . '#evidence-row-' . urlencode($item['code'])) ?>" 
+                                   class="badge bg-primary-subtle text-primary border border-primary-subtle px-1.5 py-1 fs-8 fw-bold font-monospace evidence-code-link" 
+                                   data-bs-toggle="tooltip" 
+                                   data-bs-html="true"
+                                   title="<div class='text-start p-1'><strong>Mã: <?= htmlspecialchars($item['code']) ?></strong><br><small class='text-light-50'>Bấm để xem vị trí minh chứng này trong Cây Bộ tiêu chuẩn</small></div>">
+                                    <?= highlight_search_text($item['code'], $filterKeyword) ?>
+                                    <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.62rem;"></i>
+                                </a>
                             </td>
                             <td class="evidence-title-cell">
-                                <div class="fw-semibold text-dark fs-7" title="<?= htmlspecialchars($item['name']) ?>">
-                                    <?= htmlspecialchars($item['name']) ?>
+                                <div class="fw-semibold text-dark" title="<?= htmlspecialchars($item['name']) ?>">
+                                    <?= highlight_search_text($item['name'], $filterKeyword) ?>
                                 </div>
                             </td>
                             <td class="text-center text-nowrap">
                                 <?php if (!empty($item['so_hieu'])): ?>
-                                    <span class="badge bg-light text-dark border font-monospace px-2 py-1 fs-7" title="Số hiệu: <?= htmlspecialchars($item['so_hieu']) ?>">
-                                        <?= htmlspecialchars($item['so_hieu']) ?>
+                                    <span class="badge bg-light text-dark border font-monospace px-1.5 py-1 fs-8" title="Số hiệu: <?= htmlspecialchars($item['so_hieu']) ?>">
+                                        <?= highlight_search_text($item['so_hieu'], $filterKeyword) ?>
                                     </span>
                                 <?php else: ?>
-                                    <span class="text-muted small">-</span>
+                                    <span class="text-muted fs-8">-</span>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if (!empty($item['ma_tieu_chi'])): ?>
-                                    <div class="d-flex flex-column gap-1">
-                                        <?php if (!empty($item['set_name'])): ?>
-                                            <div class="small text-secondary fw-bold d-flex align-items-center gap-1 text-truncate" style="font-size: 0.72rem;" title="Bộ tiêu chuẩn: <?= htmlspecialchars($item['set_name']) ?>">
-                                                <i class="bi bi-collection-fill text-primary" style="font-size: 0.75rem;"></i>
-                                                <span class="text-truncate"><?= htmlspecialchars($item['ma_bo_tieu_chuan'] . ($item['set_name'] ? ' - ' . $item['set_name'] : '')) ?></span>
+                                <?php if (!empty($item['criteria'])): 
+                                    $groupedByStandard = [];
+                                    foreach ($item['criteria'] as $c) {
+                                        $stdKey = $c['standard_id'] ?: 'Khác';
+                                        $groupedByStandard[$stdKey]['standard_name'] = $c['standard_name'] ?? '';
+                                        $groupedByStandard[$stdKey]['standard_id'] = $c['standard_id'] ?? '';
+                                        $groupedByStandard[$stdKey]['set_name'] = $c['set_name'] ?? '';
+                                        $groupedByStandard[$stdKey]['set_id'] = $c['set_id'] ?? '';
+                                        $groupedByStandard[$stdKey]['criteria'][] = $c;
+                                    }
+                                ?>
+                                    <div class="evidence-criteria-cell d-flex flex-column gap-1">
+                                        <?php foreach ($groupedByStandard as $sKey => $sGroup): 
+                                            $stdTooltip = "<div class='text-start p-1'>"
+                                                . "<div class='text-warning small fw-bold'><i class='bi bi-collection-fill me-1'></i>" . htmlspecialchars($sGroup['set_name'] ?: ($sGroup['set_id'] ?: 'Bộ tiêu chuẩn')) . "</div>"
+                                                . "<div class='mt-1 text-white fw-semibold'><i class='bi bi-folder2-open text-primary me-1'></i>Tiêu chuẩn " . htmlspecialchars($sGroup['standard_id']) . ": " . htmlspecialchars($sGroup['standard_name']) . "</div>"
+                                                . "<div class='mt-1 small border-top border-secondary pt-1 text-light-50'><i class='bi bi-cursor-fill me-1 text-warning'></i>Nhấp để chuyển đến Tiêu chuẩn này</div>"
+                                                . "</div>";
+                                        ?>
+                                            <div class="d-flex flex-wrap align-items-center gap-1">
+                                                <a href="<?= base_url('admin/standard_sets.php?standard=' . urlencode($sGroup['standard_id']) . '#standard-row-' . urlencode($sGroup['standard_id'])) ?>" 
+                                                   class="criteria-badge-std" 
+                                                   data-bs-toggle="tooltip" 
+                                                   data-bs-html="true" 
+                                                   title="<?= htmlspecialchars($stdTooltip, ENT_QUOTES) ?>">
+                                                    <i class="bi bi-folder2 me-1"></i><?= highlight_search_text($sGroup['standard_id'], $filterKeyword) ?>
+                                                </a>
+                                                <?php foreach ($sGroup['criteria'] as $cr): 
+                                                    $critTooltip = "<div class='text-start p-1'>"
+                                                        . "<div class='small text-light-50'><i class='bi bi-diagram-3-fill text-info me-1'></i>Vị trí cây phân cấp:</div>"
+                                                        . "<div class='small text-white'><i class='bi bi-collection me-1 text-info'></i>" . htmlspecialchars($sGroup['set_id'] ?: 'Bộ TC') . " &gt; <i class='bi bi-folder me-1 text-primary'></i>" . htmlspecialchars($sGroup['standard_id']) . "</div>"
+                                                        . "<div class='mt-1 fw-bold text-success'><i class='bi bi-check2-circle me-1'></i>Tiêu chí " . htmlspecialchars($cr['id']) . ": " . htmlspecialchars($cr['name']) . "</div>"
+                                                        . "<div class='mt-1 small border-top border-secondary pt-1 text-warning'><i class='bi bi-box-arrow-up-right me-1'></i>Nhấp để chuyển đến vị trí minh chứng này</div>"
+                                                        . "</div>";
+                                                ?>
+                                                    <a href="<?= base_url('admin/standard_sets.php?criterion=' . urlencode($cr['id']) . '&evidence=' . urlencode($item['code']) . '#evidence-row-' . urlencode($item['code'])) ?>" 
+                                                       class="criteria-badge-item" 
+                                                       data-bs-toggle="tooltip" 
+                                                       data-bs-html="true" 
+                                                       title="<?= htmlspecialchars($critTooltip, ENT_QUOTES) ?>">
+                                                        <i class="bi bi-check2 me-0.5"></i><?= highlight_search_text($cr['id'], $filterKeyword) ?>
+                                                    </a>
+                                                <?php endforeach; ?>
                                             </div>
-                                        <?php endif; ?>
-                                        <span class="badge bg-primary-subtle text-primary text-truncate d-inline-block text-start w-100" title="Tiêu chuẩn: <?= htmlspecialchars($item['standard_name']) ?>">
-                                            <i class="bi bi-folder2 me-1"></i><?= htmlspecialchars($item['ma_tieu_chuan'] . ($item['standard_name'] ? ' - ' . $item['standard_name'] : '')) ?>
-                                        </span>
-                                        <span class="badge bg-success-subtle text-success text-truncate d-inline-block text-start w-100" title="Tiêu chí: <?= htmlspecialchars($item['criterion_name']) ?>">
-                                            <i class="bi bi-list-check me-1"></i><?= htmlspecialchars($item['ma_tieu_chi'] . ($item['criterion_name'] ? ' - ' . $item['criterion_name'] : '')) ?>
-                                        </span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php elseif (!empty($item['ma_tieu_chi'])): 
+                                    $singleCritTooltip = "<div class='text-start p-1'>"
+                                        . "<div class='small text-light-50'><i class='bi bi-diagram-3-fill text-info me-1'></i>Vị trí cây phân cấp:</div>"
+                                        . "<div class='small text-white'><i class='bi bi-folder me-1 text-primary'></i>" . htmlspecialchars($item['ma_tieu_chuan']) . ": " . htmlspecialchars($item['standard_name']) . "</div>"
+                                        . "<div class='mt-1 fw-bold text-success'><i class='bi bi-check2-circle me-1'></i>Tiêu chí " . htmlspecialchars($item['ma_tieu_chi']) . ": " . htmlspecialchars($item['criterion_name']) . "</div>"
+                                        . "<div class='mt-1 small border-top border-secondary pt-1 text-warning'><i class='bi bi-box-arrow-up-right me-1'></i>Nhấp để chuyển đến vị trí minh chứng này</div>"
+                                        . "</div>";
+                                ?>
+                                    <div class="evidence-criteria-cell d-flex flex-wrap align-items-center gap-1">
+                                        <a href="<?= base_url('admin/standard_sets.php?standard=' . urlencode($item['ma_tieu_chuan']) . '#standard-row-' . urlencode($item['ma_tieu_chuan'])) ?>" 
+                                           class="criteria-badge-std" 
+                                           data-bs-toggle="tooltip" 
+                                           data-bs-html="true" 
+                                           title="<div class='text-start p-1'><strong>Tiêu chuẩn <?= htmlspecialchars($item['ma_tieu_chuan']) ?>:</strong> <?= htmlspecialchars($item['standard_name']) ?><br><small class='text-warning'>Bấm để mở Tiêu chuẩn</small></div>">
+                                            <i class="bi bi-folder2 me-1"></i><?= highlight_search_text($item['ma_tieu_chuan'], $filterKeyword) ?>
+                                        </a>
+                                        <a href="<?= base_url('admin/standard_sets.php?criterion=' . urlencode($item['ma_tieu_chi']) . '&evidence=' . urlencode($item['code']) . '#evidence-row-' . urlencode($item['code'])) ?>" 
+                                           class="criteria-badge-item" 
+                                           data-bs-toggle="tooltip" 
+                                           data-bs-html="true" 
+                                           title="<?= htmlspecialchars($singleCritTooltip, ENT_QUOTES) ?>">
+                                            <i class="bi bi-check2 me-0.5"></i><?= highlight_search_text($item['ma_tieu_chi'], $filterKeyword) ?>
+                                        </a>
                                     </div>
                                 <?php else: ?>
-                                    <span class="badge bg-light text-muted border">Chưa phân loại</span>
+                                    <span class="badge bg-light text-muted border fs-8">Chưa phân loại</span>
                                 <?php endif; ?>
                             </td>
                             <td class="text-center text-nowrap">
-                                <span class="badge bg-light text-secondary border px-2 py-1 fs-7">
+                                <span class="badge bg-light text-secondary border px-1.5 py-1 fs-8">
                                     <i class="bi bi-calendar3 me-1 text-primary"></i><?= htmlspecialchars($formattedDate) ?>
                                 </span>
                             </td>
-                            <td class="text-center text-nowrap">
-                                <span class="badge bg-light text-secondary border px-2 py-1 fs-7" title="Thời gian cập nhật gần nhất">
-                                    <i class="bi bi-clock-history me-1 text-info"></i><?= htmlspecialchars($formattedUpdated) ?>
-                                </span>
-                            </td>
                             <td class="text-nowrap">
-                                <div class="d-flex flex-column">
-                                    <span class="fw-semibold text-dark fs-7 d-flex align-items-center gap-1" title="<?= htmlspecialchars($updaterName) ?>">
-                                        <i class="bi bi-person-fill text-primary" style="font-size: 0.85rem;"></i>
-                                        <span class="text-truncate" style="max-width: 130px;"><?= htmlspecialchars($updaterName) ?></span>
+                                <div class="d-flex flex-column" style="line-height: 1.25;">
+                                    <span class="fw-semibold text-dark fs-8 d-flex align-items-center gap-1" title="Người cập nhật: <?= htmlspecialchars($updaterName) ?> (<?= htmlspecialchars($updaterRole) ?>)">
+                                        <i class="bi bi-person-fill text-primary"></i>
+                                        <span class="text-truncate" style="max-width: 105px;"><?= htmlspecialchars($updaterName) ?></span>
                                     </span>
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-1.5 py-0 mt-0.5 align-self-start" style="font-size: 0.65rem;">
-                                        <?= htmlspecialchars($updaterRole) ?>
+                                    <span class="text-muted fs-8 mt-0.5" title="Thời gian cập nhật: <?= htmlspecialchars($formattedUpdated) ?>">
+                                        <i class="bi bi-clock-history me-1 text-secondary"></i><?= htmlspecialchars($formattedUpdated) ?>
                                     </span>
                                 </div>
                             </td>
                             <td class="text-center text-nowrap">
                                 <?php if (!empty($item['file_path'])): ?>
                                     <div class="d-inline-flex gap-1 align-items-center">
-                                        <a class="btn btn-sm btn-outline-danger px-2 py-1 fs-7" href="<?= base_url('user/view.php?id=' . urlencode($item['id'])) ?>" target="_blank" title="Xem trực tiếp file ở tab mới">
-                                            <i class="bi bi-eye me-1"></i>Xem file
+                                        <a class="btn btn-sm btn-outline-danger px-1.5 py-0.5 fs-8" href="<?= base_url('user/view.php?id=' . urlencode($item['id'])) ?>" target="_blank" title="Xem trực tiếp file ở tab mới">
+                                            <i class="bi bi-file-earmark-pdf-fill me-0.5"></i>Xem
                                         </a>
-                                        <a class="btn btn-sm btn-light border text-secondary px-2 py-1 fs-7" href="<?= base_url('user/download.php?id=' . urlencode($item['id'])) ?>" title="Tải file về máy">
+                                        <a class="btn btn-sm btn-light border text-secondary px-1.5 py-0.5 fs-8" href="<?= base_url('user/download.php?id=' . urlencode($item['id'])) ?>" title="Tải file về máy">
                                             <i class="bi bi-download"></i>
                                         </a>
                                     </div>
                                 <?php else: ?>
-                                    <span class="badge bg-light text-muted border px-2 py-1 fs-7">Chưa có file</span>
+                                    <span class="text-muted fs-8">-</span>
                                 <?php endif; ?>
                             </td>
                             <td class="text-center text-nowrap">
@@ -789,33 +1117,33 @@ html[data-theme="dark"] .evidence-card {
                                         <button type="submit" class="btn-status-toggle"
                                             data-id="<?= htmlspecialchars($item['code']) ?>"
                                             data-current-status="<?= (int)($item['status_raw'] ?? 1) ?>"
-                                            title="<?= ((int)($item['status_raw'] ?? 1) === 1) ? 'Đang hoạt động (Hiển thị cho Người dùng) - Bấm để chuyển sang Không hoạt động (Ẩn)' : 'Không hoạt động (Ẩn khỏi Người dùng) - Bấm để chuyển sang Đang hoạt động (Hiển thị)' ?>">
+                                            title="<?= ((int)($item['status_raw'] ?? 1) === 1) ? 'Đang hoạt động (Hiển thị) - Bấm để chuyển sang Ẩn' : 'Không hoạt động (Ẩn) - Bấm để chuyển sang Hiển thị' ?>">
                                             <?php if ((int)($item['status_raw'] ?? 1) === 1): ?>
-                                                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fs-7 status-badge" style="cursor: pointer;">
-                                                    <i class="bi bi-toggle-on fs-6 me-1"></i>Đang hoạt động
+                                                 <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-1 fs-8 status-badge" style="cursor: pointer;">
+                                                    <i class="bi bi-toggle-on fs-7 me-1"></i>Hoạt động
                                                 </span>
                                             <?php else: ?>
-                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 fs-7 status-badge" style="cursor: pointer;">
-                                                    <i class="bi bi-toggle-off fs-6 me-1"></i>Không hoạt động
+                                                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-1.5 py-1 fs-8 status-badge" style="cursor: pointer;">
+                                                    <i class="bi bi-toggle-off fs-7 me-1"></i>Đang ẩn
                                                 </span>
                                             <?php endif; ?>
                                         </button>
                                     </form>
                                 <?php else: ?>
                                     <?php if ((int)($item['status_raw'] ?? 1) === 1): ?>
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fs-7" title="Hiển thị cho Người dùng xem">
-                                            <i class="bi bi-eye-fill me-1"></i>Đang hoạt động
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-1 fs-8" title="Hiển thị cho Người dùng xem">
+                                            <i class="bi bi-eye-fill me-1"></i>Hoạt động
                                         </span>
                                     <?php else: ?>
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 fs-7" title="Chỉ Quản trị viên thấy, ẩn với Người dùng">
-                                            <i class="bi bi-eye-slash-fill me-1"></i>Không hoạt động
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-1.5 py-1 fs-8" title="Chỉ Quản trị viên thấy, ẩn với Người dùng">
+                                            <i class="bi bi-eye-slash-fill me-1"></i>Đang ẩn
                                         </span>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                             <td class="text-end text-nowrap">
                                 <div class="d-inline-flex gap-1">
-                                    <button type="button" class="btn btn-sm btn-outline-info btn-view-evidence-detail"
+                                    <button type="button" class="btn btn-sm btn-outline-info px-1.5 py-0.5 fs-8 btn-view-evidence-detail"
                                         data-id="<?= htmlspecialchars($item['code']) ?>"
                                         data-name="<?= htmlspecialchars($item['name']) ?>"
                                         data-so-hieu="<?= htmlspecialchars($item['so_hieu'] ?? '') ?>"
@@ -825,12 +1153,8 @@ html[data-theme="dark"] .evidence-card {
                                         data-user="<?= htmlspecialchars($updaterName) ?>"
                                         data-user-role="<?= htmlspecialchars($updaterRole) ?>"
                                         data-username="<?= htmlspecialchars($item['username'] ?? '') ?>"
-                                        data-criterion="<?= htmlspecialchars($item['ma_tieu_chi'] ?? '') ?>"
-                                        data-criterion-name="<?= htmlspecialchars($item['criterion_name'] ?? '') ?>"
-                                        data-standard="<?= htmlspecialchars($item['ma_tieu_chuan'] ?? '') ?>"
-                                        data-standard-name="<?= htmlspecialchars($item['standard_name'] ?? '') ?>"
-                                        data-set="<?= htmlspecialchars($item['ma_bo_tieu_chuan'] ?? '') ?>"
-                                        data-set-name="<?= htmlspecialchars($item['set_name'] ?? '') ?>"
+                                        data-criteria-ids='<?= htmlspecialchars(json_encode($item['criteria_ids'] ?? []), ENT_QUOTES) ?>'
+                                        data-criteria-json='<?= htmlspecialchars(json_encode($item['criteria'] ?? []), ENT_QUOTES) ?>'
                                         data-file="<?= htmlspecialchars($item['file_path'] ?? '') ?>"
                                         data-file-name="<?= htmlspecialchars(basename($item['file_path'] ?? '')) ?>"
                                         data-status="<?= (int)($item['status_raw'] ?? 1) ?>"
@@ -840,7 +1164,7 @@ html[data-theme="dark"] .evidence-card {
                                         <i class="bi bi-eye"></i>
                                     </button>
                                     <?php if (current_role() === 'admin'): ?>
-                                        <button type="button" class="btn btn-sm btn-outline-primary btn-edit-evidence-item"
+                                        <button type="button" class="btn btn-sm btn-outline-primary px-1.5 py-0.5 fs-8 btn-edit-evidence-item"
                                             data-id="<?= htmlspecialchars($item['code']) ?>"
                                             data-name="<?= htmlspecialchars($item['name']) ?>"
                                             data-so-hieu="<?= htmlspecialchars($item['so_hieu'] ?? '') ?>"
@@ -849,7 +1173,8 @@ html[data-theme="dark"] .evidence-card {
                                             data-user="<?= htmlspecialchars($updaterName) ?>"
                                             data-user-role="<?= htmlspecialchars($updaterRole) ?>"
                                             data-username="<?= htmlspecialchars($item['username'] ?? '') ?>"
-                                            data-criterion="<?= htmlspecialchars($item['ma_tieu_chi'] ?? '') ?>"
+                                            data-criteria-ids='<?= htmlspecialchars(json_encode($item['criteria_ids'] ?? []), ENT_QUOTES) ?>'
+                                            data-criteria-json='<?= htmlspecialchars(json_encode($item['criteria'] ?? []), ENT_QUOTES) ?>'
                                             data-file="<?= htmlspecialchars($item['file_path'] ?? '') ?>"
                                             data-file-name="<?= htmlspecialchars(basename($item['file_path'] ?? '')) ?>"
                                             data-status="<?= (int)($item['status_raw'] ?? 1) ?>"
@@ -859,7 +1184,7 @@ html[data-theme="dark"] .evidence-card {
                                         <form method="post" class="d-inline" data-confirm-form="Bạn có chắc chắn muốn xóa hoàn toàn minh chứng <?= htmlspecialchars($item['code']) ?> và tệp đính kèm khỏi hệ thống? Thao tác này sẽ xóa vĩnh viễn và không thể khôi phục.">
                                             <input type="hidden" name="action" value="delete_evidence">
                                             <input type="hidden" name="id" value="<?= htmlspecialchars($item['id']) ?>">
-                                            <button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa hoàn toàn minh chứng"><i class="bi bi-trash"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger px-1.5 py-0.5 fs-8" type="submit" title="Xóa hoàn toàn minh chứng"><i class="bi bi-trash"></i></button>
                                         </form>
                                     <?php endif; ?>
                                 </div>
@@ -867,7 +1192,7 @@ html[data-theme="dark"] .evidence-card {
                         </tr>
                     <?php endforeach; ?>
                     <?php if (empty($filteredEvidences)): ?>
-                        <tr><td colspan="11" class="text-center text-secondary py-5"><i class="bi bi-inbox fs-2 d-block mb-2 text-muted"></i>Không tìm thấy dữ liệu minh chứng nào phù hợp với điều kiện lọc.</td></tr>
+                        <tr><td colspan="10" class="text-center text-secondary py-5"><i class="bi bi-inbox fs-2 d-block mb-2 text-muted"></i>Không tìm thấy dữ liệu minh chứng nào phù hợp với điều kiện lọc.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
@@ -922,52 +1247,60 @@ html[data-theme="dark"] .evidence-card {
                             <div class="form-text small text-muted">Tự động ghi nhận theo tài khoản Quản trị viên đang thao tác.</div>
                         </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold"><i class="bi bi-clock-history text-success me-1"></i>Ngày cập nhật (Tự động)</label>
-                            <div class="p-2.5 rounded bg-light border d-flex align-items-center justify-content-between" style="min-height: 42px;">
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi bi-calendar2-check-fill text-success"></i>
-                                    <span class="fw-bold text-dark small font-monospace" id="form_display_updated_date"><?= date('d/m/Y H:i:s') ?> (GMT+7)</span>
+                        <!-- Cụm chọn nhiều Tiêu chuẩn & Tiêu chí -->
+                        <div class="col-md-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label fw-bold mb-0">
+                                    <i class="bi bi-diagram-3-fill text-primary me-1"></i>Thuộc Tiêu chuẩn &amp; Tiêu chí <span class="text-danger">*</span>
+                                    <small class="text-muted fw-normal">(Có thể chọn 1 hoặc nhiều Tiêu chuẩn / Tiêu chí)</small>
+                                </label>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="form_selected_criteria_count">Đã chọn: <?= count($editingCriteriaIds) ?> tiêu chí</span>
+                            </div>
+                            
+                            <div class="border rounded-3 p-2.5 bg-light criteria-selection-box" style="max-height: 250px; overflow-y: auto; background-color: #f8fafc;">
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                    <input type="text" class="form-control bg-white border-start-0" id="criteriaSearchInput" placeholder="Tìm nhanh theo mã hoặc tên tiêu chí/tiêu chuẩn...">
                                 </div>
-                                <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.72rem;"><i class="bi bi-globe-asia-australia me-1"></i>Giờ Việt Nam</span>
+                                <div id="criteriaCheckboxContainer" class="d-flex flex-column gap-2">
+                                    <?php 
+                                    $groupedCriteria = [];
+                                    foreach ($criteria as $cr) {
+                                        $groupKey = ($cr['standard_id'] ? ($cr['standard_id'] . ' - ' . $cr['standard_name']) : 'Khác');
+                                        $groupedCriteria[$groupKey][] = $cr;
+                                    }
+                                    foreach ($groupedCriteria as $grp => $crList):
+                                    ?>
+                                        <div class="criteria-group-card p-2 rounded-2 bg-white border shadow-xs">
+                                            <div class="d-flex align-items-center justify-content-between pb-1 mb-1 border-bottom">
+                                                <span class="fw-bold text-primary small d-flex align-items-center gap-1">
+                                                    <i class="bi bi-folder2 text-primary"></i> <?= htmlspecialchars($grp) ?>
+                                                </span>
+                                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none btn-toggle-group-criteria" style="font-size: 0.72rem;">
+                                                    Chọn tất cả
+                                                </button>
+                                            </div>
+                                            <div class="d-flex flex-column gap-1 ps-1">
+                                                <?php foreach ($crList as $cr): 
+                                                    $isCheck = in_array($cr['id'], $editingCriteriaIds, true);
+                                                ?>
+                                                    <div class="form-check criteria-item-row py-0.5">
+                                                        <input class="form-check-input criteria-form-checkbox" type="checkbox" name="ma_tieu_chi[]" value="<?= htmlspecialchars($cr['id']) ?>" id="chk_crit_<?= htmlspecialchars($cr['id']) ?>" <?= $isCheck ? 'checked' : '' ?>
+                                                            data-std-id="<?= htmlspecialchars($cr['standard_id']) ?>"
+                                                            data-std-name="<?= htmlspecialchars($cr['standard_name']) ?>"
+                                                            data-set-id="<?= htmlspecialchars($cr['set_id']) ?>"
+                                                            data-set-name="<?= htmlspecialchars($cr['set_name']) ?>">
+                                                        <label class="form-check-label small user-select-none" for="chk_crit_<?= htmlspecialchars($cr['id']) ?>">
+                                                            <strong class="text-dark font-monospace"><?= htmlspecialchars($cr['id']) ?></strong>: <?= htmlspecialchars($cr['name']) ?>
+                                                        </label>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
-                            <div class="form-text small text-muted">Tự động lấy theo thời gian thực tế tại Việt Nam khi lưu.</div>
-                        </div>
-
-                        <!-- Cụm chọn Tiêu chí -> Tự động hiển thị Tiêu chuẩn -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold"><i class="bi bi-list-check text-success me-1"></i>Chọn Tiêu chí</label>
-                            <select class="form-select" name="ma_tieu_chi" id="form_ma_tieu_chi">
-                                <option value="">-- Chưa chọn tiêu chí --</option>
-                                <?php 
-                                $groupedCriteria = [];
-                                foreach ($criteria as $cr) {
-                                    $groupKey = ($cr['standard_id'] ? ($cr['standard_id'] . ' - ' . $cr['standard_name']) : 'Khác');
-                                    $groupedCriteria[$groupKey][] = $cr;
-                                }
-                                foreach ($groupedCriteria as $grp => $crList):
-                                ?>
-                                    <optgroup label="<?= htmlspecialchars($grp) ?>">
-                                        <?php foreach ($crList as $cr): ?>
-                                            <option value="<?= htmlspecialchars($cr['id']) ?>" 
-                                                    data-std-id="<?= htmlspecialchars($cr['standard_id']) ?>"
-                                                    data-std-name="<?= htmlspecialchars($cr['standard_name']) ?>"
-                                                    data-set-id="<?= htmlspecialchars($cr['set_id']) ?>"
-                                                    data-set-name="<?= htmlspecialchars($cr['set_name']) ?>"
-                                                    <?= (string)($editingEvidence['MaTieuChi'] ?? '') === (string)$cr['id'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($cr['id'] . ' - ' . $cr['name']) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </optgroup>
-                                <?php endforeach; ?>
-                            </select>
-                            <div class="form-text small text-muted">Chọn tiêu chí đánh giá để liên kết minh chứng.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold"><i class="bi bi-diagram-3-fill text-primary me-1"></i>Tiêu chuẩn trực thuộc (Tự động)</label>
-                            <div id="form_auto_standard_box" class="p-2 rounded bg-light border text-muted small" style="min-height: 38px; display: flex; align-items: center;">
-                                <span id="form_auto_standard_text"><i class="bi bi-info-circle me-1"></i>Tự động hiển thị khi chọn tiêu chí bên cạnh</span>
-                            </div>
+                            <div class="form-text small text-muted mt-1"><i class="bi bi-info-circle text-info me-1"></i>Minh chứng này sẽ tự động xuất hiện ở tất cả các Tiêu chuẩn / Tiêu chí được tích chọn khi xem trên Quản lý Bộ tiêu chuẩn.</div>
                         </div>
 
                         <div class="col-md-12">
@@ -1068,57 +1401,50 @@ html[data-theme="dark"] .evidence-card {
                         <div class="d-flex align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
                             <div class="d-flex align-items-center gap-2">
                                 <i class="bi bi-diagram-3-fill text-primary fs-5"></i>
-                                <h6 class="fw-bold mb-0 text-dark">Sơ đồ phân cấp đánh giá (Cây tiêu chuẩn)</h6>
+                                <h6 class="fw-bold mb-0 text-dark">Sơ đồ phân cấp đánh giá (Cây tiêu chuẩn / Tiêu chí trực thuộc)</h6>
                             </div>
-                            <span class="badge bg-primary-subtle text-primary small">4 Cấp độ kiểm định</span>
+                            <span class="badge bg-primary-subtle text-primary small" id="view_detail_criteria_count_badge">Đang liên kết</span>
                         </div>
-                        <div id="view_detail_hierarchy">
-                            <?php if (!empty($viewingEvidence['MaTieuChi'])): ?>
-                                <div class="row g-2 align-items-stretch">
-                                    <div class="col-12 col-md-6 col-xl-3">
-                                        <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #f0f7ff; border-color: #bfdbfe !important;">
-                                            <div class="d-flex align-items-center gap-2 mb-2 text-primary fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em;">
-                                                <i class="bi bi-collection-fill"></i> 1. BỘ TIÊU CHUẨN
+                        <div id="view_detail_hierarchy" class="d-flex flex-column gap-2">
+                            <?php if (!empty($viewingCriteriaList)): 
+                                $phpGrouped = [];
+                                foreach ($viewingCriteriaList as $vc) {
+                                    $stdKey = $vc['standard_id'] ?: 'Khác';
+                                    $phpGrouped[$stdKey]['standard_id'] = $vc['standard_id'] ?? '';
+                                    $phpGrouped[$stdKey]['standard_name'] = $vc['standard_name'] ?? '';
+                                    $phpGrouped[$stdKey]['set_id'] = $vc['set_id'] ?? '';
+                                    $phpGrouped[$stdKey]['set_name'] = $vc['set_name'] ?? '';
+                                    $phpGrouped[$stdKey]['criteria'][] = $vc;
+                                }
+                            ?>
+                                <?php foreach ($phpGrouped as $sKey => $grp): ?>
+                                    <div class="p-3 rounded-3 bg-light border mb-2">
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-2 border-bottom">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-primary px-2 py-1 font-monospace fs-7">
+                                                    <i class="bi bi-folder2 me-1"></i><?= htmlspecialchars($grp['standard_id']) ?>
+                                                </span>
+                                                <strong class="text-primary fs-7"><?= htmlspecialchars($grp['standard_name'] ?: 'Tiêu chuẩn ' . $grp['standard_id']) ?></strong>
                                             </div>
-                                            <div class="fw-bold text-dark fs-7 flex-grow-1">
-                                                <?= htmlspecialchars($viewingEvidence['set_name'] ?: ($viewingEvidence['MaBoTieuChuan'] ?? 'Bộ tiêu chuẩn chung')) ?>
+                                            <span class="small text-secondary fw-semibold">
+                                                <i class="bi bi-collection-fill text-info me-1"></i><?= htmlspecialchars($grp['set_name'] ?: ($grp['set_id'] ?: 'Bộ tiêu chuẩn')) ?>
+                                            </span>
+                                        </div>
+                                        <div class="d-flex flex-column gap-1.5 ps-1">
+                                            <div class="small text-muted fw-semibold mb-1"><i class="bi bi-list-check text-success me-1"></i>Các Tiêu chí trực thuộc:</div>
+                                            <div class="d-flex flex-column gap-1.5">
+                                                <?php foreach ($grp['criteria'] as $c): ?>
+                                                    <div class="p-2 rounded-2 bg-white border border-success-subtle d-flex align-items-center gap-2">
+                                                        <span class="badge bg-success font-monospace px-2 py-1"><?= htmlspecialchars($c['id']) ?></span>
+                                                        <span class="fw-semibold text-dark fs-7"><?= htmlspecialchars($c['name'] ?? '') ?></span>
+                                                    </div>
+                                                <?php endforeach; ?>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-12 col-md-6 col-xl-3">
-                                        <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #f0fdf4; border-color: #bbf7d0 !important;">
-                                            <div class="d-flex align-items-center gap-2 mb-2 text-success fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em;">
-                                                <i class="bi bi-folder2-open"></i> 2. TIÊU CHUẨN
-                                            </div>
-                                            <div class="fw-bold text-dark fs-7 flex-grow-1">
-                                                <?= htmlspecialchars(($viewingEvidence['MaTieuChuan'] ?? '') . ' - ' . ($viewingEvidence['standard_name'] ?? '')) ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-md-6 col-xl-3">
-                                        <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #fdf4ff; border-color: #f5d0fe !important;">
-                                            <div class="d-flex align-items-center gap-2 mb-2 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em; color: #9333ea;">
-                                                <i class="bi bi-list-check"></i> 3. TIÊU CHÍ
-                                            </div>
-                                            <div class="fw-bold text-dark fs-7 flex-grow-1">
-                                                <?= htmlspecialchars(($viewingEvidence['MaTieuChi'] ?? '') . ' - ' . ($viewingEvidence['criterion_name'] ?? '')) ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-md-6 col-xl-3">
-                                        <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #fffbeb; border-color: #fde68a !important;">
-                                            <div class="d-flex align-items-center gap-2 mb-2 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em; color: #d97706;">
-                                                <i class="bi bi-file-earmark-check-fill"></i> 4. MINH CHỨNG
-                                            </div>
-                                            <div class="fw-bold text-dark fs-7 flex-grow-1">
-                                                <span class="badge bg-warning text-dark me-1 font-monospace"><?= htmlspecialchars($viewingEvidence['MaMinhChung'] ?? '') ?></span>
-                                                <span class="text-truncate d-inline-block align-middle" style="max-width: 140px;"><?= htmlspecialchars($viewingEvidence['TenMinhChung'] ?? '') ?></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <?php endforeach; ?>
                             <?php else: ?>
-                                <span class="text-muted">Chưa phân loại tiêu chuẩn / tiêu chí</span>
+                                <span class="text-muted p-2 bg-white rounded border text-center">Chưa phân loại tiêu chuẩn / tiêu chí</span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -1186,7 +1512,6 @@ html[data-theme="dark"] .evidence-card {
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Helper escape chuỗi an toàn
     function escapeHtml(text) {
         if (!text) return '';
         const map = {
@@ -1199,7 +1524,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
 
-    // Helper format thời gian thực tại Việt Nam (GMT+7)
     function getVietnamTimeFormatted() {
         const now = new Date();
         const options = {
@@ -1221,7 +1545,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Cập nhật đồng hồ thời gian thực tại Việt Nam trên form mỗi giây
     setInterval(function () {
         const timeDisplay = document.getElementById('form_display_updated_date');
         if (timeDisplay) {
@@ -1234,38 +1557,53 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalViewEl = document.getElementById('evidenceViewModal');
     const modalView = modalViewEl ? new bootstrap.Modal(modalViewEl) : null;
 
-    const selectTieuChi = document.getElementById('form_ma_tieu_chi');
-    const autoStdBox = document.getElementById('form_auto_standard_box');
-    const autoStdText = document.getElementById('form_auto_standard_text');
+    // Criteria selection in Add/Edit modal
+    const criteriaCheckboxes = document.querySelectorAll('.criteria-form-checkbox');
+    const selectedCountBadge = document.getElementById('form_selected_criteria_count');
+    const criteriaSearchInput = document.getElementById('criteriaSearchInput');
 
-    function updateAutoStandardDisplay() {
-        if (!selectTieuChi || !autoStdText) return;
-        const selOption = selectTieuChi.options[selectTieuChi.selectedIndex];
-        if (selOption && selOption.value) {
-            const stdId = selOption.dataset.stdId || '';
-            const stdName = selOption.dataset.stdName || '';
-            const setId = selOption.dataset.setId || '';
-            const setName = selOption.dataset.setName || '';
-            
-            let stdHtml = `<strong class="text-primary"><i class="bi bi-folder2-open me-1"></i>${stdId ? stdId + ' - ' : ''}${stdName}</strong>`;
-            if (setId) {
-                stdHtml += ` <div class="text-muted mt-1" style="font-size: 0.75rem;"><i class="bi bi-collection me-1"></i>Bộ tiêu chuẩn: ${setId}${setName ? ' - ' + setName : ''}</div>`;
-            }
-            autoStdText.innerHTML = stdHtml;
-            if (autoStdBox) autoStdBox.className = 'p-2 rounded bg-primary-subtle border border-primary-subtle text-dark small';
-        } else {
-            autoStdText.innerHTML = '<span class="text-muted"><i class="bi bi-info-circle me-1"></i>Tự động hiển thị khi chọn tiêu chí bên cạnh</span>';
-            if (autoStdBox) autoStdBox.className = 'p-2 rounded bg-light border text-muted small';
+    function updateSelectedCriteriaCount() {
+        const checkedCount = document.querySelectorAll('.criteria-form-checkbox:checked').length;
+        if (selectedCountBadge) {
+            selectedCountBadge.textContent = `Đã chọn: ${checkedCount} tiêu chí`;
         }
     }
 
-    if (selectTieuChi) {
-        selectTieuChi.addEventListener('change', updateAutoStandardDisplay);
-        // Initial call on page load if editing
-        updateAutoStandardDisplay();
+    criteriaCheckboxes.forEach(chk => {
+        chk.addEventListener('change', updateSelectedCriteriaCount);
+    });
+
+    // Select all / deselect in a group
+    document.querySelectorAll('.btn-toggle-group-criteria').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const card = this.closest('.criteria-group-card');
+            if (!card) return;
+            const groupCheckboxes = card.querySelectorAll('.criteria-form-checkbox');
+            const allChecked = Array.from(groupCheckboxes).every(c => c.checked);
+            groupCheckboxes.forEach(c => c.checked = !allChecked);
+            this.textContent = allChecked ? 'Chọn tất cả' : 'Bỏ chọn tất cả';
+            updateSelectedCriteriaCount();
+        });
+    });
+
+    // Quick filter criteria inside modal
+    if (criteriaSearchInput) {
+        criteriaSearchInput.addEventListener('input', function () {
+            const kw = this.value.toLowerCase().trim();
+            document.querySelectorAll('.criteria-group-card').forEach(group => {
+                let groupHasMatch = false;
+                group.querySelectorAll('.criteria-item-row').forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    const matches = kw === '' || text.includes(kw);
+                    row.style.display = matches ? 'block' : 'none';
+                    if (matches) groupHasMatch = true;
+                });
+                group.style.display = groupHasMatch ? 'block' : 'none';
+            });
+        });
     }
 
-    // Reset Form Modal on open/close for Add New
+    // Reset Form Modal on open for Add New
     const btnOpenAdd = document.getElementById('btnOpenAddModal');
     if (btnOpenAdd) {
         btnOpenAdd.addEventListener('click', function () {
@@ -1280,16 +1618,16 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('evidenceFormModalLabel').innerHTML = '<i class="bi bi-folder-plus fs-5 text-white me-2"></i>Thêm mới Minh chứng';
             document.getElementById('form_file_help_text').innerHTML = 'Hỗ trợ định dạng: <strong>PDF, PNG, JPG, JPEG, WEBP, DOCX</strong> (Tối đa 100MB).';
             
-            const timeDisplay = document.getElementById('form_display_updated_date');
-            if (timeDisplay) {
-                timeDisplay.textContent = getVietnamTimeFormatted() + ' (GMT+7)';
+            criteriaCheckboxes.forEach(chk => chk.checked = false);
+            updateSelectedCriteriaCount();
+
+            if (criteriaSearchInput) {
+                criteriaSearchInput.value = '';
+                criteriaSearchInput.dispatchEvent(new Event('input'));
             }
-            if (selectTieuChi) selectTieuChi.value = '';
-            updateAutoStandardDisplay();
         });
     }
 
-    // Helper function to populate and open Edit Form
     function openEditModal(data) {
         document.getElementById('evidenceFormModalLabel').innerHTML = '<i class="bi bi-pencil-square fs-5 text-white me-2"></i>Cập nhật thông tin Minh chứng';
         document.getElementById('form_evidence_id').value = data.id || '';
@@ -1300,19 +1638,21 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('form_trang_thai').value = data.status || '1';
         document.getElementById('form_evidence_file').value = '';
 
-        const timeDisplay = document.getElementById('form_display_updated_date');
-        if (timeDisplay) {
-            timeDisplay.textContent = getVietnamTimeFormatted() + ' (GMT+7)';
-        }
+        // Check the criteria checkboxes
+        const targetIds = Array.isArray(data.criteriaIds) ? data.criteriaIds : [data.criterion];
+        criteriaCheckboxes.forEach(chk => {
+            chk.checked = targetIds.includes(chk.value);
+        });
+        updateSelectedCriteriaCount();
 
-        if (selectTieuChi) {
-            selectTieuChi.value = data.criterion || '';
-            updateAutoStandardDisplay();
+        if (criteriaSearchInput) {
+            criteriaSearchInput.value = '';
+            criteriaSearchInput.dispatchEvent(new Event('input'));
         }
 
         const helpText = document.getElementById('form_file_help_text');
         if (data.fileName) {
-            helpText.innerHTML = '<span class="text-success"><i class="bi bi-file-earmark-check me-1"></i>Tệp tin hiện tại: <strong>' + data.fileName + '</strong></span>. Chọn tệp mới để ghi đè (nếu muốn thay đổi).';
+            helpText.innerHTML = '<span class="text-success"><i class="bi bi-file-earmark-check me-1"></i>Tệp tin hiện tại: <strong>' + escapeHtml(data.fileName) + '</strong></span>. Chọn tệp mới để ghi đè (nếu muốn thay đổi).';
         } else {
             helpText.innerHTML = 'Hỗ trợ định dạng: <strong>PDF, PNG, JPG, JPEG, WEBP, DOCX</strong> (Tối đa 100MB).';
         }
@@ -1320,15 +1660,21 @@ document.addEventListener('DOMContentLoaded', function () {
         if (modalForm) modalForm.show();
     }
 
-    // Edit Item Click in Table
     document.querySelectorAll('.btn-edit-evidence-item').forEach(btn => {
         btn.addEventListener('click', function () {
+            let criteriaIds = [];
+            try {
+                criteriaIds = JSON.parse(this.dataset.criteriaIds || '[]');
+            } catch (e) {
+                criteriaIds = [];
+            }
             openEditModal({
                 id: this.dataset.id || '',
                 name: this.dataset.name || '',
                 soHieu: this.dataset.soHieu || '',
                 date: this.dataset.date || '',
                 criterion: this.dataset.criterion || '',
+                criteriaIds: criteriaIds,
                 fileName: this.dataset.fileName || '',
                 status: this.dataset.status || '1'
             });
@@ -1337,7 +1683,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let currentViewingData = null;
 
-    // View Item Click
     document.querySelectorAll('.btn-view-evidence-detail').forEach(btn => {
         btn.addEventListener('click', function () {
             const id = this.dataset.id || '';
@@ -1347,11 +1692,19 @@ document.addEventListener('DOMContentLoaded', function () {
             const rawDate = this.dataset.date || '';
             const updated = this.dataset.updated || '-';
             const user = this.dataset.user || 'Quản trị viên';
-            const criterion = this.dataset.criterion || '';
-            const criterionName = this.dataset.criterionName || '';
-            const standard = this.dataset.standard || '';
-            const standardName = this.dataset.standardName || '';
-            const setName = this.dataset.setName || '';
+            let criteriaList = [];
+            try {
+                criteriaList = JSON.parse(this.dataset.criteriaJson || '[]');
+            } catch (e) {
+                criteriaList = [];
+            }
+            let criteriaIds = [];
+            try {
+                criteriaIds = JSON.parse(this.dataset.criteriaIds || '[]');
+            } catch (e) {
+                criteriaIds = [];
+            }
+
             const file = this.dataset.file || '';
             const fileName = this.dataset.fileName || '';
             const status = this.dataset.status || '1';
@@ -1363,7 +1716,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 name: name,
                 soHieu: soHieu,
                 date: rawDate,
-                criterion: criterion,
+                criteriaIds: criteriaIds,
                 fileName: fileName,
                 status: status
             };
@@ -1397,52 +1750,64 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const hierEl = document.getElementById('view_detail_hierarchy');
-            if (criterion || standard) {
-                hierEl.innerHTML = `
-                    <div class="row g-2 align-items-stretch">
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #f0f7ff; border-color: #bfdbfe !important;">
-                                <div class="d-flex align-items-center gap-2 mb-2 text-primary fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em;">
-                                    <i class="bi bi-collection-fill"></i> 1. BỘ TIÊU CHUẨN
+            const countBadge = document.getElementById('view_detail_criteria_count_badge');
+            if (countBadge) {
+                countBadge.textContent = `Thuộc ${criteriaList.length} Tiêu chí`;
+            }
+
+            if (criteriaList.length > 0) {
+                // Group criteria by Standard
+                const grouped = {};
+                criteriaList.forEach(crit => {
+                    const stdKey = crit.standard_id || 'Khác';
+                    if (!grouped[stdKey]) {
+                        grouped[stdKey] = {
+                            standard_id: crit.standard_id || '',
+                            standard_name: crit.standard_name || '',
+                            set_id: crit.set_id || '',
+                            set_name: crit.set_name || '',
+                            criteria: []
+                        };
+                    }
+                    grouped[stdKey].criteria.push(crit);
+                });
+
+                let hierHtml = '';
+                Object.keys(grouped).forEach(sKey => {
+                    const grp = grouped[sKey];
+                    let critsHtml = '';
+                    grp.criteria.forEach(c => {
+                        critsHtml += `
+                            <div class="p-2 rounded-2 bg-white border border-success-subtle d-flex align-items-center gap-2">
+                                <span class="badge bg-success font-monospace px-2 py-1">${escapeHtml(c.id)}</span>
+                                <span class="fw-semibold text-dark fs-7">${escapeHtml(c.name || '')}</span>
+                            </div>
+                        `;
+                    });
+
+                    hierHtml += `
+                        <div class="p-3 rounded-3 bg-light border mb-2">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-2 border-bottom">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary px-2 py-1 font-monospace fs-7">
+                                        <i class="bi bi-folder2 me-1"></i>${escapeHtml(grp.standard_id)}
+                                    </span>
+                                    <strong class="text-primary fs-7">${escapeHtml(grp.standard_name || 'Tiêu chuẩn ' + grp.standard_id)}</strong>
                                 </div>
-                                <div class="fw-bold text-dark fs-7 flex-grow-1" title="${escapeHtml(setName || '')}">
-                                    ${escapeHtml(setName || 'Bộ tiêu chuẩn chung')}
+                                <span class="small text-secondary fw-semibold">
+                                    <i class="bi bi-collection-fill text-info me-1"></i>${escapeHtml(grp.set_name || grp.set_id || 'Bộ tiêu chuẩn')}
+                                </span>
+                            </div>
+                            <div class="d-flex flex-column gap-1.5 ps-1">
+                                <div class="small text-muted fw-semibold mb-1"><i class="bi bi-list-check text-success me-1"></i>Các Tiêu chí trực thuộc:</div>
+                                <div class="d-flex flex-column gap-1.5">
+                                    ${critsHtml}
                                 </div>
                             </div>
                         </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #f0fdf4; border-color: #bbf7d0 !important;">
-                                <div class="d-flex align-items-center gap-2 mb-2 text-success fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em;">
-                                    <i class="bi bi-folder2-open"></i> 2. TIÊU CHUẨN
-                                </div>
-                                <div class="fw-bold text-dark fs-7 flex-grow-1" title="${escapeHtml((standard ? standard + ' - ' : '') + (standardName || ''))}">
-                                    ${standard ? `<span class="badge bg-success-subtle text-success me-1 font-monospace">${escapeHtml(standard)}</span>` : ''}${escapeHtml(standardName || 'Chưa phân loại')}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #fdf4ff; border-color: #f5d0fe !important;">
-                                <div class="d-flex align-items-center gap-2 mb-2 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em; color: #9333ea;">
-                                    <i class="bi bi-list-check"></i> 3. TIÊU CHÍ
-                                </div>
-                                <div class="fw-bold text-dark fs-7 flex-grow-1" title="${escapeHtml((criterion ? criterion + ' - ' : '') + (criterionName || ''))}">
-                                    ${criterion ? `<span class="badge me-1 font-monospace" style="background: #f3e8ff; color: #9333ea;">${escapeHtml(criterion)}</span>` : ''}${escapeHtml(criterionName || 'Chưa phân loại')}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <div class="p-3 rounded-3 h-100 border d-flex flex-column" style="background: #fffbeb; border-color: #fde68a !important;">
-                                <div class="d-flex align-items-center gap-2 mb-2 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.04em; color: #d97706;">
-                                    <i class="bi bi-file-earmark-check-fill"></i> 4. MINH CHỨNG
-                                </div>
-                                <div class="fw-bold text-dark fs-7 flex-grow-1">
-                                    <span class="badge bg-warning text-dark me-1 font-monospace">${escapeHtml(id)}</span>
-                                    <span class="text-truncate d-inline-block align-middle" style="max-width: 140px;" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                    `;
+                });
+                hierEl.innerHTML = hierHtml;
             } else {
                 hierEl.innerHTML = '<div class="text-muted p-2 bg-light rounded-3 text-center">Chưa phân loại tiêu chuẩn / tiêu chí</div>';
             }
@@ -1498,7 +1863,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Xử lý chuyển đổi nhanh trạng thái minh chứng (Đang hoạt động <-> Không hoạt động) trực tiếp trên bảng
+    // Xử lý chuyển đổi nhanh trạng thái minh chứng
     document.querySelectorAll('.form-toggle-status').forEach(form => {
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -1537,7 +1902,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         badge.style.opacity = '1';
                     }
 
-                    // Cập nhật lại data-status trên nút Xem và Sửa của hàng này
                     const row = form.closest('tr');
                     if (row) {
                         const viewBtn = row.querySelector('.btn-view-evidence-detail');
@@ -1546,7 +1910,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (editBtn) editBtn.dataset.status = data.new_status;
                     }
 
-                    // Cập nhật lại số lượng trên thẻ thống kê Stat Cards
                     const statActive = document.getElementById('statCardActive');
                     const statInactive = document.getElementById('statCardInactive');
                     if (statActive && statInactive) {
@@ -1561,7 +1924,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     }
 
-                    // Hiển thị toast thông báo nhanh
                     showFloatingToast(data.message || 'Cập nhật trạng thái thành công', 'success');
                 } else {
                     if (badge) badge.style.opacity = '1';
@@ -1575,7 +1937,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Helper hiển thị floating toast đẹp mắt
     function showFloatingToast(message, type = 'success') {
         let toastContainer = document.getElementById('floatingToastContainer');
         if (!toastContainer) {
@@ -1600,6 +1961,64 @@ document.addEventListener('DOMContentLoaded', function () {
             toast.style.transform = 'translateY(10px)';
             setTimeout(() => toast.remove(), 300);
         }, 2500);
+    }
+
+    // ==============================================
+    // INITIALIZE HTML BOOTSTRAP TOOLTIPS
+    // ==============================================
+    const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(tooltipTriggerEl => {
+        new bootstrap.Tooltip(tooltipTriggerEl, {
+            html: true,
+            boundary: document.body,
+            fallbackPlacements: ['top', 'bottom', 'right', 'left']
+        });
+    });
+
+    // ==============================================
+    // SEARCH LOCATION NAVIGATOR & HIGHLIGHT FOCUS
+    // ==============================================
+    const matchedRows = Array.from(document.querySelectorAll('.search-matched-row'));
+    const totalMatches = matchedRows.length;
+    let currentMatchIndex = 0;
+    const matchBadge = document.getElementById('matchCurrentIndexBadge');
+    const btnPrevMatch = document.getElementById('btnPrevMatch');
+    const btnNextMatch = document.getElementById('btnNextMatch');
+
+    function focusMatch(index) {
+        if (totalMatches === 0) return;
+        matchedRows.forEach(r => r.classList.remove('current-focus-match'));
+        const targetRow = matchedRows[index];
+        if (!targetRow) return;
+
+        targetRow.classList.add('current-focus-match');
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        if (matchBadge) {
+            matchBadge.textContent = `${index + 1} / ${totalMatches}`;
+        }
+    }
+
+    if (totalMatches > 0 && <?= json_encode($filterKeyword !== '') ?>) {
+        if (matchBadge) {
+            matchBadge.textContent = `1 / ${totalMatches}`;
+        }
+        setTimeout(() => {
+            focusMatch(0);
+        }, 250);
+
+        if (btnNextMatch) {
+            btnNextMatch.addEventListener('click', function () {
+                currentMatchIndex = (currentMatchIndex + 1) % totalMatches;
+                focusMatch(currentMatchIndex);
+            });
+        }
+        if (btnPrevMatch) {
+            btnPrevMatch.addEventListener('click', function () {
+                currentMatchIndex = (currentMatchIndex - 1 + totalMatches) % totalMatches;
+                focusMatch(currentMatchIndex);
+            });
+        }
     }
 });
 </script>

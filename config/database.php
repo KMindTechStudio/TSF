@@ -87,6 +87,21 @@ function db(): PDO
                 if (empty($cols)) {
                     $pdo->exec("ALTER TABLE MinhChung ADD COLUMN NgayCapNhat DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER MaNguoiDung");
                 }
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS minh_chung_tieu_chi (
+                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        MaMinhChung VARCHAR(50) NOT NULL,
+                        MaTieuChi VARCHAR(50) NOT NULL,
+                        ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE KEY uq_mc_tc (MaMinhChung, MaTieuChi),
+                        INDEX idx_mc (MaMinhChung),
+                        INDEX idx_tc (MaTieuChi)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                ");
+                $pdo->exec("
+                    INSERT IGNORE INTO minh_chung_tieu_chi (MaMinhChung, MaTieuChi)
+                    SELECT MaMinhChung, MaTieuChi FROM MinhChung WHERE MaTieuChi IS NOT NULL AND MaTieuChi != '';
+                ");
                 $pdo->exec("ALTER TABLE BoTieuChuan MODIFY COLUMN MaBoTieuChuan VARCHAR(50) NOT NULL;");
                 $pdo->exec("ALTER TABLE NguoiDung MODIFY COLUMN MaNguoiDung VARCHAR(50) NOT NULL;");
                 $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");

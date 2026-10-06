@@ -72,7 +72,8 @@ if ($searchKeyword !== '') {
         OR b.MaBoTieuChuan IN (
             SELECT DISTINCT COALESCE(m_s.MaBoTieuChuan, tc_m.MaBoTieuChuan)
             FROM MinhChung m_s
-            LEFT JOIN TieuChi tchi_m ON tchi_m.MaTieuChi = m_s.MaTieuChi
+            LEFT JOIN minh_chung_tieu_chi mctc_s ON mctc_s.MaMinhChung = m_s.MaMinhChung
+            LEFT JOIN TieuChi tchi_m ON tchi_m.MaTieuChi = COALESCE(mctc_s.MaTieuChi, m_s.MaTieuChi)
             LEFT JOIN TieuChuan tc_m ON tc_m.MaTieuChuan = tchi_m.MaTieuChuan
             WHERE m_s.MaMinhChung LIKE :kw_ev1 OR m_s.TenMinhChung LIKE :kw_ev2 OR m_s.SoHieu LIKE :kw_ev_sohieu OR m_s.MoTa LIKE :kw_ev3 OR m_s.NamHoc LIKE :kw_ev4 OR m_s.TepTin LIKE :kw_ev5
         )
@@ -157,11 +158,12 @@ $querySets = "
         b.TrangThai,
         COUNT(DISTINCT tc.MaTieuChuan) AS total_standards,
         COUNT(DISTINCT tchi.MaTieuChi) AS total_criteria,
-        COUNT(DISTINCT m.MaMinhChung) AS total_evidences
+        COUNT(DISTINCT COALESCE(mctc.MaMinhChung, m.MaMinhChung)) AS total_evidences
     FROM BoTieuChuan b
     LEFT JOIN TieuChuan tc ON tc.MaBoTieuChuan = b.MaBoTieuChuan
     LEFT JOIN TieuChi tchi ON tchi.MaTieuChuan = tc.MaTieuChuan
-    LEFT JOIN MinhChung m ON (m.MaBoTieuChuan = b.MaBoTieuChuan OR m.MaTieuChi = tchi.MaTieuChi)
+    LEFT JOIN minh_chung_tieu_chi mctc ON mctc.MaTieuChi = tchi.MaTieuChi
+    LEFT JOIN MinhChung m ON (m.MaBoTieuChuan = b.MaBoTieuChuan OR m.MaTieuChi = tchi.MaTieuChi OR m.MaMinhChung = mctc.MaMinhChung)
 " . $whereSql . " GROUP BY b.MaBoTieuChuan, b.TenBoTieuChuan, b.ThongTu, b.NgayBanHanh, b.MoTa, b.TepTinPDF, b.TrangThai ORDER BY b.TrangThai DESC, b.MaBoTieuChuan ASC LIMIT :offset, :perPage";
 
 $stmtSets = $pdo->prepare($querySets);
@@ -177,7 +179,14 @@ $standardSetsList = $stmtSets->fetchAll(PDO::FETCH_ASSOC);
 $allSetsForFilter = $pdo->query("SELECT MaBoTieuChuan, TenBoTieuChuan, ThongTu FROM BoTieuChuan ORDER BY TrangThai DESC, MaBoTieuChuan ASC")->fetchAll(PDO::FETCH_ASSOC);
 $allStandardsForFilter = $pdo->query("SELECT MaTieuChuan, TenTieuChuan, MaBoTieuChuan FROM TieuChuan ORDER BY MaBoTieuChuan ASC, ThuTu ASC, MaTieuChuan ASC")->fetchAll(PDO::FETCH_ASSOC);
 $allCriteriaForFilter = $pdo->query("SELECT tchi.MaTieuChi, tchi.TenTieuChi, tchi.MaTieuChuan, tc.MaBoTieuChuan FROM TieuChi tchi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan ORDER BY tchi.ThuTu ASC, tchi.MaTieuChi ASC")->fetchAll(PDO::FETCH_ASSOC);
-$allEvidencesForFilter = $pdo->query("SELECT m.MaMinhChung, m.TenMinhChung, m.SoHieu, m.MaTieuChi, m.MaBoTieuChuan, tc.MaTieuChuan FROM MinhChung m LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = m.MaTieuChi LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan ORDER BY m.MaMinhChung ASC")->fetchAll(PDO::FETCH_ASSOC);
+$allEvidencesForFilter = $pdo->query("
+    SELECT DISTINCT m.MaMinhChung, m.TenMinhChung, m.SoHieu, COALESCE(mctc.MaTieuChi, m.MaTieuChi) AS MaTieuChi, m.MaBoTieuChuan, tc.MaTieuChuan 
+    FROM MinhChung m 
+    LEFT JOIN minh_chung_tieu_chi mctc ON mctc.MaMinhChung = m.MaMinhChung
+    LEFT JOIN TieuChi tchi ON tchi.MaTieuChi = COALESCE(mctc.MaTieuChi, m.MaTieuChi) 
+    LEFT JOIN TieuChuan tc ON tc.MaTieuChuan = tchi.MaTieuChuan 
+    ORDER BY m.MaMinhChung ASC
+")->fetchAll(PDO::FETCH_ASSOC);
 
 // Filter query parameters for links
 $currentFilterParams = [];
@@ -215,8 +224,9 @@ $stmtAllTChi = $pdo->query("
         tchi.NoiDung,
         tchi.ThuTu,
         tchi.MaTieuChuan,
-        COUNT(DISTINCT m.MaMinhChung) AS total_evidences
+        COUNT(DISTINCT COALESCE(mctc.MaMinhChung, m.MaMinhChung)) AS total_evidences
     FROM TieuChi tchi
+    LEFT JOIN minh_chung_tieu_chi mctc ON mctc.MaTieuChi = tchi.MaTieuChi
     LEFT JOIN MinhChung m ON m.MaTieuChi = tchi.MaTieuChi
     GROUP BY tchi.MaTieuChi, tchi.TenTieuChi, tchi.NoiDung, tchi.ThuTu, tchi.MaTieuChuan
     ORDER BY tchi.ThuTu ASC, tchi.MaTieuChi ASC
@@ -237,20 +247,30 @@ $stmtAllMC = $pdo->query("
         m.TepTin,
         m.NamHoc,
         m.TrangThai,
-        m.MaTieuChi,
+        COALESCE(mctc.MaTieuChi, m.MaTieuChi) AS AssignedTieuChi,
+        m.MaTieuChi AS PrimaryTieuChi,
         m.MaBoTieuChuan,
         m.NgayCapNhat,
         DATE_FORMAT(m.NgayCapNhat, '%d/%m/%Y %H:%i') AS NgayCapNhatFormatted,
         u.HoTen AS NguoiTao,
         u.VaiTro AS VaiTroNguoiTao
     FROM MinhChung m
+    LEFT JOIN minh_chung_tieu_chi mctc ON mctc.MaMinhChung = m.MaMinhChung
     LEFT JOIN NguoiDung u ON u.MaNguoiDung = m.MaNguoiDung
     ORDER BY m.MaMinhChung ASC
 ");
 $allEvidencesByCriterion = [];
+$seenEvidencePerCriterion = [];
 foreach ($stmtAllMC->fetchAll(PDO::FETCH_ASSOC) as $mc) {
-    if (!empty($mc['MaTieuChi'])) {
-        $allEvidencesByCriterion[$mc['MaTieuChi']][] = $mc;
+    if (!empty($mc['AssignedTieuChi']) || !empty($mc['PrimaryTieuChi'])) {
+        $assignedTc = $mc['AssignedTieuChi'] ?? $mc['PrimaryTieuChi'];
+        if (!empty($assignedTc)) {
+            $key = $assignedTc . '_' . $mc['MaMinhChung'];
+            if (!isset($seenEvidencePerCriterion[$key])) {
+                $seenEvidencePerCriterion[$key] = true;
+                $allEvidencesByCriterion[$assignedTc][] = $mc;
+            }
+        }
     }
 }
 

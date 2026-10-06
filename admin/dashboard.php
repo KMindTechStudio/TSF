@@ -476,6 +476,10 @@ html[data-theme="dark"] .line-toggle-btn:not(.active) {
                 <i class="bi bi-collection text-primary fs-6"></i>
                 <span>Bộ tiêu chuẩn</span>
             </a>
+            <a class="btn btn-outline-light d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3" href="<?= base_url('admin/evidences.php') ?>">
+                <i class="bi bi-folder-check fs-6"></i>
+                <span>Minh chứng</span>
+            </a>
             <a class="btn btn-outline-light d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3" href="<?= base_url('admin/users.php') ?>">
                 <i class="bi bi-people fs-6"></i>
                 <span>Người dùng</span>
@@ -596,7 +600,7 @@ html[data-theme="dark"] .line-toggle-btn:not(.active) {
 
     <!-- Card 5: Tổng số Minh chứng -->
     <div class="col anim-fade-up delay-5">
-        <a href="<?= base_url('user/search.php') ?>" class="kpi-clickable-card" title="Bấm để tra cứu Kho CSDL Minh chứng">
+        <a href="<?= base_url('admin/evidences.php') ?>" class="kpi-clickable-card" title="Bấm để mở trang Quản lý Minh chứng">
             <div class="kpi-card">
                 <div>
                     <div class="d-flex justify-content-between align-items-start mb-3">
