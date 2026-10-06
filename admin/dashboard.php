@@ -600,7 +600,7 @@ html[data-theme="dark"] .line-toggle-btn:not(.active) {
 
     <!-- Card 5: Tổng số Minh chứng -->
     <div class="col anim-fade-up delay-5">
-        <a href="<?= base_url('admin/evidences.php') ?>" class="kpi-clickable-card" title="Bấm để mở trang Quản lý Minh chứng">
+        <a href="<?= base_url('admin/evidences.php') ?>" class="kpi-clickable-card" title="Bấm để mở trang Cập nhật Minh chứng">
             <div class="kpi-card">
                 <div>
                     <div class="d-flex justify-content-between align-items-start mb-3">
